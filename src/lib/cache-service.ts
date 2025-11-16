@@ -103,20 +103,45 @@ export async function getCache<T>(
     
     if (cached) {
       try {
-        // Check if cached value is empty or whitespace
-        const cachedStr = cached as string;
-        if (!cachedStr || cachedStr.trim() === '') {
-          logger.warn('Empty cached value in Redis', { key: fullKey }, 'CacheService');
-          return null;
+        // Handle cached value based on its type
+        // Upstash Redis REST API may return objects directly if the value was JSON
+        if (typeof cached === 'object' && cached !== null) {
+          logger.debug('Cache hit (Redis, object)', { key: fullKey }, 'CacheService');
+          return cached as T;
         }
         
-        logger.debug('Cache hit (Redis)', { key: fullKey }, 'CacheService');
-        return JSON.parse(cachedStr) as T;
+        // Handle string values (standard Redis behavior)
+        if (typeof cached === 'string') {
+          if (!cached || cached.trim() === '') {
+            logger.warn('Empty cached value in Redis', { key: fullKey }, 'CacheService');
+            return null;
+          }
+          
+          logger.debug('Cache hit (Redis, string)', { key: fullKey }, 'CacheService');
+          return JSON.parse(cached) as T;
+        }
+        
+        // Unexpected type
+        logger.warn('Unexpected cached value type', { 
+          key: fullKey, 
+          cachedType: typeof cached 
+        }, 'CacheService');
+        return null;
+        
       } catch (error) {
+        // Safely preview cached value for logging
+        let preview = 'Unable to preview';
+        if (typeof cached === 'string') {
+          preview = cached.substring(0, 100);
+        } else if (cached !== null && cached !== undefined) {
+          preview = String(cached).substring(0, 100);
+        }
+        
         logger.error('Failed to parse cached value from Redis', { 
           key: fullKey, 
           error: error instanceof Error ? error.message : 'Unknown error',
-          preview: (cached as string).substring(0, 100)
+          cachedType: typeof cached,
+          preview
         }, 'CacheService');
         // Return null to trigger a fresh fetch
         return null;

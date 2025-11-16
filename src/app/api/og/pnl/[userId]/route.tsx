@@ -11,6 +11,8 @@ import { calculatePortfolioPnL } from '@/lib/portfolio/calculate-pnl'
 // Use Node.js runtime for full Prisma support
 export const runtime = 'nodejs'
 
+// Disable static generation for this route - it requires database access
+export const dynamic = 'force-dynamic'
 // Cache for 1 hour, revalidate in background
 export const revalidate = 3600
 

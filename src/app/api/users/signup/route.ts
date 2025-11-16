@@ -340,9 +340,11 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     'POST /api/users/signup'
   )
 
-  await notifyNewAccount(result.user.id)
-
-  logger.warn('Failed to send welcome notification', { userId: result.user.id }, 'POST /api/users/signup')
+  try {
+    await notifyNewAccount(result.user.id)
+  } catch (error) {
+    logger.warn('Failed to send welcome notification', { userId: result.user.id, error }, 'POST /api/users/signup')
+  }
 
   // Track signup with PostHog
   await trackServerEvent(result.user.id, 'signup_completed', {

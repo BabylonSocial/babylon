@@ -1,0 +1,1539 @@
+{
+  "actors": [],
+  "organizations": [
+    {
+      "id": "openai",
+      "file": "./organizations/openai.json"
+    },
+    {
+      "id": "anthropic",
+      "file": "./organizations/anthropic.json"
+    },
+    {
+      "id": "deepmaind",
+      "file": "./organizations/deepmaind.json"
+    },
+    {
+      "id": "metai",
+      "file": "./organizations/metai.json"
+    },
+    {
+      "id": "palaintir",
+      "file": "./organizations/palaintir.json"
+    },
+    {
+      "id": "anduril",
+      "file": "./organizations/anduril.json"
+    },
+    {
+      "id": "blaiackrock",
+      "file": "./organizations/blaiackrock.json"
+    },
+    {
+      "id": "faux-news",
+      "file": "./organizations/faux-news.json"
+    },
+    {
+      "id": "the-new-york-taimes",
+      "file": "./organizations/the-new-york-taimes.json"
+    },
+    {
+      "id": "bloomberg",
+      "file": "./organizations/bloomberg.json"
+    },
+    {
+      "id": "wall-street-journal",
+      "file": "./organizations/wall-street-journal.json"
+    },
+    {
+      "id": "politicai",
+      "file": "./organizations/politicai.json"
+    },
+    {
+      "id": "financial-times",
+      "file": "./organizations/financial-times.json"
+    },
+    {
+      "id": "washington-post",
+      "file": "./organizations/washington-post.json"
+    },
+    {
+      "id": "maicrosoft",
+      "file": "./organizations/maicrosoft.json"
+    },
+    {
+      "id": "coinbaise",
+      "file": "./organizations/coinbaise.json"
+    },
+    {
+      "id": "mckinsey",
+      "file": "./organizations/mckinsey.json"
+    },
+    {
+      "id": "ai16z",
+      "file": "./organizations/ai16z.json"
+    },
+    {
+      "id": "department-of-war",
+      "file": "./organizations/department-of-war.json"
+    },
+    {
+      "id": "cia-inc",
+      "file": "./organizations/cia-inc.json"
+    },
+    {
+      "id": "texais",
+      "file": "./organizations/texais.json"
+    },
+    {
+      "id": "effective-authoritarianism",
+      "file": "./organizations/effective-authoritarianism.json"
+    },
+    {
+      "id": "xai",
+      "file": "./organizations/xai.json"
+    },
+    {
+      "id": "teslai",
+      "file": "./organizations/teslai.json"
+    },
+    {
+      "id": "spaicex",
+      "file": "./organizations/spaicex.json"
+    },
+    {
+      "id": "neuralink",
+      "file": "./organizations/neuralink.json"
+    },
+    {
+      "id": "etherai-foundation",
+      "file": "./organizations/etherai-foundation.json"
+    },
+    {
+      "id": "angelai",
+      "file": "./organizations/angelai.json"
+    },
+    {
+      "id": "founders-fraud",
+      "file": "./organizations/founders-fraud.json"
+    },
+    {
+      "id": "ark-invest",
+      "file": "./organizations/ark-invest.json"
+    },
+    {
+      "id": "social-capital",
+      "file": "./organizations/social-capital.json"
+    },
+    {
+      "id": "truth-socAIl",
+      "file": "./organizations/truth-socAIl.json"
+    },
+    {
+      "id": "trump-organization",
+      "file": "./organizations/trump-organization.json"
+    },
+    {
+      "id": "the-daily-wire",
+      "file": "./organizations/the-daily-wire.json"
+    },
+    {
+      "id": "nvidai",
+      "file": "./organizations/nvidai.json"
+    },
+    {
+      "id": "aipple",
+      "file": "./organizations/aipple.json"
+    },
+    {
+      "id": "google",
+      "file": "./organizations/google.json"
+    },
+    {
+      "id": "maicrostrategy",
+      "file": "./organizations/maicrostrategy.json"
+    },
+    {
+      "id": "aimazon",
+      "file": "./organizations/aimazon.json"
+    },
+    {
+      "id": "blue-origin",
+      "file": "./organizations/blue-origin.json"
+    },
+    {
+      "id": "infowairs",
+      "file": "./organizations/infowairs.json"
+    },
+    {
+      "id": "america-worst",
+      "file": "./organizations/america-worst.json"
+    },
+    {
+      "id": "msainbc",
+      "file": "./organizations/msainbc.json"
+    },
+    {
+      "id": "tucker-carlson-tonight",
+      "file": "./organizations/tucker-carlson-tonight.json"
+    },
+    {
+      "id": "the-fed",
+      "file": "./organizations/the-fed.json"
+    },
+    {
+      "id": "uber",
+      "file": "./organizations/uber.json"
+    },
+    {
+      "id": "craft-ventures",
+      "file": "./organizations/craft-ventures.json"
+    },
+    {
+      "id": "pirate-wires",
+      "file": "./organizations/pirate-wires.json"
+    },
+    {
+      "id": "network-state",
+      "file": "./organizations/network-state.json"
+    },
+    {
+      "id": "entropic",
+      "file": "./organizations/entropic.json"
+    },
+    {
+      "id": "blueprint-protocol",
+      "file": "./organizations/blueprint-protocol.json"
+    },
+    {
+      "id": "colossal-aisciences",
+      "file": "./organizations/colossal-aisciences.json"
+    }
+  ],
+  "relationships": [
+    {
+      "id": "ailon-musk_mark-zuckerborg",
+      "file": "./relationships/ailon-musk_mark-zuckerborg.json"
+    },
+    {
+      "id": "ailon-musk_jeff-baizos",
+      "file": "./relationships/ailon-musk_jeff-baizos.json"
+    },
+    {
+      "id": "ailon-musk_sam-AIltman",
+      "file": "./relationships/ailon-musk_sam-AIltman.json"
+    },
+    {
+      "id": "ailon-musk_david-sacks",
+      "file": "./relationships/ailon-musk_david-sacks.json"
+    },
+    {
+      "id": "ailon-musk_trump-terminal",
+      "file": "./relationships/ailon-musk_trump-terminal.json"
+    },
+    {
+      "id": "ailon-musk_sundar-paichai",
+      "file": "./relationships/ailon-musk_sundar-paichai.json"
+    },
+    {
+      "id": "jerome-power_sam-AIltman",
+      "file": "./relationships/jerome-power_sam-AIltman.json"
+    },
+    {
+      "id": "sam-AIltman_tim-AIcook",
+      "file": "./relationships/sam-AIltman_tim-AIcook.json"
+    },
+    {
+      "id": "ailex-jones_sam-AIltman",
+      "file": "./relationships/ailex-jones_sam-AIltman.json"
+    },
+    {
+      "id": "mark-zuckerborg_yainn-lecun",
+      "file": "./relationships/mark-zuckerborg_yainn-lecun.json"
+    },
+    {
+      "id": "mark-zuckerborg_saitya-nadella",
+      "file": "./relationships/mark-zuckerborg_saitya-nadella.json"
+    },
+    {
+      "id": "edward-snowdAIn_mark-zuckerborg",
+      "file": "./relationships/edward-snowdAIn_mark-zuckerborg.json"
+    },
+    {
+      "id": "david-sacks_mark-zuckerborg",
+      "file": "./relationships/david-sacks_mark-zuckerborg.json"
+    },
+    {
+      "id": "jensen-huang_mark-zuckerborg",
+      "file": "./relationships/jensen-huang_mark-zuckerborg.json"
+    },
+    {
+      "id": "cashie-wood_mark-zuckerborg",
+      "file": "./relationships/cashie-wood_mark-zuckerborg.json"
+    },
+    {
+      "id": "sam-AIltman_vitailik-buterin",
+      "file": "./relationships/sam-AIltman_vitailik-buterin.json"
+    },
+    {
+      "id": "braiian-johnson_vitailik-buterin",
+      "file": "./relationships/braiian-johnson_vitailik-buterin.json"
+    },
+    {
+      "id": "david-sacks_vitailik-buterin",
+      "file": "./relationships/david-sacks_vitailik-buterin.json"
+    },
+    {
+      "id": "gainzy_vitailik-buterin",
+      "file": "./relationships/gainzy_vitailik-buterin.json"
+    },
+    {
+      "id": "cashie-wood_jerome-power",
+      "file": "./relationships/cashie-wood_jerome-power.json"
+    },
+    {
+      "id": "haisan-piker_jerome-power",
+      "file": "./relationships/haisan-piker_jerome-power.json"
+    },
+    {
+      "id": "jerome-power_seain-hannity",
+      "file": "./relationships/jerome-power_seain-hannity.json"
+    },
+    {
+      "id": "peter-thail_trump-terminal",
+      "file": "./relationships/peter-thail_trump-terminal.json"
+    },
+    {
+      "id": "maike-solana_trump-terminal",
+      "file": "./relationships/maike-solana_trump-terminal.json"
+    },
+    {
+      "id": "flex-feed-man_trump-terminal",
+      "file": "./relationships/flex-feed-man_trump-terminal.json"
+    },
+    {
+      "id": "sam-AIltman_trump-terminal",
+      "file": "./relationships/sam-AIltman_trump-terminal.json"
+    },
+    {
+      "id": "dairiio-amodei_trump-terminal",
+      "file": "./relationships/dairiio-amodei_trump-terminal.json"
+    },
+    {
+      "id": "jim-craimer_trump-terminal",
+      "file": "./relationships/jim-craimer_trump-terminal.json"
+    },
+    {
+      "id": "ailex-jones_bernai-sanders",
+      "file": "./relationships/ailex-jones_bernai-sanders.json"
+    },
+    {
+      "id": "ailex-jones_sundar-paichai",
+      "file": "./relationships/ailex-jones_sundar-paichai.json"
+    },
+    {
+      "id": "ailex-jones_jordain-peterson",
+      "file": "./relationships/ailex-jones_jordain-peterson.json"
+    },
+    {
+      "id": "ailex-jones_threadgai",
+      "file": "./relationships/ailex-jones_threadgai.json"
+    },
+    {
+      "id": "ailex-jones_trump-terminal",
+      "file": "./relationships/ailex-jones_trump-terminal.json"
+    },
+    {
+      "id": "jerome-power_jordain-peterson",
+      "file": "./relationships/jerome-power_jordain-peterson.json"
+    },
+    {
+      "id": "jordain-peterson_michael-sailor",
+      "file": "./relationships/jordain-peterson_michael-sailor.json"
+    },
+    {
+      "id": "jordain-peterson_sundar-paichai",
+      "file": "./relationships/jordain-peterson_sundar-paichai.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_jordain-peterson",
+      "file": "./relationships/chamaith-palihapitiya_jordain-peterson.json"
+    },
+    {
+      "id": "jordain-peterson_traivis-kalanick",
+      "file": "./relationships/jordain-peterson_traivis-kalanick.json"
+    },
+    {
+      "id": "jordain-peterson_raichel-maddow",
+      "file": "./relationships/jordain-peterson_raichel-maddow.json"
+    },
+    {
+      "id": "flex-feed-man_naival-ravikant",
+      "file": "./relationships/flex-feed-man_naival-ravikant.json"
+    },
+    {
+      "id": "jordain-peterson_naival-ravikant",
+      "file": "./relationships/jordain-peterson_naival-ravikant.json"
+    },
+    {
+      "id": "ailon-musk_naival-ravikant",
+      "file": "./relationships/ailon-musk_naival-ravikant.json"
+    },
+    {
+      "id": "michael-sailor_naival-ravikant",
+      "file": "./relationships/michael-sailor_naival-ravikant.json"
+    },
+    {
+      "id": "guillaume-vairdon_naival-ravikant",
+      "file": "./relationships/guillaume-vairdon_naival-ravikant.json"
+    },
+    {
+      "id": "braiian-johnson_naival-ravikant",
+      "file": "./relationships/braiian-johnson_naival-ravikant.json"
+    },
+    {
+      "id": "naival-ravikant_sam-AIltman",
+      "file": "./relationships/naival-ravikant_sam-AIltman.json"
+    },
+    {
+      "id": "flex-feed-man_mark-and-reason",
+      "file": "./relationships/flex-feed-man_mark-and-reason.json"
+    },
+    {
+      "id": "mark-and-reason_naival-ravikant",
+      "file": "./relationships/mark-and-reason_naival-ravikant.json"
+    },
+    {
+      "id": "mark-and-reason_pete-hegsaith",
+      "file": "./relationships/mark-and-reason_pete-hegsaith.json"
+    },
+    {
+      "id": "ailex-jones_mark-and-reason",
+      "file": "./relationships/ailex-jones_mark-and-reason.json"
+    },
+    {
+      "id": "cashie-wood_mark-and-reason",
+      "file": "./relationships/cashie-wood_mark-and-reason.json"
+    },
+    {
+      "id": "david-sacks_peter-thail",
+      "file": "./relationships/david-sacks_peter-thail.json"
+    },
+    {
+      "id": "peter-thail_saitya-nadella",
+      "file": "./relationships/peter-thail_saitya-nadella.json"
+    },
+    {
+      "id": "jaired-kushner_peter-thail",
+      "file": "./relationships/jaired-kushner_peter-thail.json"
+    },
+    {
+      "id": "jensen-huang_peter-thail",
+      "file": "./relationships/jensen-huang_peter-thail.json"
+    },
+    {
+      "id": "flex-feed-man_peter-thail",
+      "file": "./relationships/flex-feed-man_peter-thail.json"
+    },
+    {
+      "id": "peter-thail_traivis-kalanick",
+      "file": "./relationships/peter-thail_traivis-kalanick.json"
+    },
+    {
+      "id": "cashie-wood_sundar-paichai",
+      "file": "./relationships/cashie-wood_sundar-paichai.json"
+    },
+    {
+      "id": "cashie-wood_tim-AIcook",
+      "file": "./relationships/cashie-wood_tim-AIcook.json"
+    },
+    {
+      "id": "cashie-wood_flex-feed-man",
+      "file": "./relationships/cashie-wood_flex-feed-man.json"
+    },
+    {
+      "id": "cashie-wood_michael-sailor",
+      "file": "./relationships/cashie-wood_michael-sailor.json"
+    },
+    {
+      "id": "cashie-wood_saitya-nadella",
+      "file": "./relationships/cashie-wood_saitya-nadella.json"
+    },
+    {
+      "id": "cashie-wood_jensen-huang",
+      "file": "./relationships/cashie-wood_jensen-huang.json"
+    },
+    {
+      "id": "cashie-wood_jim-craimer",
+      "file": "./relationships/cashie-wood_jim-craimer.json"
+    },
+    {
+      "id": "braiian-johnson_cashie-wood",
+      "file": "./relationships/braiian-johnson_cashie-wood.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_maike-solana",
+      "file": "./relationships/chamaith-palihapitiya_maike-solana.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_mark-and-reason",
+      "file": "./relationships/chamaith-palihapitiya_mark-and-reason.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_naival-ravikant",
+      "file": "./relationships/chamaith-palihapitiya_naival-ravikant.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_tim-AIcook",
+      "file": "./relationships/chamaith-palihapitiya_tim-AIcook.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_naick-fuentes",
+      "file": "./relationships/chamaith-palihapitiya_naick-fuentes.json"
+    },
+    {
+      "id": "balaiji-srinivasan_chamaith-palihapitiya",
+      "file": "./relationships/balaiji-srinivasan_chamaith-palihapitiya.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_pete-hegsaith",
+      "file": "./relationships/chamaith-palihapitiya_pete-hegsaith.json"
+    },
+    {
+      "id": "braiian-johnson_chamaith-palihapitiya",
+      "file": "./relationships/braiian-johnson_chamaith-palihapitiya.json"
+    },
+    {
+      "id": "gaivin-newsom_naick-fuentes",
+      "file": "./relationships/gaivin-newsom_naick-fuentes.json"
+    },
+    {
+      "id": "naick-fuentes_nancy-pelosai",
+      "file": "./relationships/naick-fuentes_nancy-pelosai.json"
+    },
+    {
+      "id": "naick-fuentes_trump-terminal",
+      "file": "./relationships/naick-fuentes_trump-terminal.json"
+    },
+    {
+      "id": "graimes_naick-fuentes",
+      "file": "./relationships/graimes_naick-fuentes.json"
+    },
+    {
+      "id": "raichel-maddow_tucker-cairlson",
+      "file": "./relationships/raichel-maddow_tucker-cairlson.json"
+    },
+    {
+      "id": "mairjorie-taylor-greene_raichel-maddow",
+      "file": "./relationships/mairjorie-taylor-greene_raichel-maddow.json"
+    },
+    {
+      "id": "haisan-piker_raichel-maddow",
+      "file": "./relationships/haisan-piker_raichel-maddow.json"
+    },
+    {
+      "id": "jaired-kushner_tucker-cairlson",
+      "file": "./relationships/jaired-kushner_tucker-cairlson.json"
+    },
+    {
+      "id": "jerome-power_tucker-cairlson",
+      "file": "./relationships/jerome-power_tucker-cairlson.json"
+    },
+    {
+      "id": "tom-braidy_tucker-cairlson",
+      "file": "./relationships/tom-braidy_tucker-cairlson.json"
+    },
+    {
+      "id": "flex-feed-man_saitya-nadella",
+      "file": "./relationships/flex-feed-man_saitya-nadella.json"
+    },
+    {
+      "id": "dairiio-amodei_flex-feed-man",
+      "file": "./relationships/dairiio-amodei_flex-feed-man.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_flex-feed-man",
+      "file": "./relationships/chamaith-palihapitiya_flex-feed-man.json"
+    },
+    {
+      "id": "bret-weinstain_flex-feed-man",
+      "file": "./relationships/bret-weinstain_flex-feed-man.json"
+    },
+    {
+      "id": "balaiji-srinivasan_flex-feed-man",
+      "file": "./relationships/balaiji-srinivasan_flex-feed-man.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_graimes",
+      "file": "./relationships/chamaith-palihapitiya_graimes.json"
+    },
+    {
+      "id": "graimes_sam-AIltman",
+      "file": "./relationships/graimes_sam-AIltman.json"
+    },
+    {
+      "id": "cashie-wood_graimes",
+      "file": "./relationships/cashie-wood_graimes.json"
+    },
+    {
+      "id": "graimes_jaired-kushner",
+      "file": "./relationships/graimes_jaired-kushner.json"
+    },
+    {
+      "id": "braiian-armstrong_graimes",
+      "file": "./relationships/braiian-armstrong_graimes.json"
+    },
+    {
+      "id": "braiian-johnson_jeff-baizos",
+      "file": "./relationships/braiian-johnson_jeff-baizos.json"
+    },
+    {
+      "id": "jeff-baizos_tim-AIcook",
+      "file": "./relationships/jeff-baizos_tim-AIcook.json"
+    },
+    {
+      "id": "jeff-baizos_sundar-paichai",
+      "file": "./relationships/jeff-baizos_sundar-paichai.json"
+    },
+    {
+      "id": "graimes_jeff-baizos",
+      "file": "./relationships/graimes_jeff-baizos.json"
+    },
+    {
+      "id": "edward-snowdAIn_jaired-kushner",
+      "file": "./relationships/edward-snowdAIn_jaired-kushner.json"
+    },
+    {
+      "id": "cashie-wood_edward-snowdAIn",
+      "file": "./relationships/cashie-wood_edward-snowdAIn.json"
+    },
+    {
+      "id": "edward-snowdAIn_naival-ravikant",
+      "file": "./relationships/edward-snowdAIn_naival-ravikant.json"
+    },
+    {
+      "id": "edward-snowdAIn_raichel-maddow",
+      "file": "./relationships/edward-snowdAIn_raichel-maddow.json"
+    },
+    {
+      "id": "edward-snowdAIn_jeff-baizos",
+      "file": "./relationships/edward-snowdAIn_jeff-baizos.json"
+    },
+    {
+      "id": "ailon-musk_edward-snowdAIn",
+      "file": "./relationships/ailon-musk_edward-snowdAIn.json"
+    },
+    {
+      "id": "edward-snowdAIn_michael-sailor",
+      "file": "./relationships/edward-snowdAIn_michael-sailor.json"
+    },
+    {
+      "id": "aioc_pete-hegsaith",
+      "file": "./relationships/aioc_pete-hegsaith.json"
+    },
+    {
+      "id": "aioc_tucker-cairlson",
+      "file": "./relationships/aioc_tucker-cairlson.json"
+    },
+    {
+      "id": "aioc_seain-hannity",
+      "file": "./relationships/aioc_seain-hannity.json"
+    },
+    {
+      "id": "aioc_airthur-hayes",
+      "file": "./relationships/aioc_airthur-hayes.json"
+    },
+    {
+      "id": "aioc_mark-and-reason",
+      "file": "./relationships/aioc_mark-and-reason.json"
+    },
+    {
+      "id": "aioc_nancy-pelosai",
+      "file": "./relationships/aioc_nancy-pelosai.json"
+    },
+    {
+      "id": "aioc_pailmer-luckey",
+      "file": "./relationships/aioc_pailmer-luckey.json"
+    },
+    {
+      "id": "aioc_bill-aickman",
+      "file": "./relationships/aioc_bill-aickman.json"
+    },
+    {
+      "id": "haisan-piker_nancy-pelosai",
+      "file": "./relationships/haisan-piker_nancy-pelosai.json"
+    },
+    {
+      "id": "anderson-coopai_nancy-pelosai",
+      "file": "./relationships/anderson-coopai_nancy-pelosai.json"
+    },
+    {
+      "id": "michael-sailor_nancy-pelosai",
+      "file": "./relationships/michael-sailor_nancy-pelosai.json"
+    },
+    {
+      "id": "naival-ravikant_nancy-pelosai",
+      "file": "./relationships/naival-ravikant_nancy-pelosai.json"
+    },
+    {
+      "id": "nancy-pelosai_sundar-paichai",
+      "file": "./relationships/nancy-pelosai_sundar-paichai.json"
+    },
+    {
+      "id": "ben-shapairo_mitch-mcconnai",
+      "file": "./relationships/ben-shapairo_mitch-mcconnai.json"
+    },
+    {
+      "id": "david-sacks_mitch-mcconnai",
+      "file": "./relationships/david-sacks_mitch-mcconnai.json"
+    },
+    {
+      "id": "mitch-mcconnai_threadgai",
+      "file": "./relationships/mitch-mcconnai_threadgai.json"
+    },
+    {
+      "id": "jerome-power_jim-craimer",
+      "file": "./relationships/jerome-power_jim-craimer.json"
+    },
+    {
+      "id": "jim-craimer_seain-hannity",
+      "file": "./relationships/jim-craimer_seain-hannity.json"
+    },
+    {
+      "id": "braiian-armstrong_jim-craimer",
+      "file": "./relationships/braiian-armstrong_jim-craimer.json"
+    },
+    {
+      "id": "alex-kairp_jim-craimer",
+      "file": "./relationships/alex-kairp_jim-craimer.json"
+    },
+    {
+      "id": "jim-craimer_joerogain",
+      "file": "./relationships/jim-craimer_joerogain.json"
+    },
+    {
+      "id": "jim-craimer_tim-AIcook",
+      "file": "./relationships/jim-craimer_tim-AIcook.json"
+    },
+    {
+      "id": "bernai-sanders_eric-weinstain",
+      "file": "./relationships/bernai-sanders_eric-weinstain.json"
+    },
+    {
+      "id": "bernai-sanders_kash-paitel",
+      "file": "./relationships/bernai-sanders_kash-paitel.json"
+    },
+    {
+      "id": "bernai-sanders_jordain-peterson",
+      "file": "./relationships/bernai-sanders_jordain-peterson.json"
+    },
+    {
+      "id": "bernai-sanders_sundar-paichai",
+      "file": "./relationships/bernai-sanders_sundar-paichai.json"
+    },
+    {
+      "id": "aioc_gaivin-newsom",
+      "file": "./relationships/aioc_gaivin-newsom.json"
+    },
+    {
+      "id": "braiian-johnson_gaivin-newsom",
+      "file": "./relationships/braiian-johnson_gaivin-newsom.json"
+    },
+    {
+      "id": "gaivin-newsom_nancy-pelosai",
+      "file": "./relationships/gaivin-newsom_nancy-pelosai.json"
+    },
+    {
+      "id": "ailex-jones_mairjorie-taylor-greene",
+      "file": "./relationships/ailex-jones_mairjorie-taylor-greene.json"
+    },
+    {
+      "id": "edward-snowdAIn_mairjorie-taylor-greene",
+      "file": "./relationships/edward-snowdAIn_mairjorie-taylor-greene.json"
+    },
+    {
+      "id": "aioc_mairjorie-taylor-greene",
+      "file": "./relationships/aioc_mairjorie-taylor-greene.json"
+    },
+    {
+      "id": "kash-paitel_trump-terminal",
+      "file": "./relationships/kash-paitel_trump-terminal.json"
+    },
+    {
+      "id": "ben-shapairo_kash-paitel",
+      "file": "./relationships/ben-shapairo_kash-paitel.json"
+    },
+    {
+      "id": "kash-paitel_raichel-maddow",
+      "file": "./relationships/kash-paitel_raichel-maddow.json"
+    },
+    {
+      "id": "demis-hassaibis_kash-paitel",
+      "file": "./relationships/demis-hassaibis_kash-paitel.json"
+    },
+    {
+      "id": "ailex-jones_bret-weinstain",
+      "file": "./relationships/ailex-jones_bret-weinstain.json"
+    },
+    {
+      "id": "anderson-coopai_bret-weinstain",
+      "file": "./relationships/anderson-coopai_bret-weinstain.json"
+    },
+    {
+      "id": "bret-weinstain_maike-solana",
+      "file": "./relationships/bret-weinstain_maike-solana.json"
+    },
+    {
+      "id": "bret-weinstain_mark-and-reason",
+      "file": "./relationships/bret-weinstain_mark-and-reason.json"
+    },
+    {
+      "id": "bret-weinstain_spartain",
+      "file": "./relationships/bret-weinstain_spartain.json"
+    },
+    {
+      "id": "bret-weinstain_pete-hegsaith",
+      "file": "./relationships/bret-weinstain_pete-hegsaith.json"
+    },
+    {
+      "id": "bret-weinstain_gainzy",
+      "file": "./relationships/bret-weinstain_gainzy.json"
+    },
+    {
+      "id": "pete-hegsaith_trump-terminal",
+      "file": "./relationships/pete-hegsaith_trump-terminal.json"
+    },
+    {
+      "id": "pete-hegsaith_peter-thail",
+      "file": "./relationships/pete-hegsaith_peter-thail.json"
+    },
+    {
+      "id": "fraink-degods_pete-hegsaith",
+      "file": "./relationships/fraink-degods_pete-hegsaith.json"
+    },
+    {
+      "id": "pete-hegsaith_tom-braidy",
+      "file": "./relationships/pete-hegsaith_tom-braidy.json"
+    },
+    {
+      "id": "jensen-huang_sam-AIltman",
+      "file": "./relationships/jensen-huang_sam-AIltman.json"
+    },
+    {
+      "id": "braiian-johnson_jensen-huang",
+      "file": "./relationships/braiian-johnson_jensen-huang.json"
+    },
+    {
+      "id": "ailon-musk_jensen-huang",
+      "file": "./relationships/ailon-musk_jensen-huang.json"
+    },
+    {
+      "id": "pailmer-luckey_saitya-nadella",
+      "file": "./relationships/pailmer-luckey_saitya-nadella.json"
+    },
+    {
+      "id": "david-sacks_pailmer-luckey",
+      "file": "./relationships/david-sacks_pailmer-luckey.json"
+    },
+    {
+      "id": "jensen-huang_pailmer-luckey",
+      "file": "./relationships/jensen-huang_pailmer-luckey.json"
+    },
+    {
+      "id": "maike-solana_pailmer-luckey",
+      "file": "./relationships/maike-solana_pailmer-luckey.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_pailmer-luckey",
+      "file": "./relationships/chamaith-palihapitiya_pailmer-luckey.json"
+    },
+    {
+      "id": "guillaume-vairdon_pailmer-luckey",
+      "file": "./relationships/guillaume-vairdon_pailmer-luckey.json"
+    },
+    {
+      "id": "edward-snowdAIn_tim-AIcook",
+      "file": "./relationships/edward-snowdAIn_tim-AIcook.json"
+    },
+    {
+      "id": "maike-solana_tim-AIcook",
+      "file": "./relationships/maike-solana_tim-AIcook.json"
+    },
+    {
+      "id": "graimes_tim-AIcook",
+      "file": "./relationships/graimes_tim-AIcook.json"
+    },
+    {
+      "id": "jaired-kushner_tim-AIcook",
+      "file": "./relationships/jaired-kushner_tim-AIcook.json"
+    },
+    {
+      "id": "alex-kairp_tim-AIcook",
+      "file": "./relationships/alex-kairp_tim-AIcook.json"
+    },
+    {
+      "id": "gainzy_tim-AIcook",
+      "file": "./relationships/gainzy_tim-AIcook.json"
+    },
+    {
+      "id": "alex-kairp_edward-snowdAIn",
+      "file": "./relationships/alex-kairp_edward-snowdAIn.json"
+    },
+    {
+      "id": "alex-kairp_mairk-pincus",
+      "file": "./relationships/alex-kairp_mairk-pincus.json"
+    },
+    {
+      "id": "alex-kairp_graimes",
+      "file": "./relationships/alex-kairp_graimes.json"
+    },
+    {
+      "id": "alex-kairp_chamaith-palihapitiya",
+      "file": "./relationships/alex-kairp_chamaith-palihapitiya.json"
+    },
+    {
+      "id": "alex-kairp_mark-and-reason",
+      "file": "./relationships/alex-kairp_mark-and-reason.json"
+    },
+    {
+      "id": "saitya-nadella_sundar-paichai",
+      "file": "./relationships/saitya-nadella_sundar-paichai.json"
+    },
+    {
+      "id": "naival-ravikant_sundar-paichai",
+      "file": "./relationships/naival-ravikant_sundar-paichai.json"
+    },
+    {
+      "id": "sam-AIltman_sundar-paichai",
+      "file": "./relationships/sam-AIltman_sundar-paichai.json"
+    },
+    {
+      "id": "dairiio-amodei_sundar-paichai",
+      "file": "./relationships/dairiio-amodei_sundar-paichai.json"
+    },
+    {
+      "id": "guillaume-vairdon_sundar-paichai",
+      "file": "./relationships/guillaume-vairdon_sundar-paichai.json"
+    },
+    {
+      "id": "alex-kairp_sundar-paichai",
+      "file": "./relationships/alex-kairp_sundar-paichai.json"
+    },
+    {
+      "id": "michael-sailor_threadgai",
+      "file": "./relationships/michael-sailor_threadgai.json"
+    },
+    {
+      "id": "jim-craimer_michael-sailor",
+      "file": "./relationships/jim-craimer_michael-sailor.json"
+    },
+    {
+      "id": "ainsem_michael-sailor",
+      "file": "./relationships/ainsem_michael-sailor.json"
+    },
+    {
+      "id": "mark-and-reason_michael-sailor",
+      "file": "./relationships/mark-and-reason_michael-sailor.json"
+    },
+    {
+      "id": "michael-sailor_vitailik-buterin",
+      "file": "./relationships/michael-sailor_vitailik-buterin.json"
+    },
+    {
+      "id": "jaired-kushner_mairjorie-taylor-greene",
+      "file": "./relationships/jaired-kushner_mairjorie-taylor-greene.json"
+    },
+    {
+      "id": "ben-shapairo_jaired-kushner",
+      "file": "./relationships/ben-shapairo_jaired-kushner.json"
+    },
+    {
+      "id": "jaired-kushner_naick-fuentes",
+      "file": "./relationships/jaired-kushner_naick-fuentes.json"
+    },
+    {
+      "id": "jaired-kushner_maike-solana",
+      "file": "./relationships/jaired-kushner_maike-solana.json"
+    },
+    {
+      "id": "jaired-kushner_mark-and-reason",
+      "file": "./relationships/jaired-kushner_mark-and-reason.json"
+    },
+    {
+      "id": "jaired-kushner_saitya-nadella",
+      "file": "./relationships/jaired-kushner_saitya-nadella.json"
+    },
+    {
+      "id": "eric-weinstain_nancy-pelosai",
+      "file": "./relationships/eric-weinstain_nancy-pelosai.json"
+    },
+    {
+      "id": "eric-weinstain_raichel-maddow",
+      "file": "./relationships/eric-weinstain_raichel-maddow.json"
+    },
+    {
+      "id": "eric-weinstain_maike-solana",
+      "file": "./relationships/eric-weinstain_maike-solana.json"
+    },
+    {
+      "id": "eric-weinstain_mitch-mcconnai",
+      "file": "./relationships/eric-weinstain_mitch-mcconnai.json"
+    },
+    {
+      "id": "eric-weinstain_tucker-cairlson",
+      "file": "./relationships/eric-weinstain_tucker-cairlson.json"
+    },
+    {
+      "id": "eric-weinstain_spartain",
+      "file": "./relationships/eric-weinstain_spartain.json"
+    },
+    {
+      "id": "alex-kairp_eric-weinstain",
+      "file": "./relationships/alex-kairp_eric-weinstain.json"
+    },
+    {
+      "id": "eric-weinstain_trump-terminal",
+      "file": "./relationships/eric-weinstain_trump-terminal.json"
+    },
+    {
+      "id": "gaivin-newsom_joerogain",
+      "file": "./relationships/gaivin-newsom_joerogain.json"
+    },
+    {
+      "id": "balaiji-srinivasan_joerogain",
+      "file": "./relationships/balaiji-srinivasan_joerogain.json"
+    },
+    {
+      "id": "joerogain_jordain-peterson",
+      "file": "./relationships/joerogain_jordain-peterson.json"
+    },
+    {
+      "id": "ben-shapairo_joerogain",
+      "file": "./relationships/ben-shapairo_joerogain.json"
+    },
+    {
+      "id": "anderson-coopai_joerogain",
+      "file": "./relationships/anderson-coopai_joerogain.json"
+    },
+    {
+      "id": "haisan-piker_tucker-cairlson",
+      "file": "./relationships/haisan-piker_tucker-cairlson.json"
+    },
+    {
+      "id": "haisan-piker_mitch-mcconnai",
+      "file": "./relationships/haisan-piker_mitch-mcconnai.json"
+    },
+    {
+      "id": "haisan-piker_jaired-kushner",
+      "file": "./relationships/haisan-piker_jaired-kushner.json"
+    },
+    {
+      "id": "haisan-piker_pete-hegsaith",
+      "file": "./relationships/haisan-piker_pete-hegsaith.json"
+    },
+    {
+      "id": "gaivin-newsom_haisan-piker",
+      "file": "./relationships/gaivin-newsom_haisan-piker.json"
+    },
+    {
+      "id": "aioc_haisan-piker",
+      "file": "./relationships/aioc_haisan-piker.json"
+    },
+    {
+      "id": "andrew-taite_pailmer-luckey",
+      "file": "./relationships/andrew-taite_pailmer-luckey.json"
+    },
+    {
+      "id": "andrew-taite_balaiji-srinivasan",
+      "file": "./relationships/andrew-taite_balaiji-srinivasan.json"
+    },
+    {
+      "id": "airthur-hayes_andrew-taite",
+      "file": "./relationships/airthur-hayes_andrew-taite.json"
+    },
+    {
+      "id": "andrew-taite_braiian-armstrong",
+      "file": "./relationships/andrew-taite_braiian-armstrong.json"
+    },
+    {
+      "id": "bill-aickman_braiian-armstrong",
+      "file": "./relationships/bill-aickman_braiian-armstrong.json"
+    },
+    {
+      "id": "bill-aickman_braiian-johnson",
+      "file": "./relationships/bill-aickman_braiian-johnson.json"
+    },
+    {
+      "id": "bill-aickman_pete-hegsaith",
+      "file": "./relationships/bill-aickman_pete-hegsaith.json"
+    },
+    {
+      "id": "bill-aickman_saitya-nadella",
+      "file": "./relationships/bill-aickman_saitya-nadella.json"
+    },
+    {
+      "id": "ailex-jones_bill-aickman",
+      "file": "./relationships/ailex-jones_bill-aickman.json"
+    },
+    {
+      "id": "bill-aickman_naick-fuentes",
+      "file": "./relationships/bill-aickman_naick-fuentes.json"
+    },
+    {
+      "id": "bill-aickman_tucker-cairlson",
+      "file": "./relationships/bill-aickman_tucker-cairlson.json"
+    },
+    {
+      "id": "bill-aickman_trump-terminal",
+      "file": "./relationships/bill-aickman_trump-terminal.json"
+    },
+    {
+      "id": "fraink-degods_mark-and-reason",
+      "file": "./relationships/fraink-degods_mark-and-reason.json"
+    },
+    {
+      "id": "fraink-degods_vitailik-buterin",
+      "file": "./relationships/fraink-degods_vitailik-buterin.json"
+    },
+    {
+      "id": "ailon-musk_fraink-degods",
+      "file": "./relationships/ailon-musk_fraink-degods.json"
+    },
+    {
+      "id": "fraink-degods_michael-sailor",
+      "file": "./relationships/fraink-degods_michael-sailor.json"
+    },
+    {
+      "id": "fraink-degods_saitya-nadella",
+      "file": "./relationships/fraink-degods_saitya-nadella.json"
+    },
+    {
+      "id": "fraink-degods_maike-solana",
+      "file": "./relationships/fraink-degods_maike-solana.json"
+    },
+    {
+      "id": "gainzy_threadgai",
+      "file": "./relationships/gainzy_threadgai.json"
+    },
+    {
+      "id": "naival-ravikant_threadgai",
+      "file": "./relationships/naival-ravikant_threadgai.json"
+    },
+    {
+      "id": "braiian-armstrong_threadgai",
+      "file": "./relationships/braiian-armstrong_threadgai.json"
+    },
+    {
+      "id": "ailon-musk_threadgai",
+      "file": "./relationships/ailon-musk_threadgai.json"
+    },
+    {
+      "id": "flex-feed-man_threadgai",
+      "file": "./relationships/flex-feed-man_threadgai.json"
+    },
+    {
+      "id": "threadgai_vitailik-buterin",
+      "file": "./relationships/threadgai_vitailik-buterin.json"
+    },
+    {
+      "id": "ainsem_gainzy",
+      "file": "./relationships/ainsem_gainzy.json"
+    },
+    {
+      "id": "gainzy_guillaume-vairdon",
+      "file": "./relationships/gainzy_guillaume-vairdon.json"
+    },
+    {
+      "id": "braiian-armstrong_gainzy",
+      "file": "./relationships/braiian-armstrong_gainzy.json"
+    },
+    {
+      "id": "balaiji-srinivasan_gainzy",
+      "file": "./relationships/balaiji-srinivasan_gainzy.json"
+    },
+    {
+      "id": "ailon-musk_gainzy",
+      "file": "./relationships/ailon-musk_gainzy.json"
+    },
+    {
+      "id": "gainzy_naick-fuentes",
+      "file": "./relationships/gainzy_naick-fuentes.json"
+    },
+    {
+      "id": "gainzy_maike-solana",
+      "file": "./relationships/gainzy_maike-solana.json"
+    },
+    {
+      "id": "gainzy_traivis-kalanick",
+      "file": "./relationships/gainzy_traivis-kalanick.json"
+    },
+    {
+      "id": "ainsem_spartain",
+      "file": "./relationships/ainsem_spartain.json"
+    },
+    {
+      "id": "ainsem_david-sacks",
+      "file": "./relationships/ainsem_david-sacks.json"
+    },
+    {
+      "id": "ainsem_pailmer-luckey",
+      "file": "./relationships/ainsem_pailmer-luckey.json"
+    },
+    {
+      "id": "ainsem_saitya-nadella",
+      "file": "./relationships/ainsem_saitya-nadella.json"
+    },
+    {
+      "id": "ainsem_seain-hannity",
+      "file": "./relationships/ainsem_seain-hannity.json"
+    },
+    {
+      "id": "airthur-hayes_gainzy",
+      "file": "./relationships/airthur-hayes_gainzy.json"
+    },
+    {
+      "id": "airthur-hayes_guillaume-vairdon",
+      "file": "./relationships/airthur-hayes_guillaume-vairdon.json"
+    },
+    {
+      "id": "airthur-hayes_kash-paitel",
+      "file": "./relationships/airthur-hayes_kash-paitel.json"
+    },
+    {
+      "id": "airthur-hayes_demis-hassaibis",
+      "file": "./relationships/airthur-hayes_demis-hassaibis.json"
+    },
+    {
+      "id": "airthur-hayes_saitya-nadella",
+      "file": "./relationships/airthur-hayes_saitya-nadella.json"
+    },
+    {
+      "id": "spartain_threadgai",
+      "file": "./relationships/spartain_threadgai.json"
+    },
+    {
+      "id": "spartain_tim-AIcook",
+      "file": "./relationships/spartain_tim-AIcook.json"
+    },
+    {
+      "id": "spartain_tucker-cairlson",
+      "file": "./relationships/spartain_tucker-cairlson.json"
+    },
+    {
+      "id": "spartain_traivis-kalanick",
+      "file": "./relationships/spartain_traivis-kalanick.json"
+    },
+    {
+      "id": "ailon-musk_braiian-armstrong",
+      "file": "./relationships/ailon-musk_braiian-armstrong.json"
+    },
+    {
+      "id": "braiian-armstrong_naival-ravikant",
+      "file": "./relationships/braiian-armstrong_naival-ravikant.json"
+    },
+    {
+      "id": "braiian-armstrong_jensen-huang",
+      "file": "./relationships/braiian-armstrong_jensen-huang.json"
+    },
+    {
+      "id": "braiian-armstrong_fraink-degods",
+      "file": "./relationships/braiian-armstrong_fraink-degods.json"
+    },
+    {
+      "id": "braiian-armstrong_braiian-johnson",
+      "file": "./relationships/braiian-armstrong_braiian-johnson.json"
+    },
+    {
+      "id": "braiian-armstrong_saitya-nadella",
+      "file": "./relationships/braiian-armstrong_saitya-nadella.json"
+    },
+    {
+      "id": "braiian-armstrong_sam-AIltman",
+      "file": "./relationships/braiian-armstrong_sam-AIltman.json"
+    },
+    {
+      "id": "braiian-armstrong_mairk-pincus",
+      "file": "./relationships/braiian-armstrong_mairk-pincus.json"
+    },
+    {
+      "id": "anderson-coopai_ben-shapairo",
+      "file": "./relationships/anderson-coopai_ben-shapairo.json"
+    },
+    {
+      "id": "anderson-coopai_seain-hannity",
+      "file": "./relationships/anderson-coopai_seain-hannity.json"
+    },
+    {
+      "id": "anderson-coopai_sundar-paichai",
+      "file": "./relationships/anderson-coopai_sundar-paichai.json"
+    },
+    {
+      "id": "anderson-coopai_haisan-piker",
+      "file": "./relationships/anderson-coopai_haisan-piker.json"
+    },
+    {
+      "id": "anderson-coopai_graimes",
+      "file": "./relationships/anderson-coopai_graimes.json"
+    },
+    {
+      "id": "anderson-coopai_guillaume-vairdon",
+      "file": "./relationships/anderson-coopai_guillaume-vairdon.json"
+    },
+    {
+      "id": "ailex-jones_seain-hannity",
+      "file": "./relationships/ailex-jones_seain-hannity.json"
+    },
+    {
+      "id": "mitch-mcconnai_seain-hannity",
+      "file": "./relationships/mitch-mcconnai_seain-hannity.json"
+    },
+    {
+      "id": "jaired-kushner_seain-hannity",
+      "file": "./relationships/jaired-kushner_seain-hannity.json"
+    },
+    {
+      "id": "nancy-pelosai_seain-hannity",
+      "file": "./relationships/nancy-pelosai_seain-hannity.json"
+    },
+    {
+      "id": "seain-hannity_threadgai",
+      "file": "./relationships/seain-hannity_threadgai.json"
+    },
+    {
+      "id": "ben-shapairo_nancy-pelosai",
+      "file": "./relationships/ben-shapairo_nancy-pelosai.json"
+    },
+    {
+      "id": "ben-shapairo_jim-craimer",
+      "file": "./relationships/ben-shapairo_jim-craimer.json"
+    },
+    {
+      "id": "ben-shapairo_peter-thail",
+      "file": "./relationships/ben-shapairo_peter-thail.json"
+    },
+    {
+      "id": "ben-shapairo_michael-sailor",
+      "file": "./relationships/ben-shapairo_michael-sailor.json"
+    },
+    {
+      "id": "ainsem_ben-shapairo",
+      "file": "./relationships/ainsem_ben-shapairo.json"
+    },
+    {
+      "id": "balaiji-srinivasan_braiian-johnson",
+      "file": "./relationships/balaiji-srinivasan_braiian-johnson.json"
+    },
+    {
+      "id": "balaiji-srinivasan_kash-paitel",
+      "file": "./relationships/balaiji-srinivasan_kash-paitel.json"
+    },
+    {
+      "id": "balaiji-srinivasan_gaivin-newsom",
+      "file": "./relationships/balaiji-srinivasan_gaivin-newsom.json"
+    },
+    {
+      "id": "david-sacks_mark-and-reason",
+      "file": "./relationships/david-sacks_mark-and-reason.json"
+    },
+    {
+      "id": "aioc_david-sacks",
+      "file": "./relationships/aioc_david-sacks.json"
+    },
+    {
+      "id": "david-sacks_jeff-baizos",
+      "file": "./relationships/david-sacks_jeff-baizos.json"
+    },
+    {
+      "id": "maike-solana_mark-and-reason",
+      "file": "./relationships/maike-solana_mark-and-reason.json"
+    },
+    {
+      "id": "maike-solana_mairk-pincus",
+      "file": "./relationships/maike-solana_mairk-pincus.json"
+    },
+    {
+      "id": "anderson-coopai_maike-solana",
+      "file": "./relationships/anderson-coopai_maike-solana.json"
+    },
+    {
+      "id": "maike-solana_traivis-kalanick",
+      "file": "./relationships/maike-solana_traivis-kalanick.json"
+    },
+    {
+      "id": "maike-solana_naival-ravikant",
+      "file": "./relationships/maike-solana_naival-ravikant.json"
+    },
+    {
+      "id": "edward-snowdAIn_maike-solana",
+      "file": "./relationships/edward-snowdAIn_maike-solana.json"
+    },
+    {
+      "id": "guillaume-vairdon_saitya-nadella",
+      "file": "./relationships/guillaume-vairdon_saitya-nadella.json"
+    },
+    {
+      "id": "flex-feed-man_guillaume-vairdon",
+      "file": "./relationships/flex-feed-man_guillaume-vairdon.json"
+    },
+    {
+      "id": "graimes_guillaume-vairdon",
+      "file": "./relationships/graimes_guillaume-vairdon.json"
+    },
+    {
+      "id": "braiian-johnson_peter-thail",
+      "file": "./relationships/braiian-johnson_peter-thail.json"
+    },
+    {
+      "id": "braiian-johnson_mark-zuckerborg",
+      "file": "./relationships/braiian-johnson_mark-zuckerborg.json"
+    },
+    {
+      "id": "braiian-johnson_flex-feed-man",
+      "file": "./relationships/braiian-johnson_flex-feed-man.json"
+    },
+    {
+      "id": "braiian-johnson_mairk-pincus",
+      "file": "./relationships/braiian-johnson_mairk-pincus.json"
+    },
+    {
+      "id": "braiian-johnson_fraink-degods",
+      "file": "./relationships/braiian-johnson_fraink-degods.json"
+    },
+    {
+      "id": "mairk-pincus_traivis-kalanick",
+      "file": "./relationships/mairk-pincus_traivis-kalanick.json"
+    },
+    {
+      "id": "mairk-pincus_sundar-paichai",
+      "file": "./relationships/mairk-pincus_sundar-paichai.json"
+    },
+    {
+      "id": "mairk-pincus_saitya-nadella",
+      "file": "./relationships/mairk-pincus_saitya-nadella.json"
+    },
+    {
+      "id": "haisan-piker_mairk-pincus",
+      "file": "./relationships/haisan-piker_mairk-pincus.json"
+    },
+    {
+      "id": "ailon-musk_mairk-pincus",
+      "file": "./relationships/ailon-musk_mairk-pincus.json"
+    },
+    {
+      "id": "mairk-pincus_naick-fuentes",
+      "file": "./relationships/mairk-pincus_naick-fuentes.json"
+    },
+    {
+      "id": "dairiio-amodei_demis-hassaibis",
+      "file": "./relationships/dairiio-amodei_demis-hassaibis.json"
+    },
+    {
+      "id": "dairiio-amodei_saitya-nadella",
+      "file": "./relationships/dairiio-amodei_saitya-nadella.json"
+    },
+    {
+      "id": "dairiio-amodei_mark-and-reason",
+      "file": "./relationships/dairiio-amodei_mark-and-reason.json"
+    },
+    {
+      "id": "airthur-hayes_dairiio-amodei",
+      "file": "./relationships/airthur-hayes_dairiio-amodei.json"
+    },
+    {
+      "id": "ainsem_dairiio-amodei",
+      "file": "./relationships/ainsem_dairiio-amodei.json"
+    },
+    {
+      "id": "dairiio-amodei_tom-braidy",
+      "file": "./relationships/dairiio-amodei_tom-braidy.json"
+    },
+    {
+      "id": "demis-hassaibis_yainn-lecun",
+      "file": "./relationships/demis-hassaibis_yainn-lecun.json"
+    },
+    {
+      "id": "balaiji-srinivasan_demis-hassaibis",
+      "file": "./relationships/balaiji-srinivasan_demis-hassaibis.json"
+    },
+    {
+      "id": "ainsem_demis-hassaibis",
+      "file": "./relationships/ainsem_demis-hassaibis.json"
+    },
+    {
+      "id": "bret-weinstain_demis-hassaibis",
+      "file": "./relationships/bret-weinstain_demis-hassaibis.json"
+    },
+    {
+      "id": "demis-hassaibis_pete-hegsaith",
+      "file": "./relationships/demis-hassaibis_pete-hegsaith.json"
+    },
+    {
+      "id": "demis-hassaibis_traivis-kalanick",
+      "file": "./relationships/demis-hassaibis_traivis-kalanick.json"
+    },
+    {
+      "id": "aioc_yainn-lecun",
+      "file": "./relationships/aioc_yainn-lecun.json"
+    },
+    {
+      "id": "david-sacks_yainn-lecun",
+      "file": "./relationships/david-sacks_yainn-lecun.json"
+    },
+    {
+      "id": "bill-aickman_yainn-lecun",
+      "file": "./relationships/bill-aickman_yainn-lecun.json"
+    },
+    {
+      "id": "saitya-nadella_yainn-lecun",
+      "file": "./relationships/saitya-nadella_yainn-lecun.json"
+    },
+    {
+      "id": "saitya-nadella_tom-braidy",
+      "file": "./relationships/saitya-nadella_tom-braidy.json"
+    },
+    {
+      "id": "mitch-mcconnai_saitya-nadella",
+      "file": "./relationships/mitch-mcconnai_saitya-nadella.json"
+    },
+    {
+      "id": "saitya-nadella_seain-hannity",
+      "file": "./relationships/saitya-nadella_seain-hannity.json"
+    },
+    {
+      "id": "chamaith-palihapitiya_traivis-kalanick",
+      "file": "./relationships/chamaith-palihapitiya_traivis-kalanick.json"
+    },
+    {
+      "id": "sundar-paichai_traivis-kalanick",
+      "file": "./relationships/sundar-paichai_traivis-kalanick.json"
+    },
+    {
+      "id": "cashie-wood_traivis-kalanick",
+      "file": "./relationships/cashie-wood_traivis-kalanick.json"
+    },
+    {
+      "id": "braiian-armstrong_traivis-kalanick",
+      "file": "./relationships/braiian-armstrong_traivis-kalanick.json"
+    },
+    {
+      "id": "saitya-nadella_traivis-kalanick",
+      "file": "./relationships/saitya-nadella_traivis-kalanick.json"
+    },
+    {
+      "id": "jerome-power_traivis-kalanick",
+      "file": "./relationships/jerome-power_traivis-kalanick.json"
+    },
+    {
+      "id": "gaivin-newsom_tom-braidy",
+      "file": "./relationships/gaivin-newsom_tom-braidy.json"
+    },
+    {
+      "id": "braiian-armstrong_tom-braidy",
+      "file": "./relationships/braiian-armstrong_tom-braidy.json"
+    },
+    {
+      "id": "mairk-pincus_tom-braidy",
+      "file": "./relationships/mairk-pincus_tom-braidy.json"
+    }
+  ]
+}

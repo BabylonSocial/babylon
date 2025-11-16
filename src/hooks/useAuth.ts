@@ -249,6 +249,7 @@ export function useAuth(): UseAuthReturn {
     if (!authenticated || !privyUser) return;
     if (isLoadingProfile) return; // Wait for profile to load
     if (needsOnboarding || needsOnchain) return;
+    if (!user) return; // Don't link social accounts if user doesn't exist yet
     if (linkedSocialUsers.has(privyUser.id)) return;
 
     const token = await getAccessToken();
@@ -265,67 +266,91 @@ export function useAuth(): UseAuthReturn {
 
     if (userWithFarcaster.farcaster) {
       const farcaster = userWithFarcaster.farcaster;
-      await apiFetch(
-        `/api/users/${encodeURIComponent(privyUser.id)}/link-social`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            platform: 'farcaster',
-            username: farcaster.username || farcaster.displayName,
-          }),
-        }
-      );
-      logger.info(
-        'Linked Farcaster account during auth sync',
-        { username: farcaster.username },
-        'useAuth'
-      );
+      try {
+        await apiFetch(
+          `/api/users/${encodeURIComponent(privyUser.id)}/link-social`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              platform: 'farcaster',
+              username: farcaster.username || farcaster.displayName,
+            }),
+          }
+        );
+        logger.info(
+          'Linked Farcaster account during auth sync',
+          { username: farcaster.username },
+          'useAuth'
+        );
+      } catch (error) {
+        logger.warn(
+          'Failed to link Farcaster account during auth sync',
+          { username: farcaster.username, error },
+          'useAuth'
+        );
+      }
     }
 
     if (userWithTwitter.twitter) {
       const twitter = userWithTwitter.twitter;
-      await apiFetch(
-        `/api/users/${encodeURIComponent(privyUser.id)}/link-social`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            platform: 'twitter',
-            username: twitter.username,
-          }),
-        }
-      );
-      logger.info(
-        'Linked Twitter account during auth sync',
-        { username: twitter.username },
-        'useAuth'
-      );
+      try {
+        await apiFetch(
+          `/api/users/${encodeURIComponent(privyUser.id)}/link-social`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              platform: 'twitter',
+              username: twitter.username,
+            }),
+          }
+        );
+        logger.info(
+          'Linked Twitter account during auth sync',
+          { username: twitter.username },
+          'useAuth'
+        );
+      } catch (error) {
+        logger.warn(
+          'Failed to link Twitter account during auth sync',
+          { username: twitter.username, error },
+          'useAuth'
+        );
+      }
     }
 
     if (wallet?.address) {
-      await apiFetch(
-        `/api/users/${encodeURIComponent(privyUser.id)}/link-social`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            platform: 'wallet',
-            address: wallet.address.toLowerCase(),
-          }),
-        }
-      );
-      logger.info(
-        'Linked wallet during auth sync',
-        { address: wallet.address },
-        'useAuth'
-      );
+      try {
+        await apiFetch(
+          `/api/users/${encodeURIComponent(privyUser.id)}/link-social`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              platform: 'wallet',
+              address: wallet.address.toLowerCase(),
+            }),
+          }
+        );
+        logger.info(
+          'Linked wallet during auth sync',
+          { address: wallet.address },
+          'useAuth'
+        );
+      } catch (error) {
+        logger.warn(
+          'Failed to link wallet during auth sync',
+          { address: wallet.address, error },
+          'useAuth'
+        );
+      }
     }
   };
 

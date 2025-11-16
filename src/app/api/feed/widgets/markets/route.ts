@@ -12,6 +12,8 @@ import { NextResponse } from 'next/server'
 import { getCacheOrFetch, CACHE_KEYS, DEFAULT_TTLS } from '@/lib/cache-service'
 import { logger } from '@/lib/logger'
 
+// Disable static generation for this route - it requires database access
+export const dynamic = 'force-dynamic';
 // Cache config (60 seconds)
 export const revalidate = 60;
 
