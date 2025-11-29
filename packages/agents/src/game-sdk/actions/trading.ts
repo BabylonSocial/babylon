@@ -7,7 +7,7 @@ import {
 // Mock interface for Babylon Runtime access - in real implementation this would need proper injection
 export interface BabylonContext {
     agentId: string;
-    runtime: any; // Placeholder for actual Babylon runtime
+    runtime: unknown; // Placeholder for actual Babylon runtime
 }
 
 export const buyPredictionSharesFunction = new GameFunction({
