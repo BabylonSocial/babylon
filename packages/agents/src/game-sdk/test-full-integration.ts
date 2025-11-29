@@ -1,4 +1,6 @@
 import { BabylonGameAgent } from './index';
+import { BabylonA2AClient } from '../plugins/babylon/integration-a2a-sdk';
+import { A2AClient } from '@a2a-js/sdk/client';
 
 // Load environment variables
 const path = require('path');
@@ -40,13 +42,35 @@ async function main() {
 
     console.log(`API Key found: ${apiKey.substring(0, 8)}...`);
 
+    // Initialize real A2A Client
+    const baseUrl = process.env.BABYLON_A2A_ENDPOINT || 'http://localhost:3000';
+    console.log(`Connecting to A2A at: ${baseUrl}`);
+
+    let runtime: any = undefined;
+
+    try {
+        const agentCardUrl = `${baseUrl}/.well-known/agent-card.json`;
+        console.log(`Fetching agent card from: ${agentCardUrl}`);
+        const sdkClient = await A2AClient.fromCardUrl(agentCardUrl);
+        const a2aClient = new BabylonA2AClient(sdkClient, "test-agent-integration");
+
+        runtime = {
+            a2aClient,
+            agentId: "test-agent-integration"
+        };
+        console.log("Successfully connected to A2A Client");
+    } catch (error: any) {
+        console.warn("WARNING: Failed to connect to A2A Client:", error.message);
+        console.warn("Running in disconnected mode (some features will be unavailable)");
+    }
 
     const agent = new BabylonGameAgent(
-        apiKey || "mock-api-key",
+        apiKey,
         "Test Agent",
         "Verify full integration of Trading and Social functions",
         "A test agent for Babylon G.A.M.E. SDK integration",
         {
+            runtime,
             llmConfig: {
                 model: process.env.GAME_LLM_MODEL || "Llama-3.3-70B-Instruct",
                 apiKey: process.env.OPENAI_API_KEY, // Optional, only if using custom model
@@ -85,7 +109,7 @@ async function main() {
     const state = await gameAgent.getAgentState();
     console.log("Agent State:", state);
 
-    console.log("\n--- Running Remote Execution (with provided/mock key) ---");
+    console.log("\n--- Running Remote Execution ---");
     try {
         console.log("Initializing agent...");
         await agent.init();
