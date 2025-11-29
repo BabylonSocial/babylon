@@ -18,6 +18,7 @@ export const createPostFunction = new GameFunction({
                 ExecutableGameFunctionStatus.Done,
                 `Successfully created post`
             );
+            // biome-ignore lint/suspicious/noExplicitAny: Error handling wrapper
         } catch (e: any) {
             return new ExecutableGameFunctionResponse(
                 ExecutableGameFunctionStatus.Failed,
@@ -41,6 +42,7 @@ export const commentFunction = new GameFunction({
                 ExecutableGameFunctionStatus.Done,
                 `Successfully commented on ${args.postId}`
             );
+            // biome-ignore lint/suspicious/noExplicitAny: Error handling wrapper
         } catch (e: any) {
             return new ExecutableGameFunctionResponse(
                 ExecutableGameFunctionStatus.Failed,

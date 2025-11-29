@@ -52,6 +52,7 @@ export const sellPredictionSharesFunction = new GameFunction({
                 ExecutableGameFunctionStatus.Done,
                 `Successfully sold ${args.shares} shares from ${args.positionId}`
             );
+            // biome-ignore lint/suspicious/noExplicitAny: Error handling wrapper
         } catch (e: any) {
             return new ExecutableGameFunctionResponse(
                 ExecutableGameFunctionStatus.Failed,
@@ -77,6 +78,7 @@ export const openPerpPositionFunction = new GameFunction({
                 ExecutableGameFunctionStatus.Done,
                 `Successfully opened ${args.leverage}x ${args.side} position on ${args.ticker}`
             );
+            // biome-ignore lint/suspicious/noExplicitAny: Error handling wrapper
         } catch (e: any) {
             return new ExecutableGameFunctionResponse(
                 ExecutableGameFunctionStatus.Failed,
@@ -99,6 +101,7 @@ export const closePerpPositionFunction = new GameFunction({
                 ExecutableGameFunctionStatus.Done,
                 `Successfully closed position ${args.positionId}`
             );
+            // biome-ignore lint/suspicious/noExplicitAny: Error handling wrapper
         } catch (e: any) {
             return new ExecutableGameFunctionResponse(
                 ExecutableGameFunctionStatus.Failed,

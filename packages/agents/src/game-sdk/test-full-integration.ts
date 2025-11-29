@@ -56,21 +56,26 @@ async function main() {
     console.log("Agent initialized successfully.");
 
     // Access private agent property for testing (using any cast to bypass TS)
+    // biome-ignore lint/suspicious/noExplicitAny: Testing private property
     const gameAgent = (agent as any).agent;
 
     console.log("\n--- Verifying Workers ---");
     const workers = gameAgent.workers;
     console.log(`Total Workers: ${workers.length}`);
 
+    // biome-ignore lint/suspicious/noExplicitAny: Testing private property
     const tradingWorker = workers.find((w: any) => w.id === "trading_worker");
     console.log(`Trading Worker found: ${!!tradingWorker}`);
     if (tradingWorker) {
+        // biome-ignore lint/suspicious/noExplicitAny: Testing private property
         console.log(`Trading Functions: ${tradingWorker.functions.map((f: any) => f.name).join(", ")}`);
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Testing private property
     const socialWorker = workers.find((w: any) => w.id === "social_worker");
     console.log(`Social Worker found: ${!!socialWorker}`);
     if (socialWorker) {
+        // biome-ignore lint/suspicious/noExplicitAny: Testing private property
         console.log(`Social Functions: ${socialWorker.functions.map((f: any) => f.name).join(", ")}`);
     }
 
