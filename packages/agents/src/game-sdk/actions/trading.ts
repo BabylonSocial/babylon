@@ -10,7 +10,7 @@ import type { BabylonRuntime } from "../../plugins/babylon/types";
  */
 export function createBuyPredictionSharesFunction(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "buy_prediction_shares",
         description: "Buy shares in a prediction market",
@@ -30,7 +30,7 @@ export function createBuyPredictionSharesFunction(
                     );
                 }
 
-                const outcome = args.side.toUpperCase() === "YES" ? "YES" : "NO";
+                const outcome = (args.side || "").toUpperCase() === "YES" ? "YES" : "NO";
                 const result = (await runtime.a2aClient.sendRequest("a2a.buyShares", {
                     marketId: args.marketId,
                     outcome,
@@ -57,7 +57,7 @@ export function createBuyPredictionSharesFunction(
  */
 export function createSellPredictionSharesFunction(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "sell_prediction_shares",
         description: "Sell shares in a prediction market",
@@ -101,7 +101,7 @@ export function createSellPredictionSharesFunction(
  */
 export function createOpenPerpPositionFunction(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "open_perp_position",
         description: "Open a leveraged position on a perpetual market",
@@ -122,7 +122,7 @@ export function createOpenPerpPositionFunction(
                     );
                 }
 
-                const side = args.side.toUpperCase() === "LONG" ? "long" : "short";
+                const side = (args.side || "").toUpperCase() === "LONG" ? "long" : "short";
                 const result = (await runtime.a2aClient.sendRequest("a2a.openPosition", {
                     ticker: args.ticker,
                     side,
@@ -150,7 +150,7 @@ export function createOpenPerpPositionFunction(
  */
 export function createClosePerpPositionFunction(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "close_perp_position",
         description: "Close an open perpetual position",

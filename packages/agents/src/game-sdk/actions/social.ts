@@ -10,7 +10,7 @@ import type { BabylonRuntime } from "../../plugins/babylon/types";
  */
 export function createPostFunctionFactory(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "create_post",
         description: "Create a post on the Babylon social feed",
@@ -53,7 +53,7 @@ export function createPostFunctionFactory(
  */
 export function createCommentFunctionFactory(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "comment_on_post",
         description: "Comment on a post",
@@ -97,7 +97,7 @@ export function createCommentFunctionFactory(
  */
 export function createLikePostFunctionFactory(
     runtime?: BabylonRuntime
-): GameFunction {
+): GameFunction<any> {
     return new GameFunction({
         name: "like_post",
         description: "Like a post",

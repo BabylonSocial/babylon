@@ -47,9 +47,11 @@ async function main() {
         "Verify full integration of Trading and Social functions",
         "A test agent for Babylon G.A.M.E. SDK integration",
         {
-            model: process.env.GAME_LLM_MODEL || "Llama-3.3-70B-Instruct",
-            apiKey: process.env.OPENAI_API_KEY, // Optional, only if using custom model
-            baseUrl: process.env.OPENAI_API_KEY ? "https://api.openai.com/v1" : undefined,
+            llmConfig: {
+                model: process.env.GAME_LLM_MODEL || "Llama-3.3-70B-Instruct",
+                apiKey: process.env.OPENAI_API_KEY, // Optional, only if using custom model
+                baseUrl: process.env.OPENAI_API_KEY ? "https://api.openai.com/v1" : undefined,
+            },
         }
     );
 
