@@ -17,10 +17,15 @@
  *   bun run scripts/seed-test-data.ts all           # Create all test data
  */
 
-import { ethers } from 'ethers';
-import { nanoid } from 'nanoid';
+// Load environment variables from .env file
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(process.cwd(), '.env') });
+
 import { db, generateSnowflakeId } from '@babylon/db';
 import { logger } from '@babylon/engine';
+import { ethers } from 'ethers';
+import { nanoid } from 'nanoid';
 
 // ============================================================================
 // AUTONOMOUS TRADING AGENTS
@@ -782,8 +787,5 @@ if (import.meta.main) {
 }
 
 export {
-  seedAutonomousAgents,
-  seedA2ATestAgents,
-  seedModerationTestUsers,
-  seedBenchmarkAgents,
+    seedA2ATestAgents, seedAutonomousAgents, seedBenchmarkAgents, seedModerationTestUsers
 };
