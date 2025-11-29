@@ -10,6 +10,7 @@ import type { BabylonRuntime } from "../../plugins/babylon/types";
  */
 export function createBuyPredictionSharesFunction(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "buy_prediction_shares",
@@ -57,6 +58,7 @@ export function createBuyPredictionSharesFunction(
  */
 export function createSellPredictionSharesFunction(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "sell_prediction_shares",
@@ -101,6 +103,7 @@ export function createSellPredictionSharesFunction(
  */
 export function createOpenPerpPositionFunction(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "open_perp_position",
@@ -150,6 +153,7 @@ export function createOpenPerpPositionFunction(
  */
 export function createClosePerpPositionFunction(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "close_perp_position",

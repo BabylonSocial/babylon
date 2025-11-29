@@ -10,6 +10,7 @@ import type { BabylonRuntime } from "../../plugins/babylon/types";
  */
 export function createPostFunctionFactory(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "create_post",
@@ -53,6 +54,7 @@ export function createPostFunctionFactory(
  */
 export function createCommentFunctionFactory(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "comment_on_post",
@@ -97,6 +99,7 @@ export function createCommentFunctionFactory(
  */
 export function createLikePostFunctionFactory(
     runtime?: BabylonRuntime
+    // biome-ignore lint/suspicious/noExplicitAny: GameFunction requires type arg, using any for flexibility
 ): GameFunction<any> {
     return new GameFunction({
         name: "like_post",

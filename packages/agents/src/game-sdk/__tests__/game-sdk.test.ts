@@ -9,7 +9,7 @@
  * - A2A client integration
  */
 
-import { describe, expect, it, beforeEach, mock } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
 import type { BabylonRuntime } from '../../plugins/babylon/types';
 import type { BabylonA2AClient } from '../../plugins/babylon/integration-a2a-sdk';
 import {
@@ -421,6 +421,7 @@ describe('Game SDK Integration', () => {
                 );
 
                 // Access private agent property for testing
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
                 const state = await gameAgent.getAgentState();
 
@@ -442,6 +443,7 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
                 const state = await gameAgent.getAgentState();
 
@@ -470,6 +472,7 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
                 const state = await gameAgent.getAgentState();
 
@@ -489,7 +492,9 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const tradingWorker = gameAgent.workers.find((w: any) => w.id === 'trading_worker');
                 const env = await tradingWorker.getEnvironment();
 
@@ -509,7 +514,9 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const tradingWorker = gameAgent.workers.find((w: any) => w.id === 'trading_worker');
                 const env = await tradingWorker.getEnvironment();
 
@@ -537,7 +544,9 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const tradingWorker = gameAgent.workers.find((w: any) => w.id === 'trading_worker');
                 const env = await tradingWorker.getEnvironment();
 
@@ -557,7 +566,9 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const socialWorker = gameAgent.workers.find((w: any) => w.id === 'social_worker');
                 const env = await socialWorker.getEnvironment();
 
@@ -586,7 +597,9 @@ describe('Game SDK Integration', () => {
                     { runtime }
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const socialWorker = gameAgent.workers.find((w: any) => w.id === 'social_worker');
                 const env = await socialWorker.getEnvironment();
 
@@ -606,6 +619,7 @@ describe('Game SDK Integration', () => {
                 );
 
                 // Mock the GameAgent.init method
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
                 const originalInit = gameAgent.init;
                 gameAgent.init = mock(async () => {});
@@ -626,6 +640,7 @@ describe('Game SDK Integration', () => {
                     'Test description'
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
                 gameAgent.step = mock(async () => {});
 
@@ -642,6 +657,7 @@ describe('Game SDK Integration', () => {
                     'Test description'
                 );
 
+                // biome-ignore lint/suspicious/noExplicitAny: Testing private property
                 const gameAgent = (agent as any).agent;
                 gameAgent.run = mock(async () => {});
 
