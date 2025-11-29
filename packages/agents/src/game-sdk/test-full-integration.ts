@@ -46,6 +46,7 @@ async function main() {
     const baseUrl = process.env.BABYLON_A2A_ENDPOINT || 'http://localhost:3000';
     console.log(`Connecting to A2A at: ${baseUrl}`);
 
+    // biome-ignore lint/suspicious/noExplicitAny: Runtime is partially mocked here
     let runtime: any = undefined;
 
     try {
@@ -59,8 +60,9 @@ async function main() {
             agentId: "test-agent-integration"
         };
         console.log("Successfully connected to A2A Client");
-    } catch (error: any) {
-        console.warn("WARNING: Failed to connect to A2A Client:", error.message);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.warn("WARNING: Failed to connect to A2A Client:", errorMessage);
         console.warn("Running in disconnected mode (some features will be unavailable)");
     }
 
