@@ -11,6 +11,8 @@
 
 // Agent0 integration (feedback/reputation)
 export * from './agent0';
+// G.A.M.E. SDK Integration
+export * from './game-sdk';
 // Autonomous services
 export * from './autonomous';
 // Communication
