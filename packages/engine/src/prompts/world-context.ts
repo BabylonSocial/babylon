@@ -353,7 +353,7 @@ export async function generateWorldContext(
       : Promise.resolve({ general: '' }),
   ]);
 
-  // Determine reality grounding level (all are async now)
+  // Determine reality grounding level
   let realityGrounding = '';
   if (includeRealityGrounding) {
     switch (realityGroundingLevel) {

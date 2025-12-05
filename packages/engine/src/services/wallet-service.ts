@@ -21,7 +21,7 @@ import {
   users,
   withTransaction,
 } from '@babylon/db';
-import { generateSnowflakeId } from '@babylon/shared';
+import { generateSnowflakeId, NotFoundError } from '@babylon/shared';
 import { EarnedPointsService } from './earned-points-service';
 
 /**
@@ -134,7 +134,7 @@ export class WalletService {
 
     const [user] = result;
     if (!user) {
-      throw new Error(`User not found: ${userId}`);
+      throw new NotFoundError('User', userId);
     }
 
     const currentBalance = Number(user.virtualBalance);

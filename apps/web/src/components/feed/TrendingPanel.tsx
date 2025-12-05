@@ -90,9 +90,9 @@ export function TrendingPanel() {
   const handleTrendingClick = (item: TrendingItem) => {
     // If multiple tags, navigate to grouped view; otherwise single tag view
     if (item.tagSlugs.length > 1) {
-      // Navigate to grouped trending view with multiple tag IDs
-      const tagIds = item.tagIds.join(',');
-      router.push(`/trending/group?tags=${tagIds}`);
+      // Navigate to grouped trending view with multiple tag slugs
+      const tagSlugsParam = item.tagSlugs.join(',');
+      router.push(`/trending/group?tags=${encodeURIComponent(tagSlugsParam)}`);
     } else {
       // Single tag - use existing route
       router.push(`/trending/${item.tagSlugs[0]}`);

@@ -1,73 +1,137 @@
 /**
  * @babylon/shared
  *
- * Shared types, constants, and utilities for Babylon
+ * Shared types, constants, and utilities for Babylon.
+ * This package exports only client-safe code that can run in the browser.
+ *
+ * For server-only utilities, import from @babylon/api:
+ * - Storage: import { getStorageClient } from '@babylon/api'
+ * - Monitoring: import { performanceMonitor } from '@babylon/api'
+ * - Token counting: import { countTokens, countTokensSync } from '@babylon/api'
  */
 
-// Constants
+// =============================================================================
+// Constants (all client-safe)
+// =============================================================================
+
 export * from './constants';
 
-// Types (all types are re-exported through ./types)
+// =============================================================================
+// Types (all types are client-safe - they're just TypeScript interfaces)
+// =============================================================================
+
 export * from './types';
 
-// Game types (Actor, FeedPost, Question, etc.)
+// =============================================================================
+// Game Types (Actor, FeedPost, Question, etc.)
+// =============================================================================
+
 export * from './game-types';
 
-// Errors (all error classes are re-exported through ./errors)
-export * from './errors';
-
-// Explicitly export commonly used types and utilities for better IDE support
-export type { AuthenticatedUser } from './types/auth';
-export { extractErrorMessage } from './types/errors';
-
-// Explicitly export payment types to ensure they're available
-export type { PaymentVerificationParams, PaymentVerificationResult } from './types/payments';
-// Explicitly re-export commonly used types to ensure they're available when imported from other packages
-export type { JsonValue, StringRecord } from './types/common';
-export type { AgentCapabilities, GameNetworkInfo } from './types/agents';
-export { AgentCapabilitiesSchema, GameNetworkInfoSchema } from './types/agents';
-export type { UserProfileStats, PredictionPosition, UserBalanceData, PerpPositionFromAPI } from './types/profile';
-export type { ProfileInfo, UserProfile, ActorProfile } from './types/profiles';
-export type { PostInteraction, CommentInteraction, CommentData, CommentWithReplies, FavoriteProfile, InteractionError, PendingInteraction, LikeButtonProps, CommentButtonProps, RepostButtonProps, FavoriteButtonProps, InteractionBarProps, CommentCardProps, CommentInputProps } from './types/interactions';
-
+// =============================================================================
 // Perps Types
+// =============================================================================
+
 export * from './perps-types';
 
-// Perp Mode Configuration
-export * from './perp-modes';
+// =============================================================================
+// Client-Safe Utilities (excludes token-counter which uses tiktoken)
+// =============================================================================
 
-// Utilities
-export * from './utils';
+// UI utilities (cn function for Tailwind)
+export * from './utils/ui';
 
-// Auth utilities
+// Logger (works in browser)
+export * from './utils/logger';
+
+// Formatting utilities (pure functions)
+export * from './utils/format';
+
+// Retry utilities (pure functions)
+export * from './utils/retry';
+
+// JSON parser (pure functions)
+export * from './utils/json-parser';
+
+// Decimal converter (pure functions)
+export * from './utils/decimal-converter';
+
+// Singleton utility (pure function)
+export * from './utils/singleton';
+
+// Snowflake ID generator (pure functions)
+export * from './utils/snowflake';
+
+// Profile utilities (pure functions)
+export * from './utils/profile';
+
+// Assets utilities (URL helpers)
+export * from './utils/assets';
+
+// Name replacement utilities (pure functions)
+export * from './utils/name-replacement';
+
+// Content analysis (pure functions, no external deps)
+export * from './utils/content-analysis';
+
+// Content safety (pure functions, no external deps)
+export * from './utils/content-safety';
+
+// OASF skill mapper (pure functions)
+export * from './utils/oasf-skill-mapper';
+
+// =============================================================================
+// Error Classes (client-safe)
+// =============================================================================
+
+export * from './errors';
+
+// =============================================================================
+// Auth utilities (client-safe parts)
+// =============================================================================
+
 export * from './auth';
 
-// Contracts (ABIs and addresses)
+// =============================================================================
+// Contracts (ABIs and addresses - pure data)
+// =============================================================================
+
 export * from './contracts';
 
-// Monitoring utilities
-export * from './monitoring';
-
+// =============================================================================
 // Onboarding utilities
+// =============================================================================
+
 export * from './onboarding';
 
-// Validation utilities and schemas
+// =============================================================================
+// Validation utilities and schemas (Zod schemas work in browser)
+// =============================================================================
+
 export * from './validation';
 
-// Storage utilities
-export * from './storage';
-
-// Services
-export * from './services';
-
-// Rate limiting utilities
-export * from './rate-limiting';
-
+// =============================================================================
 // Referral utilities
+// =============================================================================
+
 export * from './referral';
 
-// PostHog server utilities
-export * from './posthog';
-
+// =============================================================================
 // Share utilities
+// =============================================================================
+
 export * from './share';
+
+// =============================================================================
+// Public configuration (canonical contract addresses, endpoints, game settings)
+// =============================================================================
+
+export * from './config';
+
+// =============================================================================
+// NOT EXPORTED (Server-only modules - import from @babylon/api):
+// =============================================================================
+// - Token counting: import { countTokens, countTokensSync } from '@babylon/api'
+// - Storage: import { getStorageClient } from '@babylon/api'
+// - Monitoring: import { performanceMonitor } from '@babylon/api'
+// - Rate limiting (user-level): import { checkRateLimit, RATE_LIMIT_CONFIGS } from '@babylon/api'

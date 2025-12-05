@@ -1,6 +1,7 @@
 import { definePrompt } from '../define-prompt';
 import {
   CONTENT_REQUIREMENTS,
+  FINAL_REMINDERS,
   IMPORTANT_RULES,
   WORLD_CONTEXT_HEADER,
 } from '../shared-sections';
@@ -53,6 +54,8 @@ Respond with ONLY this XML:
 <response>
   <post>Your ticker post here</post>
 </response>
+
+${FINAL_REMINDERS}
 
 No other text.
 `.trim(),

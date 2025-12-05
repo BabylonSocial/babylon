@@ -3,7 +3,6 @@
 import {
   Bell,
   Check,
-  Coins,
   Copy,
   Gift,
   Home,
@@ -31,8 +30,8 @@ import { useAuthStore } from '@/stores/authStore';
  *
  * Provides a fixed header with logo, profile menu trigger, and slide-out
  * side menu. Shows user profile, navigation links, points balance, referral
- * code, and logout. Automatically hides on production home page unless dev
- * mode is enabled via URL parameter.
+ * code, and logout. Automatically hides when WAITLIST_MODE is enabled on
+ * home page unless dev mode is enabled via URL parameter (?dev=true).
  *
  * @returns Mobile header element or null if hidden
  */
@@ -49,15 +48,11 @@ function MobileHeaderContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Check if dev mode is enabled via URL parameter
-  const isDevMode = searchParams.get('dev') === 'true';
-
-  // Hide mobile header on production (babylon.market) on home page unless ?dev=true
-  const isProduction =
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'babylon.market';
-  const isHomePage = pathname === '/';
-  const shouldHide = isProduction && isHomePage && !isDevMode;
+  // Hide mobile header when WAITLIST_MODE is enabled in production OR ?comingsoon=true
+  const forceComingSoon = searchParams.get('comingsoon') === 'true';
+  const waitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const shouldHide = (waitlistMode && isProduction) || forceComingSoon;
 
   // All hooks must be called before any conditional returns
   useEffect(() => {
@@ -122,23 +117,42 @@ function MobileHeaderContent() {
         Authorization: `Bearer ${token}`,
       };
 
-      const response = await fetch(
-        `/api/users/${encodeURIComponent(user.id)}/balance`,
-        { headers }
-      );
-      if (response.ok) {
-        const data = await response.json();
+      // Fetch both trading balance and profile for reputation points
+      const [balanceResponse, profileResponse] = await Promise.all([
+        fetch(`/api/users/${encodeURIComponent(user.id)}/balance`, { headers }),
+        fetch(`/api/users/${encodeURIComponent(user.id)}/profile`, { headers }),
+      ]);
+
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
         setPointsData({
-          available: Number(data.balance || 0),
-          total: Number(data.totalDeposited || 0),
+          available: Number(balanceData.balance || 0),
+          total: user.reputationPoints || 0, // Use reputation points from authStore as fallback
         });
+      }
+
+      // Update reputation points from profile if changed
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        if (profileData.user?.reputationPoints !== undefined && 
+            profileData.user.reputationPoints !== user.reputationPoints) {
+          setUser({
+            ...user,
+            reputationPoints: profileData.user.reputationPoints,
+          });
+          // Update local state with new reputation points
+          setPointsData((prev) => prev ? {
+            ...prev,
+            total: profileData.user.reputationPoints,
+          } : null);
+        }
       }
     };
 
     fetchPoints();
     const interval = setInterval(fetchPoints, 30000);
     return () => clearInterval(interval);
-  }, [authenticated, user?.id]);
+  }, [authenticated, user?.id, user?.reputationPoints, setUser, user]);
 
   // Poll for unread notifications
   useEffect(() => {
@@ -331,26 +345,34 @@ function MobileHeaderContent() {
             </Link>
 
             {/* Points Display */}
-            {pointsData && (
-              <div className="shrink-0 bg-muted/30 px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-                    style={{ backgroundColor: '#0066FF' }}
-                  >
-                    <Coins className="h-5 w-5 text-foreground" />
-                  </div>
-                  <div className="flex-1">
+            <div className="shrink-0 bg-muted/30 px-4 py-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: '#0066FF' }}
+                >
+                  <Trophy className="h-5 w-5 text-foreground" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
                     <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wide">
-                      Balance
+                      Reputation
                     </div>
-                    <div className="mt-1 font-bold text-base text-foreground">
-                      {pointsData.available.toLocaleString()} pts
+                    <div className="font-bold text-base text-foreground">
+                      {(user?.reputationPoints || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="text-muted-foreground text-xs">
+                      Trading Balance
+                    </div>
+                    <div className="font-semibold text-foreground text-sm">
+                      {(pointsData?.available || 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Menu Items - Scrollable */}
             <nav className="min-h-0 flex-1 overflow-y-auto">

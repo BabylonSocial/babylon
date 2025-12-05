@@ -9,5 +9,5 @@ export {
   extractJsonFromText,
   parseContinuationContent,
 } from './json-continuation-parser';
-export { parseXML } from './xml-parser';
+export { parseXML, stripThinkingBlocks } from './xml-parser';
 

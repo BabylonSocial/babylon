@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, Key, LogOut } from 'lucide-react';
+import { Check, Copy, Key, LogOut, Settings } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/shared/Avatar';
@@ -27,37 +27,36 @@ let userMenuIntervalId: ReturnType<typeof setInterval> | null = null;
  *
  * Features:
  * - User profile display with avatar
- * - Points balance (total and available)
+ * - Points balance (total reputation and available trading balance)
  * - Referral code copy functionality
  * - Logout action
  *
  * @returns User menu dropdown element or null if no user
  */
 export function UserMenu() {
-  const { logout } = useAuth();
-  const { user } = useAuthStore();
+  const { logout, refresh } = useAuth();
+  const { user, setUser } = useAuthStore();
   const router = useRouter();
-  const [pointsData, setPointsData] = useState<{
-    available: number;
-    total: number;
-  } | null>(null);
+  const [tradingBalance, setTradingBalance] = useState<number | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const lastFetchedUserIdRef = useRef<string | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    // Don't refetch if user ID hasn't changed
-    if (lastFetchedUserIdRef.current === user?.id && user?.id) {
-      return;
-    }
-
     let isMounted = true;
     let currentFetchController: AbortController | null = null;
 
-    const fetchData = async () => {
+    const fetchData = async (forceRefresh = false) => {
       if (!user?.id || !isMounted) {
         if (!isMounted) return;
-        setPointsData(null);
+        setTradingBalance(null);
         lastFetchedUserIdRef.current = null;
+        return;
+      }
+
+      // Skip if we fetched recently (within 5 seconds) unless force refresh
+      const now = Date.now();
+      if (!forceRefresh && now - lastFetchTimeRef.current < 5000 && lastFetchedUserIdRef.current === user.id) {
         return;
       }
 
@@ -82,32 +81,49 @@ export function UserMenu() {
       const fetchController = currentFetchController;
 
       try {
-        // Fetch points
-        const balanceResponse = await fetch(
-          `/api/users/${encodeURIComponent(user.id)}/balance`,
-          {
+        // Fetch both trading balance and user profile (for latest reputation points)
+        const [balanceResponse, profileResponse] = await Promise.all([
+          fetch(`/api/users/${encodeURIComponent(user.id)}/balance`, {
             headers,
             signal: fetchController.signal,
-          }
-        );
+          }),
+          fetch(`/api/users/${encodeURIComponent(user.id)}/profile`, {
+            headers,
+            signal: fetchController.signal,
+          }),
+        ]);
 
         if (!isMounted || fetchController.signal.aborted) {
           userMenuFetchInFlight = false;
           return;
         }
 
+        // Update trading balance
         if (balanceResponse.ok) {
-          const data = await balanceResponse.json();
+          const balanceData = await balanceResponse.json();
           if (isMounted && !fetchController.signal.aborted) {
-            setPointsData({
-              available: Number(data.balance || 0),
-              total: Number(data.totalDeposited || 0),
-            });
+            setTradingBalance(Number(balanceData.balance || 0));
+          }
+        }
+
+        // Update reputation points from profile
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          if (isMounted && !fetchController.signal.aborted && profileData.user) {
+            const newReputationPoints = profileData.user.reputationPoints;
+            // Only update if reputation points changed
+            if (newReputationPoints !== undefined && newReputationPoints !== user.reputationPoints) {
+              setUser({
+                ...user,
+                reputationPoints: newReputationPoints,
+              });
+            }
           }
         }
 
         if (isMounted && !fetchController.signal.aborted) {
           lastFetchedUserIdRef.current = user.id;
+          lastFetchTimeRef.current = now;
         }
       } catch (error) {
         // Ignore abort errors
@@ -132,13 +148,14 @@ export function UserMenu() {
       userMenuIntervalId = null;
     }
 
-    // Fetch immediately
-    fetchData();
+    // Fetch immediately when user changes or reputation points change
+    const shouldRefresh = lastFetchedUserIdRef.current !== user?.id;
+    fetchData(shouldRefresh);
 
     // Set up interval for refresh
     userMenuIntervalId = setInterval(() => {
       if (isMounted) {
-        fetchData();
+        fetchData(true);
       }
     }, 30000);
 
@@ -152,7 +169,21 @@ export function UserMenu() {
         userMenuIntervalId = null;
       }
     };
-  }, [user?.id]);
+  }, [user?.id, user?.reputationPoints, setUser, user]);
+
+  // Listen for rewards-updated events to refresh auth state
+  // This ensures the sidebar updates when rewards are claimed elsewhere
+  useEffect(() => {
+    const handleRewardsUpdated = () => {
+      // Refresh the auth state to get latest reputation points
+      refresh();
+    };
+
+    window.addEventListener('rewards-updated', handleRewardsUpdated);
+    return () => {
+      window.removeEventListener('rewards-updated', handleRewardsUpdated);
+    };
+  }, [refresh]);
 
   const handleCopyReferralCode = async () => {
     if (!user?.referralCode) return;
@@ -194,27 +225,29 @@ export function UserMenu() {
     </div>
   );
 
+  // Use reputation points from authStore (synced when rewards are claimed)
+  const reputationPoints = user?.reputationPoints ?? 0;
+  const tradingBalanceValue = tradingBalance ?? 0;
+
   return (
     <Dropdown trigger={trigger} placement="top-right" width="default">
       {/* Points Display */}
-      {pointsData && (
-        <div className="border-sidebar-accent border-b px-5 py-4">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-muted-foreground text-sm">
-              Total Points
-            </span>
-            <span className="font-bold text-foreground text-xl">
-              {pointsData.total.toLocaleString()}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-muted-foreground text-xs">Available</span>
-            <span className="font-semibold text-foreground text-sm">
-              {pointsData.available.toLocaleString()}
-            </span>
-          </div>
+      <div className="border-sidebar-accent border-b px-5 py-4">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-muted-foreground text-sm">
+            Reputation
+          </span>
+          <span className="font-bold text-foreground text-xl">
+            {reputationPoints.toLocaleString()}
+          </span>
         </div>
-      )}
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-muted-foreground text-xs">Trading Balance</span>
+          <span className="font-semibold text-foreground text-sm">
+            {tradingBalanceValue.toLocaleString()}
+          </span>
+        </div>
+      </div>
 
       {user?.referralCode && (
         <DropdownItem onClick={handleCopyReferralCode}>
@@ -242,6 +275,13 @@ export function UserMenu() {
           </div>
         </DropdownItem>
       )}
+
+      <DropdownItem onClick={() => router.push('/settings')}>
+        <div className="flex items-center gap-3 py-2">
+          <Settings className="h-5 w-5" style={{ color: '#0066FF' }} />
+          <span className="font-semibold text-foreground text-sm">Settings</span>
+        </div>
+      </DropdownItem>
 
       <DropdownItem onClick={() => router.push('/settings?tab=api')}>
         <div className="flex items-center gap-3 py-2">

@@ -1,6 +1,7 @@
 import { definePrompt } from '../define-prompt';
 import {
   CONTENT_REQUIREMENTS,
+  FINAL_REMINDERS,
   IMPORTANT_RULES,
   WORLD_CONTEXT_HEADER,
 } from '../shared-sections';
@@ -59,6 +60,8 @@ Respond with ONLY this XML:
   <sentiment>0.3</sentiment>
   <confidence>0.7</confidence>
 </response>
+
+${FINAL_REMINDERS}
 
 No other text.
 `.trim(),

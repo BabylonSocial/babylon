@@ -119,7 +119,7 @@ import {
   getOnchainRegistrationStatus,
   processOnchainRegistration,
 } from '@babylon/api';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import { OnChainRegistrationSchema } from '@babylon/shared';
 
 export const GET = withErrorHandling(async (request: NextRequest) => {

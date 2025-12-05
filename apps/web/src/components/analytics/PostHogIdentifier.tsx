@@ -17,7 +17,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { posthog } from '@babylon/shared';
+import { posthog } from '@/lib/posthog';
 
 export function PostHogIdentifier() {
   const { user, authenticated } = useAuth();

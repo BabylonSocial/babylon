@@ -338,7 +338,7 @@ export function WorldFactsSection() {
             </pre>
             <p className="mt-2 text-muted-foreground text-xs">
               This content is loaded from{' '}
-              <code>src/data/reality-grounding.md</code> and injected into
+              <code>src/data/reality-grounding.ts</code> and injected into
               prompts.
             </p>
           </div>

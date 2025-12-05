@@ -1,6 +1,7 @@
 import { definePrompt } from '../define-prompt';
 import {
   characterVoiceGuidance,
+  FINAL_REMINDERS,
   STANDARD_FEED_RULES,
   VALUE_RANGES,
   WORLD_CONTEXT_HEADER,
@@ -38,9 +39,11 @@ ${STANDARD_FEED_RULES}
 
 ${characterVoiceGuidance('commentatorsList')}
 
-Generate expert analysis posts from these {{commentatorCount}} commentators:
+Generate expert analysis posts from these {{commentatorCount}} commentators (STRICT MAX 140 CHARACTERS PER POST):
 
 {{commentatorsList}}
+
+CHARACTER LIMIT: Each commentary MUST be 140 characters or less. Count carefully before submitting.
 
 ${VALUE_RANGES}
 
@@ -54,7 +57,7 @@ Respond with ONLY this XML format (example for 2 commentators):
       <pointsToward>null</pointsToward>
     </comment>
     <comment>
-      <post>OpenAGI's Cognition-9000 consciousness claims from @samailtman again. Same pattern: hype cycles followed by reality checks. Still no AGI breakthrough.</post>
+      <post>OpenAGI's SMH-9000 consciousness claims from @samailtman again. Same pattern: hype cycles followed by reality checks. Still no AGI breakthrough.</post>
       <sentiment>-0.2</sentiment>
       <clueStrength>0.5</clueStrength>
       <pointsToward>false</pointsToward>
@@ -63,5 +66,7 @@ Respond with ONLY this XML format (example for 2 commentators):
 </response>
 
 CRITICAL: Return EXACTLY {{commentatorCount}} commentary posts. Each must have post, sentiment, clueStrength, pointsToward elements.
+
+${FINAL_REMINDERS}
 `.trim(),
 });

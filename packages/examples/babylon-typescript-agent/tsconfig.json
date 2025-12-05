@@ -15,7 +15,6 @@
       "@babylon/a2a": ["../../a2a/src/index.ts"],
       "@babylon/a2a/*": ["../../a2a/src/*"],
       "@babylon/mcp": ["../../mcp/src/index.ts"],
-      "@babylon/mcp/*": ["../../mcp/src/*"],
       "@babylon/db": ["../../db/src/index.ts"],
       "@babylon/db/*": ["../../db/src/*"],
       "@babylon/shared": ["../../shared/src/index.ts"],

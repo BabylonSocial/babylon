@@ -17,7 +17,7 @@ import {
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { db, eq, positions, users } from '@babylon/db';
-import { logger } from '@babylon/shared';
+import { logger, REPUTATION_SYSTEM_BASE_SEPOLIA, getCurrentRpcUrl } from '@babylon/shared';
 import { REPUTATION_SYSTEM_ABI } from '@babylon/shared';
 
 // =============================================================================
@@ -84,9 +84,8 @@ export async function syncReputationIfAvailable(
   return await reputationSyncService.batchSync(options);
 }
 
-// Contract addresses
-const REPUTATION_SYSTEM = process.env
-  .NEXT_PUBLIC_REPUTATION_SYSTEM_BASE_SEPOLIA as Address;
+// Contract addresses from canonical config
+const REPUTATION_SYSTEM = REPUTATION_SYSTEM_BASE_SEPOLIA as Address;
 
 // Server wallet for paying gas (testnet only!)
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY as `0x${string}`;
@@ -164,14 +163,14 @@ export class ReputationService {
     // 2. Create clients
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL),
+      transport: http(getCurrentRpcUrl()),
     });
 
     const account = privateKeyToAccount(DEPLOYER_PRIVATE_KEY);
     const walletClient = createWalletClient({
       account,
       chain: baseSepolia,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL),
+      transport: http(getCurrentRpcUrl()),
     });
 
     // 3. Process each position
@@ -268,7 +267,7 @@ export class ReputationService {
     // Query on-chain reputation
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http(process.env.NEXT_PUBLIC_RPC_URL),
+      transport: http(getCurrentRpcUrl()),
     });
 
     const reputation = (await publicClient.readContract({

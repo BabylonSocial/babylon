@@ -79,7 +79,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { authenticate } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import { PerpTradeService } from '@babylon/engine';
 import { ClosePerpPositionSchema } from '@babylon/shared';
 

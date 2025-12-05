@@ -14,6 +14,7 @@ import { Providers } from '@/components/providers/Providers';
 import { BottomNav } from '@/components/shared/BottomNav';
 import { MobileHeader } from '@/components/shared/MobileHeader';
 import { Sidebar } from '@/components/shared/Sidebar';
+import { WaitlistWrapper } from '@/components/shared/WaitlistWrapper';
 
 export const metadata: Metadata = {
   title: 'Babylon',
@@ -52,11 +53,20 @@ export const metadata: Metadata = {
   other: {
     // Farcaster Mini App metadata
     // Reference: https://miniapps.farcaster.xyz/
-    'fc:frame': 'vNext',
-    'fc:frame:image': 'https://babylon.market/assets/images/og-image.png',
-    'fc:frame:button:1': 'Launch Babylon',
-    'fc:frame:button:1:action': 'link',
-    'fc:frame:button:1:target': 'https://babylon.market',
+    'fc:frame': JSON.stringify({
+      version: '1',
+      imageUrl: 'https://babylon.market/assets/images/og-image.png',
+      button: {
+        title: 'Launch Babylon',
+        action: {
+          type: 'launch_frame',
+          name: 'Babylon',
+          url: 'https://babylon.market',
+          splashImageUrl: 'https://babylon.market/assets/images/og-image.png',
+          splashBackgroundColor: '#0a0a0a',
+        },
+      },
+    }),
   },
 };
 
@@ -78,7 +88,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const waitlistModeEnabled =
+  // Read WAITLIST_MODE from server-side environment (set on Vercel)
+  // Fallback to NEXT_PUBLIC_WAITLIST_MODE for compatibility
+  const waitlistMode =
     (process.env.WAITLIST_MODE ?? process.env.NEXT_PUBLIC_WAITLIST_MODE) ===
     'true';
 
@@ -94,40 +106,34 @@ export default function RootLayout({
             <GlobalLoginModal />
           </Suspense>
 
-          {/* Mobile Header - Fixed, not affected by pull-to-refresh */}
-          {!waitlistModeEnabled && (
+          <WaitlistWrapper waitlistMode={waitlistMode}>
+            {/* Mobile Header - Fixed, not affected by pull-to-refresh */}
             <Suspense fallback={null}>
               <MobileHeader />
             </Suspense>
-          )}
 
-          <div className="mx-auto flex min-h-screen max-w-screen-xl bg-sidebar">
-            {/* Desktop Sidebar - Sticky, not affected by pull-to-refresh */}
-            {!waitlistModeEnabled && (
+            <div className="mx-auto flex min-h-screen max-w-screen-xl bg-sidebar">
+              {/* Desktop Sidebar - Sticky, not affected by pull-to-refresh */}
               <Suspense fallback={null}>
                 <Sidebar />
               </Suspense>
-            )}
 
-            {/* Main Content Area - Scrollable content with pull-to-refresh */}
-            <main className="min-h-screen w-full flex-1 bg-background pt-14 pb-14 md:pt-0 md:pb-0">
-              {children}
-            </main>
+              {/* Main Content Area - Scrollable content with pull-to-refresh */}
+              <main className="min-h-screen w-full flex-1 bg-background pt-14 pb-14 md:pt-0 md:pb-0">
+                {children}
+              </main>
 
-            {/* Mobile Bottom Navigation - Fixed, not affected by pull-to-refresh */}
-            {!waitlistModeEnabled && (
+              {/* Mobile Bottom Navigation - Fixed, not affected by pull-to-refresh */}
               <Suspense fallback={null}>
                 <BottomNav />
               </Suspense>
-            )}
-          </div>
+            </div>
 
-          {/* Auth Banner - shows on all pages when not authenticated */}
-          {!waitlistModeEnabled && (
+            {/* Auth Banner - shows on all pages when not authenticated */}
             <Suspense fallback={null}>
               <FeedAuthBanner />
             </Suspense>
-          )}
+          </WaitlistWrapper>
         </Providers>
         <Analytics />
         <SpeedInsights />

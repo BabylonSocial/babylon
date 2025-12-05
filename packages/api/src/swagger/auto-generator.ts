@@ -41,7 +41,7 @@ interface OpenAPISpec {
  *
  * @example
  * ```typescript
- * import { generateAutoSpec } from '@babylon/api/swagger/auto-generator';
+ * import { generateAutoSpec } from '@babylon/api';
  *
  * const spec = generateAutoSpec();
  * console.log(spec.paths); // All documented paths

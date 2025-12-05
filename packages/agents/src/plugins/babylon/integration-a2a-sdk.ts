@@ -236,7 +236,6 @@ export class BabylonA2AClient {
     };
 
     const skillId = skillMap[action] || 'portfolio-balance';
-    const messageText = JSON.stringify({ action, params });
 
     try {
       const response = await this.sdkClient.sendMessage({
@@ -246,8 +245,8 @@ export class BabylonA2AClient {
           role: 'user',
           parts: [
             {
-              kind: 'text',
-              text: messageText,
+              kind: 'data',
+              data: { operation: action, params },
               metadata: {
                 skillId,
               },

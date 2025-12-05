@@ -132,7 +132,7 @@ import { BusinessLogicError, NotFoundError } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import { hasBlocked } from '@babylon/db';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import { generateSnowflakeId } from '@babylon/shared';
 import { DMChatCreateSchema } from '@babylon/shared';
 

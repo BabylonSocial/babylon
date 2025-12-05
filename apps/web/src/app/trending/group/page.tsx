@@ -31,13 +31,13 @@ interface TagInfo {
 export default function GroupedTrendingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const tagIds = searchParams.get('tags')?.split(',') || [];
+  const tagsParam = searchParams.get('tags') || '';
   const [posts, setPosts] = useState<PostData[]>([]);
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<TagInfo[]>([]);
 
   const fetchPosts = useCallback(async () => {
-    if (tagIds.length === 0) {
+    if (!tagsParam) {
       setLoading(false);
       return;
     }
@@ -45,13 +45,13 @@ export default function GroupedTrendingPage() {
     setLoading(true);
 
     const response = await fetch(
-      `/api/trending/group?tags=${tagIds.join(',')}&limit=50`
+      `/api/trending/group?tags=${tagsParam}&limit=50`
     );
 
     if (!response.ok) {
       logger.warn(
         'Failed to fetch grouped trending posts',
-        { tagIds },
+        { tagsParam },
         'GroupedTrendingPage'
       );
       setLoading(false);
@@ -66,7 +66,7 @@ export default function GroupedTrendingPage() {
     }
 
     setLoading(false);
-  }, [tagIds]);
+  }, [tagsParam]);
 
   useEffect(() => {
     fetchPosts();
@@ -80,28 +80,26 @@ export default function GroupedTrendingPage() {
     <PageContainer>
       <div className="flex h-full flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-10 border-border border-b bg-background">
-          <div className="mx-auto max-w-feed px-6 py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={handleBack}
-                className="rounded-full p-2 transition-colors hover:bg-muted"
-                aria-label="Go back"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div className="flex-1">
-                <h1 className="font-bold text-xl">
-                  {tags.length > 0
-                    ? tags.map((t) => t.displayName).join(' • ')
-                    : 'Grouped Trending'}
-                </h1>
-                {tags.length > 0 && tags[0]?.category && (
-                  <p className="text-muted-foreground text-sm">
-                    {tags[0].category}
-                  </p>
-                )}
-              </div>
+        <div className="sticky top-0 z-10 border-border border-b bg-background px-4 py-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleBack}
+              className="rounded-full p-2 transition-colors hover:bg-muted"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="flex-1">
+              <h1 className="font-bold text-xl">
+                {tags.length > 0
+                  ? tags.map((t) => t.displayName).join(' • ')
+                  : 'Grouped Trending'}
+              </h1>
+              {tags.length > 0 && tags[0]?.category && (
+                <p className="text-muted-foreground text-sm">
+                  {tags[0].category}
+                </p>
+              )}
             </div>
           </div>
         </div>

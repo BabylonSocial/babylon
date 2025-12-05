@@ -7,14 +7,12 @@
  * external agents and cron jobs.
  */
 
-import type { Redis as UpstashRedis } from '@upstash/redis';
 import type IORedis from 'ioredis';
 import { logger } from '../shared/logger';
 
-// Redis client types and availability checker
+// Redis client type and availability checker
 // These are injected at runtime or fallback to in-memory
-let redis: UpstashRedis | IORedis | null = null;
-let redisClientType: 'upstash' | 'standard' | null = null;
+let redis: IORedis | null = null;
 
 function isRedisAvailable(): boolean {
   return redis !== null;
@@ -24,12 +22,8 @@ function isRedisAvailable(): boolean {
  * Configure the redis client
  * Called by apps/web to inject the redis instance
  */
-export function configureRedis(
-  client: UpstashRedis | IORedis | null,
-  clientType: 'upstash' | 'standard' | null
-): void {
+export function configureRedis(client: IORedis | null): void {
   redis = client;
-  redisClientType = clientType;
 }
 
 /**
@@ -72,7 +66,7 @@ const isProduction = process.env.NODE_ENV === 'production';
  */
 export function cleanupExpiredSessions(): void {
   if (useRedis) {
-    // Redis gère la péremption via TTL, rien à faire ici.
+    // Redis handles expiration via TTL, nothing to do here.
     return;
   }
 
@@ -167,21 +161,7 @@ export async function createAgentSession(
 
   if (useRedis && redis) {
     const key = `${SESSION_PREFIX}${sessionToken}`;
-
-    if (redisClientType === 'upstash') {
-      await (redis as UpstashRedis).set(key, JSON.stringify(session), {
-        ex: Math.ceil(SESSION_DURATION / 1000),
-      });
-    } else if (redisClientType === 'standard') {
-      await (redis as IORedis).set(
-        key,
-        JSON.stringify(session),
-        'PX',
-        SESSION_DURATION
-      );
-    } else {
-      agentSessions.set(sessionToken, session);
-    }
+    await redis.set(key, JSON.stringify(session), 'PX', SESSION_DURATION);
   } else {
     agentSessions.set(sessionToken, session);
   }
@@ -212,13 +192,7 @@ export async function verifyAgentSession(
 ): Promise<{ agentId: string } | null> {
   if (useRedis && redis) {
     const key = `${SESSION_PREFIX}${sessionToken}`;
-    let stored: string | null = null;
-
-    if (redisClientType === 'upstash') {
-      stored = await (redis as UpstashRedis).get<string>(key);
-    } else if (redisClientType === 'standard') {
-      stored = await (redis as IORedis).get(key);
-    }
+    const stored = await redis.get(key);
 
     if (stored) {
       const session = JSON.parse(stored) as AgentSession;
@@ -226,11 +200,7 @@ export async function verifyAgentSession(
         return { agentId: session.agentId };
       }
       // Session expired - delete it
-      if (redisClientType === 'upstash') {
-        await (redis as UpstashRedis).del(key);
-      } else if (redisClientType === 'standard') {
-        await (redis as IORedis).del(key);
-      }
+      await redis.del(key);
       return null;
     }
   }

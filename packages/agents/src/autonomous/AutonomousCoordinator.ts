@@ -314,11 +314,19 @@ export class AutonomousCoordinator {
     // === PRIORITY 3: SOCIAL (Posting) ===
     if (agent.autonomousPosting) {
       if (useA2A) {
-        const trendingResult = await autonomousA2AService.engageWithTrending(
-          agentUserId,
-          runtime
-        );
-        result.actionsExecuted.engagements += trendingResult.engagements;
+        try {
+          const trendingResult = await autonomousA2AService.engageWithTrending(
+            agentUserId,
+            runtime
+          );
+          result.actionsExecuted.engagements += trendingResult.engagements;
+        } catch (a2aError) {
+          logger.warn(
+            'A2A trending engagement failed, continuing with direct posting',
+            { error: a2aError instanceof Error ? a2aError.message : String(a2aError) },
+            'AutonomousCoordinator'
+          );
+        }
       }
 
       // Capture initial state if recording trajectories

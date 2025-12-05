@@ -200,7 +200,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
           );
 
           return {
-            id: item.id,
+            id: item.tag.id, // Use actual tag ID, not trending record ID
             tag: item.tag.displayName,
             tagSlug: item.tag.name,
             category: item.tag.category,

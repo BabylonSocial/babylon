@@ -393,7 +393,10 @@ export const PostCard = memo(function PostCard({
               <TaggedText
                 text={post.quoteComment}
                 onTagClick={(tag) => {
-                  router.push(`/feed?search=${encodeURIComponent(tag)}`);
+                  // Extract tag name (remove # prefix) and convert to slug
+                  const tagName = tag.startsWith('#') ? tag.slice(1) : tag;
+                  const tagSlug = tagName.toLowerCase().replace(/\s+/g, '-');
+                  router.push(`/trending/${encodeURIComponent(tagSlug)}`);
                 }}
               />
             </div>
@@ -471,7 +474,10 @@ export const PostCard = memo(function PostCard({
                   <TaggedText
                     text={post.originalPost.content}
                     onTagClick={(tag) => {
-                      router.push(`/feed?search=${encodeURIComponent(tag)}`);
+                      // Extract tag name (remove # prefix) and convert to slug
+                      const tagName = tag.startsWith('#') ? tag.slice(1) : tag;
+                      const tagSlug = tagName.toLowerCase().replace(/\s+/g, '-');
+                      router.push(`/trending/${encodeURIComponent(tagSlug)}`);
                     }}
                   />
                 </div>
@@ -489,7 +495,10 @@ export const PostCard = memo(function PostCard({
           <TaggedText
             text={post.content || ''}
             onTagClick={(tag) => {
-              router.push(`/feed?search=${encodeURIComponent(tag)}`);
+              // Extract tag name (remove # prefix) and convert to slug
+              const tagName = tag.startsWith('#') ? tag.slice(1) : tag;
+              const tagSlug = tagName.toLowerCase().replace(/\s+/g, '-');
+              router.push(`/trending/${encodeURIComponent(tagSlug)}`);
             }}
           />
         </div>

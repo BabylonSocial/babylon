@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
-import { posthog, type StringRecord } from '@babylon/shared';
+import { posthog } from '@/lib/posthog';
+
+type StringRecord = Record<string, string | number | boolean | null | undefined>;
 
 /**
  * Main PostHog analytics hook for tracking events throughout the app.

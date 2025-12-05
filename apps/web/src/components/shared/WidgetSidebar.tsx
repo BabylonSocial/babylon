@@ -132,6 +132,7 @@ export function WidgetSidebar() {
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search users..."
+            searchType="users"
           />
         </div>
 

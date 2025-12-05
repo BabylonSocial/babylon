@@ -17,23 +17,16 @@
     "typecheck": "tsc -b ."
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.68.0",
-    "@aws-sdk/client-s3": "^3.928.0",
-    "@aws-sdk/lib-storage": "^3.928.0",
-    "@vercel/blob": "^2.0.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.4.0",
-    "viem": "^2.38.6",
+    "viem": "^2.41.2",
     "zod": "^4.1.12"
   },
   "peerDependencies": {
-    "@privy-io/react-auth": "^3.7.0",
-    "posthog-js": "^1.290.0",
-    "posthog-node": "^5.11.2"
+    "@privy-io/react-auth": "^3.8.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
-    "tiktoken": "^1.0.21",
     "typescript": "^5.9.3"
   }
 }

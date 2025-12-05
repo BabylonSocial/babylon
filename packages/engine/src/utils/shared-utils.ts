@@ -13,8 +13,11 @@ export { shuffleArray };
  * Format actor voice context with postStyle and randomized postExample
  *
  * Used for LLM prompt generation to maintain actor voice consistency.
+ * Enhanced to make personality/postStyle/postExample more prominent
+ * and provide clear matching instructions.
  */
 export function formatActorVoiceContext(actor: {
+  name?: string;
   postStyle?: string;
   postExample?: string[];
   voice?: string;
@@ -29,30 +32,57 @@ export function formatActorVoiceContext(actor: {
     return '';
   }
 
-  let context = '';
+  const parts: string[] = [];
+  const actorName = actor.name || 'this character';
+
+  // Header with clear instruction
+  parts.push(`\n   === VOICE FOR ${actorName.toUpperCase()} ===`);
 
   if (actor.personality) {
-    context += `\n   Personality: ${actor.personality}`;
+    parts.push(`   PERSONALITY: ${actor.personality}`);
   }
 
   if (actor.voice) {
-    context += `\n   Voice: ${actor.voice}`;
+    parts.push(`   VOICE TONE: ${actor.voice}`);
   }
 
   if (actor.postStyle) {
-    context += `\n   Writing Style: ${actor.postStyle}`;
+    parts.push(`   WRITING STYLE: ${actor.postStyle}`);
   }
 
   if (actor.postExample && actor.postExample.length > 0) {
     const shuffledExamples = shuffleArray(actor.postExample);
-    const examples = shuffledExamples
-      .slice(0, 3)
-      .map((ex) => `"${ex}"`)
-      .join(', ');
-    context += `\n   Example Posts: ${examples}`;
+    const examples = shuffledExamples.slice(0, 3);
+
+    // Analyze example patterns for guidance
+    const avgLength = Math.round(
+      examples.reduce((sum, ex) => sum + ex.length, 0) / examples.length
+    );
+    const hasLowercase = examples.some((ex) => ex === ex.toLowerCase());
+    const hasAllCaps = examples.some((ex) => ex === ex.toUpperCase() && ex.length > 3);
+
+    parts.push(`   EXAMPLE POSTS (YOUR OUTPUT MUST MATCH THIS STYLE):`);
+    examples.forEach((ex, i) => {
+      parts.push(`     ${i + 1}. "${ex}"`);
+    });
+
+    // Add derived voice hints
+    const hints: string[] = [];
+    if (avgLength < 50) hints.push('ultra-short');
+    else if (avgLength < 100) hints.push('short');
+    if (hasLowercase) hints.push('lowercase');
+    if (hasAllCaps) hints.push('ALL CAPS');
+
+    if (hints.length > 0) {
+      parts.push(`   VOICE PATTERN: ${hints.join(', ')}`);
+    }
+
+    parts.push(
+      `   YOUR POST MUST: Match tone, length (~${avgLength} chars), and quirks from examples above.`
+    );
   }
 
-  return context;
+  return parts.join('\n');
 }
 
 /**

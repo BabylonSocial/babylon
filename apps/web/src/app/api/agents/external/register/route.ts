@@ -13,7 +13,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { authenticate } from '@babylon/api';
-import { generateApiKey, hashApiKey } from '@babylon/shared';
+import { generateApiKey, hashApiKey } from '@babylon/api';
 import { agentRegistry } from '@babylon/agents';
 import type { ExternalAgentConnectionParams } from '@babylon/agents';
 

@@ -6,6 +6,10 @@
 # next.js
 /.next/
 /out/
+.next/
+dist/
+.turbo/
+/.turbo/
 
 # production
 /build
@@ -23,6 +27,7 @@ apps/*/.env
 apps/*/.env.local
 
 # act (local GitHub Actions) secrets
+.secrets
 .secrets.local
 
 # vercel
@@ -86,3 +91,13 @@ python/trained_models
 packages/contracts/dependencies/
 packages/training/python/trained_models
 _docs/
+
+# Serena
+.serena/
+
+# Claude Code
+.claude/
+migration-data/
+# Vendor docs (generated)
+docs/vendors/
+local_db.bak

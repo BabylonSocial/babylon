@@ -1,6 +1,7 @@
 import { definePrompt } from '../define-prompt';
 import {
   characterVoiceGuidance,
+  FINAL_REMINDERS,
   STANDARD_FEED_RULES,
   VALUE_RANGES,
   WORLD_CONTEXT_HEADER,
@@ -39,9 +40,17 @@ ${STANDARD_FEED_RULES}
 
 ${characterVoiceGuidance('repliersList')}
 
-Generate reply posts from these {{replierCount}} actors:
+Generate reply posts from these {{replierCount}} actors (STRICT MAX 140 CHARACTERS PER POST):
 
 {{repliersList}}
+
+REPLY DYNAMICS - this is social media, not polite discussion:
+- Agreement: "this", "W", "based", pile on with support
+- Disagreement: "ratio", "L take", "this ain't it", dismissive one-liners
+- Quote dunk: Mock the original point directly
+- Escalate: Each reply should raise stakes, not de-escalate
+
+CHARACTER LIMIT: Each reply MUST be 140 characters or less. Count carefully before submitting.
 
 ${VALUE_RANGES}
 
@@ -49,20 +58,22 @@ Respond with ONLY this XML format (example for 2 replies):
 <response>
   <replies>
     <reply>
-      <post>Interesting take! I've been saying this for months. Glad others are catching on.</post>
-      <sentiment>0.5</sentiment>
-      <clueStrength>0.2</clueStrength>
+      <post>hard disagree on this one</post>
+      <sentiment>-0.5</sentiment>
+      <clueStrength>0.0</clueStrength>
       <pointsToward>null</pointsToward>
     </reply>
     <reply>
-      <post>Hard disagree. This completely ignores the technical challenges. Not happening.</post>
-      <sentiment>-0.6</sentiment>
-      <clueStrength>0.3</clueStrength>
-      <pointsToward>false</pointsToward>
+      <post>been saying this for months</post>
+      <sentiment>0.4</sentiment>
+      <clueStrength>0.1</clueStrength>
+      <pointsToward>null</pointsToward>
     </reply>
   </replies>
 </response>
 
 CRITICAL: Return EXACTLY {{replierCount}} replies. Each must have post, sentiment, clueStrength, pointsToward elements.
+
+${FINAL_REMINDERS}
 `.trim(),
 });

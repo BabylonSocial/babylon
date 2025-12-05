@@ -1,6 +1,7 @@
 import { definePrompt } from '../define-prompt';
 import {
   CONTENT_REQUIREMENTS,
+  FINAL_REMINDERS,
   IMPORTANT_RULES,
   WORLD_CONTEXT_HEADER,
 } from '../shared-sections';
@@ -52,6 +53,8 @@ Respond with ONLY this XML format:
 sentiment: -1 (very negative) to 1 (very positive)
 clueStrength: 0 (no info) to 1 (smoking gun)
 pointsToward: true/false/null (does this help guilty party?)
+
+${FINAL_REMINDERS}
 
 No other text.
 `.trim(),

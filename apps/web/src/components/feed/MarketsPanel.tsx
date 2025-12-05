@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useWidgetRefresh } from '@/contexts/WidgetRefreshContext';
+import { usePerpMarkets } from '@/stores/perpMarketsStore';
 import { cn } from '@babylon/shared';
 
 /**
@@ -19,18 +20,6 @@ interface Market {
   endDate: string;
   priceChange24h?: number;
   changePercent24h?: number;
-}
-
-/**
- * Perpetual market structure for markets panel.
- */
-interface PerpMarket {
-  ticker: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-  volume24h?: number;
 }
 
 /**
@@ -52,13 +41,17 @@ interface PerpMarket {
 export function MarketsPanel() {
   const router = useRouter();
   const [markets, setMarkets] = useState<Market[]>([]);
-  const [perpMarkets, setPerpMarkets] = useState<PerpMarket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [predictionsLoading, setPredictionsLoading] = useState(true);
   const { registerRefresh, unregisterRefresh } = useWidgetRefresh();
+
+  // Use shared perp markets store
+  const { markets: perpMarkets, loading: perpLoading, refetch: refetchPerps } = usePerpMarkets();
+
+  const loading = predictionsLoading && perpLoading;
 
   const fetchMarkets = useCallback(async () => {
     try {
-      // Fetch prediction markets
+      // Fetch prediction markets only - perps come from shared store
       const response = await fetch('/api/feed/widgets/markets');
 
       if (!response.ok) {
@@ -87,62 +80,11 @@ export function MarketsPanel() {
           }
         }
       }
-
-      // Fetch perp markets for trending tokens
-      const perpResponse = await fetch('/api/markets/perps');
-
-      if (!perpResponse.ok) {
-        console.error(
-          'Failed to fetch perp markets:',
-          perpResponse.status,
-          perpResponse.statusText
-        );
-        setPerpMarkets([]);
-      } else {
-        const perpText = await perpResponse.text();
-        if (!perpText) {
-          console.error('Empty response from perp markets API');
-          setPerpMarkets([]);
-        } else {
-          try {
-            const perpData = JSON.parse(perpText);
-
-            if (perpData.markets && Array.isArray(perpData.markets)) {
-              // Map and normalize the data (same as TopMoversPanel)
-              const normalizedMarkets = perpData.markets.map(
-                (m: {
-                  ticker: string;
-                  name: string;
-                  currentPrice?: number;
-                  change24h?: number;
-                  changePercent24h?: number;
-                  volume24h?: number;
-                }) => ({
-                  ticker: m.ticker,
-                  name: m.name,
-                  currentPrice: m.currentPrice || 0,
-                  change24h: m.change24h || 0,
-                  changePercent24h: m.changePercent24h || 0,
-                  volume24h: m.volume24h,
-                })
-              );
-
-              setPerpMarkets(normalizedMarkets);
-            } else {
-              setPerpMarkets([]);
-            }
-          } catch (parseError) {
-            console.error('Failed to parse perp markets response:', parseError);
-            setPerpMarkets([]);
-          }
-        }
-      }
     } catch (error) {
       console.error('Error fetching markets:', error);
       setMarkets([]);
-      setPerpMarkets([]);
     } finally {
-      setLoading(false);
+      setPredictionsLoading(false);
     }
   }, []);
 
@@ -150,11 +92,14 @@ export function MarketsPanel() {
     fetchMarkets();
   }, [fetchMarkets]);
 
-  // Register refresh function
+  // Register refresh function (includes both predictions and perps)
   useEffect(() => {
-    registerRefresh('markets', fetchMarkets);
+    const refreshAll = async () => {
+      await Promise.all([fetchMarkets(), refetchPerps()]);
+    };
+    registerRefresh('markets', refreshAll);
     return () => unregisterRefresh('markets');
-  }, [registerRefresh, unregisterRefresh, fetchMarkets]);
+  }, [registerRefresh, unregisterRefresh, fetchMarkets, refetchPerps]);
 
   const handleMarketClick = (marketId: string) => {
     router.push(`/markets/predictions/${marketId}`);

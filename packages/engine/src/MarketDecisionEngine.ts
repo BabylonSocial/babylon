@@ -88,7 +88,7 @@ import {
   countTokensSync,
   getSafeContextLimit,
   truncateToTokenLimitSync,
-} from '@babylon/shared';
+} from '@babylon/api';
 import {
   generateWorldContext,
   getShuffledExamplesText,
@@ -1303,6 +1303,13 @@ ${prompt}`
         );
       }
 
+      // Add the parody name itself as a variation (cleaned, lowercase)
+      // e.g., "AInduril" -> LLM might generate "AINDRUIL", map to "AINDRL"
+      const parodyNameCleaned = org.name.replace(/[^a-z]/gi, '').toLowerCase();
+      if (parodyNameCleaned) {
+        variations.push(parodyNameCleaned); // ainduril
+      }
+
       // Add current ticker as variation too (lowercase)
       if (org.ticker) {
         variations.push(org.ticker.toLowerCase()); // opnai
@@ -1524,10 +1531,9 @@ ${prompt}`
           decision.npcName = context.npcName;
         }
 
-        // Ensure npcId is set from context if missing
-        if (!decision.npcId) {
-          decision.npcId = context.npcId;
-        }
+        // Always use context's canonical npcId (string from database)
+        // XML parser may convert numeric IDs to numbers, causing type errors downstream
+        decision.npcId = context.npcId;
 
         // Validate hold action
         if (decision.action === 'hold') {

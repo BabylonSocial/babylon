@@ -16,10 +16,11 @@ import { toast } from 'sonner';
 
 import { FollowButton } from '@/components/interactions';
 import { useAuth } from '@/hooks/useAuth';
+import { usePerpMarketsStore } from '@/stores/perpMarketsStore';
 import {
   calculateExpectedPayout,
   PredictionPricing,
-} from '@babylon/engine';
+} from '@babylon/engine/client';
 import { cn } from '@babylon/shared';
 
 import type { PerpPositionFromAPI, PredictionPosition } from '@babylon/shared';
@@ -148,22 +149,30 @@ export function PositionDetailModal({
   const [amount, setAmount] = useState('10');
   const [loading, setLoading] = useState(false);
 
-  // Market data
+  // Market data - use shared store for perps
+  const fetchPerpMarketsFromStore = usePerpMarketsStore(
+    (state) => state.fetchMarkets
+  );
   const [perpMarket, setPerpMarket] = useState<PerpMarket | null>(null);
   const [predictionMarket, setPredictionMarket] =
     useState<PredictionMarket | null>(null);
 
-  const fetchPerpMarket = useCallback(async (ticker: string) => {
-    const response = await fetch('/api/markets/perps');
-    if (response.ok) {
-      const marketData = await response.json();
-      const market = marketData.markets?.find((m: PerpMarket) => m.ticker === ticker);
+  const fetchPerpMarket = useCallback(
+    async (ticker: string) => {
+      // Ensure store is populated
+      await fetchPerpMarketsFromStore();
+      // Get fresh markets from store
+      const markets = usePerpMarketsStore.getState().markets;
+      const market = markets.find(
+        (m) => m.ticker.toLowerCase() === ticker.toLowerCase()
+      );
       if (market) {
         setPerpMarket(market);
-        setSide(market.ticker ? 'long' : 'long');
+        setSide('long');
       }
-    }
-  }, []);
+    },
+    [fetchPerpMarketsFromStore]
+  );
 
   const fetchPredictionMarket = useCallback(async (marketId: string) => {
     const response = await fetch(`/api/markets/predictions/${marketId}`);

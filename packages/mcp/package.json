@@ -10,36 +10,6 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "require": "./src/index.ts"
-    },
-    "./types": {
-      "types": "./src/types/index.ts",
-      "import": "./src/types/index.ts",
-      "require": "./src/types/index.ts"
-    },
-    "./types/mcp": {
-      "types": "./src/types/mcp.ts",
-      "import": "./src/types/mcp.ts",
-      "require": "./src/types/mcp.ts"
-    },
-    "./handlers": {
-      "types": "./src/handlers/index.ts",
-      "import": "./src/handlers/index.ts",
-      "require": "./src/handlers/index.ts"
-    },
-    "./auth": {
-      "types": "./src/auth/index.ts",
-      "import": "./src/auth/index.ts",
-      "require": "./src/auth/index.ts"
-    },
-    "./server": {
-      "types": "./src/server/index.ts",
-      "import": "./src/server/index.ts",
-      "require": "./src/server/index.ts"
-    },
-    "./utils": {
-      "types": "./src/utils/index.ts",
-      "import": "./src/utils/index.ts",
-      "require": "./src/utils/index.ts"
     }
   },
   "scripts": {
@@ -47,12 +17,14 @@
     "typecheck": "tsc -b ."
   },
   "dependencies": {
-    "@babylon/shared": "workspace:*"
+    "@babylon/shared": "workspace:*",
+    "@babylon/a2a": "workspace:*"
   },
   "peerDependencies": {
     "@babylon/db": "workspace:*",
     "@babylon/api": "workspace:*",
     "@babylon/shared": "workspace:*",
+    "@babylon/a2a": "workspace:*",
     "drizzle-orm": "^0.44.7",
     "ethers": "^6.15.0",
     "zod": "^4.1.12"

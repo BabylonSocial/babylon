@@ -5,14 +5,15 @@
  * Contract Address Loader
  *
  * Loads deployed contract addresses based on the current network environment.
- * Supports localnet (Hardhat) and Base Sepolia testnet.
+ * Uses canonical config from @babylon/shared/config for network detection.
  *
  * @remarks Base mainnet support will be added when contracts are deployed.
  */
 
-import baseSepoliaDeployment from '@babylon/contracts/deployments/base-sepolia';
-import localDeployment from '@babylon/contracts/deployments/local';
+import baseSepoliaDeployment from '../../deployments/base-sepolia';
+import localDeployment from '../../deployments/local';
 import type { Address } from 'viem';
+import { getCurrentChainId, getCurrentRpcUrl } from '@babylon/shared';
 
 /**
  * Deployed contract addresses for the current network.
@@ -52,7 +53,7 @@ export interface DeployedContracts {
  * ```
  */
 export function getContractAddresses(): DeployedContracts {
-  const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
+  const chainId = getCurrentChainId();
 
   if (chainId === 31337) {
     return {
@@ -71,8 +72,7 @@ export function getContractAddresses(): DeployedContracts {
   if (chainId === 84532) {
     return {
       diamond: baseSepoliaDeployment.contracts.diamond as Address,
-      babylonOracle: (process.env.NEXT_PUBLIC_BABYLON_ORACLE ||
-        baseSepoliaDeployment.contracts.oracleFacet) as Address,
+      babylonOracle: baseSepoliaDeployment.contracts.oracleFacet as Address,
       predimarket: '0x0000000000000000000000000000000000000000' as Address,
       predictionMarketFacet: baseSepoliaDeployment.contracts
         .predictionMarketFacet as Address,
@@ -91,6 +91,7 @@ export function getContractAddresses(): DeployedContracts {
     );
   }
 
+  // Default to localnet for unknown chains
   return {
     diamond: localDeployment.contracts.diamond as Address,
     babylonOracle: localDeployment.contracts.babylonOracle as Address,
@@ -110,15 +111,14 @@ export function getContractAddresses(): DeployedContracts {
  * @returns `true` if chain ID is 31337 (Hardhat local network)
  */
 export function isLocalnet(): boolean {
-  const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
-  return chainId === 31337;
+  return getCurrentChainId() === 31337;
 }
 
 /**
  * Get the RPC URL for the current network.
  *
- * Returns the appropriate RPC endpoint based on the detected chain ID.
- * Falls back to localhost if no environment variable is set.
+ * Returns the appropriate RPC endpoint from canonical config.
+ * Supports env var override via NEXT_PUBLIC_RPC_URL.
  *
  * @returns RPC URL string for the current network
  *
@@ -129,20 +129,6 @@ export function isLocalnet(): boolean {
  * ```
  */
 export function getRpcUrl(): string {
-  const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
-
-  if (chainId === 31337) {
-    return process.env.NEXT_PUBLIC_RPC_URL || 'http://localhost:8545';
-  }
-
-  if (chainId === 84532) {
-    return process.env.NEXT_PUBLIC_RPC_URL || 'https://sepolia.base.org';
-  }
-
-  if (chainId === 8453) {
-    return process.env.NEXT_PUBLIC_RPC_URL || 'https://mainnet.base.org';
-  }
-
-  return process.env.NEXT_PUBLIC_RPC_URL || 'http://localhost:8545';
+  return getCurrentRpcUrl();
 }
 

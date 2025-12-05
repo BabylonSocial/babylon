@@ -10,43 +10,11 @@
  * - Cache invalidation patterns
  * - Fallback to database on cache miss
  * - Graceful degradation if Redis unavailable
- * - Support for both Upstash (REST API) and standard Redis
+ * - Works with any Redis server via standard protocol
  */
 
-import type { Redis as UpstashRedis } from '@upstash/redis';
 import { logger } from '@babylon/shared';
-import { redis, redisClientType, type RedisClientType } from '../redis';
-
-// Type for ioredis instance (avoid importing at top level to prevent bundling in edge runtime)
-type IORedisInstance = {
-  set: (key: string, value: string, mode: string, ttl: number) => Promise<string>;
-  get: (key: string) => Promise<string | null>;
-  scanStream: (opts: { match: string }) => NodeJS.ReadableStream;
-  del: (...keys: string[]) => Promise<unknown>;
-};
-
-// Redis client union type
-type RedisClient = UpstashRedis | IORedisInstance | null;
-
-/**
- * Type guard to check if Redis client is IORedisInstance
- */
-function isIORedisInstance(
-  client: RedisClient,
-  type: RedisClientType
-): client is IORedisInstance {
-  return type === 'standard' && client !== null;
-}
-
-/**
- * Type guard to check if Redis client is UpstashRedis
- */
-function isUpstashRedis(
-  client: RedisClient,
-  type: RedisClientType
-): client is UpstashRedis {
-  return type === 'upstash' && client !== null;
-}
+import { getRedisClient, isRedisAvailable } from '../redis';
 
 /**
  * Cache options
@@ -150,7 +118,7 @@ setInterval(cleanMemoryCache, 60000);
  * Get value from cache
  *
  * @description Retrieves a value from cache (Redis or in-memory). Returns null
- * if not found or expired. Handles both Upstash REST API and standard Redis protocols.
+ * if not found or expired.
  *
  * @param {string} key - Cache key
  * @param {CacheOptions} [options={}] - Cache options (namespace, etc.)
@@ -170,98 +138,22 @@ export async function getCache<T>(
 ): Promise<T | null> {
   const fullKey = options.namespace ? `${options.namespace}:${key}` : key;
 
-  if (redis && redisClientType) {
-    const redisClient = redis;
-    let cached: string | null | unknown = null;
-    
-    if (redisClientType === 'upstash' && isUpstashRedis(redisClient, redisClientType)) {
-      cached = await redisClient.get(fullKey);
-    } else if (redisClientType === 'standard' && isIORedisInstance(redisClient, redisClientType)) {
-      cached = await redisClient.get(fullKey);
-    }
+  const client = getRedisClient();
+  if (client) {
+    const cached = await client.get(fullKey);
 
     if (cached !== null && cached !== undefined) {
-      try {
-        // Handle cached value based on its type
-        // Upstash Redis REST API may return objects directly if the value was JSON
-        if (typeof cached === 'object' && cached !== null) {
-          logger.debug(
-            'Cache hit (Redis, object)',
-            { key: fullKey },
-            'CacheService'
-          );
-          return cached as T;
-        }
-
-        // Handle primitive values that might be returned directly by Upstash
-        if (typeof cached === 'number' || typeof cached === 'boolean') {
-          logger.debug(
-            `Cache hit (Redis, ${typeof cached})`,
-            { key: fullKey },
-            'CacheService'
-          );
-          return cached as T;
-        }
-
-        // Handle string values (standard Redis behavior)
-        if (typeof cached === 'string') {
-          if (!cached || cached.trim() === '') {
-            logger.warn(
-              'Empty cached value in Redis',
-              { key: fullKey },
-              'CacheService'
-            );
-            return null;
-          }
-
-          logger.debug(
-            'Cache hit (Redis, string)',
-            { key: fullKey },
-            'CacheService'
-          );
-          return JSON.parse(cached) as T;
-        }
-
-        // Unexpected type
+      if (!cached || cached.trim() === '') {
         logger.warn(
-          'Unexpected cached value type',
-          {
-            key: fullKey,
-            cachedType: typeof cached,
-          },
+          'Empty cached value in Redis',
+          { key: fullKey },
           'CacheService'
         );
-        return null;
-      } catch (error) {
-        // Safely preview cached value for logging
-        let preview = 'Unable to preview';
-        if (typeof cached === 'string') {
-          preview = cached.substring(0, 100);
-        } else if (cached !== null && cached !== undefined) {
-          preview = String(cached).substring(0, 100);
-        }
-
-        // Log warning - will fetch from DB and refresh cache
-        logger.warn(
-          `Failed to parse cached value: ${preview}`,
-          {
-            key: fullKey,
-            error:
-              error instanceof Error
-                ? {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack,
-                  }
-                : String(error),
-            cachedType: typeof cached,
-            preview,
-          },
-          'CacheService'
-        );
-        // Return null to trigger a fresh fetch from DB and cache refresh
         return null;
       }
+
+      logger.debug('Cache hit (Redis)', { key: fullKey }, 'CacheService');
+      return JSON.parse(cached) as T;
     }
 
     logger.debug('Cache miss (Redis)', { key: fullKey }, 'CacheService');
@@ -311,16 +203,10 @@ export async function setCache<T>(
   const ttl = options.ttl || 300;
 
   const serialized = JSON.stringify(value);
-  const redisClient = redis;
+  const client = getRedisClient();
 
-  if (!redisClient || !redisClientType) {
-    // Fall through to memory cache
-  } else if (redisClientType === 'upstash' && isUpstashRedis(redisClient, redisClientType)) {
-    await redisClient.set(fullKey, serialized, { ex: ttl });
-    logger.debug('Cache set (Redis)', { key: fullKey, ttl }, 'CacheService');
-    return;
-  } else if (redisClientType === 'standard' && isIORedisInstance(redisClient, redisClientType)) {
-    await redisClient.set(fullKey, serialized, 'EX', ttl);
+  if (client) {
+    await client.set(fullKey, serialized, 'EX', ttl);
     logger.debug('Cache set (Redis)', { key: fullKey, ttl }, 'CacheService');
     return;
   }
@@ -350,12 +236,10 @@ export async function invalidateCache(
 ): Promise<void> {
   const fullKey = options.namespace ? `${options.namespace}:${key}` : key;
 
-  if (redis && redisClientType) {
-    const redisClient = redis;
-    if (isUpstashRedis(redisClient, redisClientType) || isIORedisInstance(redisClient, redisClientType)) {
-      await redisClient.del(fullKey);
-      logger.debug('Cache invalidated (Redis)', { key: fullKey }, 'CacheService');
-    }
+  const client = getRedisClient();
+  if (client) {
+    await client.del(fullKey);
+    logger.debug('Cache invalidated (Redis)', { key: fullKey }, 'CacheService');
   }
 
   memoryCache.delete(fullKey);
@@ -365,8 +249,8 @@ export async function invalidateCache(
 /**
  * Invalidate cache entries matching a pattern
  *
- * @description Removes all cache entries matching a pattern. Uses SCAN for standard
- * Redis, but pattern matching is limited with Upstash REST API.
+ * @description Removes all cache entries matching a pattern. Uses SCAN for
+ * Redis to efficiently find matching keys.
  *
  * @param {string} pattern - Pattern to match (e.g., 'user:*')
  * @param {CacheOptions} [options={}] - Cache options (namespace, etc.)
@@ -386,18 +270,10 @@ export async function invalidateCachePattern(
     : pattern;
 
   // Invalidate in Redis
-  const redisClient = redis;
-  if (redisClient && redisClientType === 'upstash' && isUpstashRedis(redisClient, redisClientType)) {
-    // Upstash Redis doesn't support SCAN, so we'll need to track keys manually
-    // For now, log a warning
-    logger.warn(
-      'Pattern invalidation not fully supported with Upstash Redis',
-      { pattern: fullPattern },
-      'CacheService'
-    );
-  } else if (redisClient && redisClientType === 'standard' && isIORedisInstance(redisClient, redisClientType)) {
-    // For standard Redis, use SCAN to find matching keys
-    const stream = redisClient.scanStream({ match: fullPattern });
+  const client = getRedisClient();
+  if (client) {
+    // Use SCAN to find matching keys
+    const stream = client.scanStream({ match: fullPattern });
     const keys: string[] = [];
 
     stream.on('data', (resultKeys: string[]) => {
@@ -410,7 +286,7 @@ export async function invalidateCachePattern(
     });
 
     if (keys.length > 0) {
-      await redisClient.del(...keys);
+      await client.del(...keys);
       logger.info(
         'Cache pattern invalidated (Redis)',
         { pattern: fullPattern, count: keys.length },
@@ -501,7 +377,7 @@ export async function warmCache<T>(
  * and Redis availability. Useful for monitoring and debugging.
  *
  * @returns {object} Cache statistics including totalEntries, activeEntries, expiredEntries,
- * redisAvailable, and redisType
+ * redisAvailable
  */
 export function getCacheStats() {
   const now = Date.now();
@@ -520,8 +396,7 @@ export function getCacheStats() {
     totalEntries: memoryCache.size,
     activeEntries,
     expiredEntries,
-    redisAvailable: !!redis,
-    redisType: redisClientType,
+    redisAvailable: isRedisAvailable(),
   };
 }
 
@@ -543,7 +418,7 @@ export async function clearAllCache(): Promise<void> {
   memoryCache.clear();
 
   // Clear Redis cache (if available and safe to do)
-  if (redis && redisClientType === 'standard') {
+  if (isRedisAvailable()) {
     // Only clear our namespaced keys, not the entire Redis instance
     logger.warn(
       'Redis cache clear requested but not implemented for safety',
@@ -552,4 +427,3 @@ export async function clearAllCache(): Promise<void> {
     );
   }
 }
-

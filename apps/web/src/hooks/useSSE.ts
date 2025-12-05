@@ -4,6 +4,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logger } from '@babylon/shared';
 
 /**
+ * Static SSE channel names for standard event types.
+ */
+export type StaticChannel =
+  | 'feed'
+  | 'markets'
+  | 'breaking-news'
+  | 'upcoming-events';
+
+/**
+ * Dynamic SSE channel names that include user-specific identifiers.
+ */
+export type DynamicChannel =
+  | `chat:${string}`
+  | `notifications:${string}`;
+
+/**
  * SSE channel names for different event types.
  *
  * Standard channels include:
@@ -12,14 +28,11 @@ import { logger } from '@babylon/shared';
  * - 'breaking-news': Breaking news events
  * - 'upcoming-events': Upcoming event notifications
  *
- * Custom channel names (strings) are also supported.
+ * Dynamic channels include:
+ * - 'chat:{chatId}': Chat-specific messages
+ * - 'notifications:{userId}': User-specific notifications
  */
-export type Channel =
-  | 'feed'
-  | 'markets'
-  | 'breaking-news'
-  | 'upcoming-events'
-  | string;
+export type Channel = StaticChannel | DynamicChannel;
 
 /**
  * Represents a message received via SSE.
@@ -78,7 +91,6 @@ let globalEventSource: EventSource | null = null;
 let connecting = false;
 let reconnectAttempts = 0;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-let lastConnectionError: string | null = null;
 let pendingTokenRetry: ReturnType<typeof setTimeout> | null = null;
 const connectionListeners = new Set<ConnectionListener>();
 let getAccessTokenRef: (() => Promise<string | null>) | null = null;
@@ -175,7 +187,6 @@ const hasBrowserEnv = () =>
   typeof window !== 'undefined' && typeof EventSource !== 'undefined';
 
 const notifyConnectionStatus = (connected: boolean, error: string | null) => {
-  lastConnectionError = error;
   connectionListeners.forEach((listener) => {
     listener(connected, error);
   });
@@ -193,19 +204,16 @@ const closeEventSource = () => {
   }
 
   if (globalEventSource) {
-    try {
-      // Remove all event listeners to prevent callbacks after close
-      globalEventSource.onopen = null;
-      globalEventSource.onerror = null;
-      globalEventSource.close();
-    } catch (error) {
-      logger.debug('Error closing EventSource', { error }, 'useSSE');
-    }
+    // Remove all event listeners to prevent callbacks after close
+    globalEventSource.onopen = null;
+    globalEventSource.onerror = null;
+    globalEventSource.close();
     globalEventSource = null;
   }
 
   connectedChannels.clear();
-  connecting = false;
+  // Note: Don't reset `connecting` here - it's managed by ensureConnection()
+  // to prevent race conditions during async operations.
 };
 
 const scheduleTokenRetry = () => {
@@ -243,6 +251,7 @@ async function ensureConnection(forceReconnect = false) {
   if (!authenticatedRef) return;
   if (requestedChannels.size === 0) {
     closeEventSource();
+    connecting = false;
     notifyConnectionStatus(false, null);
     return;
   }
@@ -256,6 +265,28 @@ async function ensureConnection(forceReconnect = false) {
   if (connecting) {
     logger.debug(
       'SSE connection already in progress, skipping',
+      undefined,
+      'useSSE'
+    );
+    return;
+  }
+
+  // Don't attempt reconnection if we've already hit the max attempts
+  // (unless this is a manual reconnect call which resets the counter)
+  if (!forceReconnect && reconnectAttempts >= maxReconnectAttemptsRef) {
+    logger.debug(
+      'SSE connection skipped - max reconnection attempts already reached',
+      undefined,
+      'useSSE'
+    );
+    return;
+  }
+
+  // Don't start a new connection if a reconnect is already scheduled
+  // This prevents racing between subscribe() calls and the backoff timer
+  if (!forceReconnect && reconnectTimeout) {
+    logger.debug(
+      'SSE connection skipped - reconnect already scheduled',
       undefined,
       'useSSE'
     );
@@ -387,61 +418,65 @@ async function ensureConnection(forceReconnect = false) {
     if (errorHandled) {
       return;
     }
+    errorHandled = true;
 
-    // Only handle error if connection is actually closed or failed
-    if (eventSource.readyState === EventSource.CLOSED) {
-      errorHandled = true;
-      connecting = false;
+    // Always close the EventSource to prevent browser auto-reconnect.
+    // We manage our own reconnection with exponential backoff.
+    connecting = false;
+    if (globalEventSource === eventSource) {
+      globalEventSource = null;
+    }
+    connectedChannels.clear();
 
-      // Close immediately to prevent EventSource auto-reconnect
-      if (globalEventSource === eventSource) {
-        globalEventSource = null;
-      }
-      eventSource.close();
+    // Close to stop browser auto-reconnect behavior
+    eventSource.onopen = null;
+    eventSource.onerror = null;
+    eventSource.close();
 
-      notifyConnectionStatus(false, 'SSE connection error');
-      logger.warn(
-        'SSE connection lost, scheduling reconnect',
-        { reconnectAttempts, maxAttempts: maxReconnectAttemptsRef },
+    notifyConnectionStatus(false, 'SSE connection error');
+    logger.warn(
+      'SSE connection lost, scheduling reconnect',
+      { reconnectAttempts, maxAttempts: maxReconnectAttemptsRef },
+      'useSSE'
+    );
+
+    if (!autoReconnectRef) {
+      return;
+    }
+
+    if (reconnectAttempts >= maxReconnectAttemptsRef) {
+      notifyConnectionStatus(
+        false,
+        'Unable to connect to real-time updates. Please refresh the page.'
+      );
+      logger.error(
+        'SSE: Max reconnection attempts reached',
+        undefined,
         'useSSE'
       );
-
-      if (!autoReconnectRef) {
-        return;
-      }
-
-      if (reconnectAttempts >= maxReconnectAttemptsRef) {
-        notifyConnectionStatus(
-          false,
-          'Unable to connect to real-time updates. Please refresh the page.'
-        );
-        logger.error(
-          'SSE: Max reconnection attempts reached',
-          undefined,
-          'useSSE'
-        );
-        return;
-      }
-
-      // Cancel any existing reconnect timeout
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-      }
-
-      const baseDelay = reconnectDelayRef * 2 ** reconnectAttempts;
-      const jitter = baseDelay * 0.25 * (Math.random() * 2 - 1);
-      const delay = Math.min(baseDelay + jitter, 30000);
-
-      reconnectAttempts += 1;
-      reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null;
-        void ensureConnection();
-      }, delay);
-    } else if (eventSource.readyState === EventSource.CONNECTING) {
-      // Connection is still trying, don't handle as error yet
-      logger.debug('SSE connection in progress...', undefined, 'useSSE');
+      return;
     }
+
+    // Cancel any existing reconnect timeout
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
+
+    const baseDelay = reconnectDelayRef * 2 ** reconnectAttempts;
+    const jitter = baseDelay * 0.25 * (Math.random() * 2 - 1);
+    const delay = Math.min(baseDelay + jitter, 30000);
+
+    reconnectAttempts += 1;
+    logger.debug(
+      `SSE reconnect scheduled in ${Math.round(delay)}ms`,
+      { attempt: reconnectAttempts, delay: Math.round(delay) },
+      'useSSE'
+    );
+    reconnectTimeout = setTimeout(() => {
+      reconnectTimeout = null;
+      void ensureConnection();
+    }, delay);
   };
 
   globalEventSource = eventSource;
@@ -489,12 +524,10 @@ export function useSSE(options: SSEHookOptions = {}): SSEHookReturn {
   } = options;
 
   const { getAccessToken, authenticated } = usePrivy();
-  const [isConnected, setIsConnected] = useState(() =>
-    Boolean(
-      globalEventSource && globalEventSource.readyState === EventSource.OPEN
-    )
-  );
-  const [error, setError] = useState<string | null>(lastConnectionError);
+  // Always initialize to false to avoid SSR/hydration mismatches.
+  // The connection listener will update this once the connection is established.
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const subscriptionsRef = useRef<
     Map<Channel, Set<(message: SSEMessage) => void>>
@@ -511,6 +544,7 @@ export function useSSE(options: SSEHookOptions = {}): SSEHookReturn {
     authenticatedRef = authenticated;
     if (!authenticated) {
       closeEventSource();
+      connecting = false;
       notifyConnectionStatus(false, null);
       return;
     }
@@ -580,6 +614,8 @@ export function useSSE(options: SSEHookOptions = {}): SSEHookReturn {
       if (globalSubscribers.size === 0) {
         channelSubscribers.delete(channel);
         requestedChannels.delete(channel);
+        // Clean up lastEventIds to prevent memory leaks for long-running sessions
+        lastEventIds.delete(channel);
       }
     }
 
@@ -594,34 +630,70 @@ export function useSSE(options: SSEHookOptions = {}): SSEHookReturn {
 
     if (requestedChannels.size === 0) {
       closeEventSource();
+      connecting = false;
       notifyConnectionStatus(false, null);
     } else if (!channelsInSync()) {
       void ensureConnection(true);
     }
   }, []);
 
-  // Memoize initial channels to prevent unnecessary re-subscriptions
-  // This ensures that the effect only runs when the actual channel values change,
-  // not just when the array reference changes
-  // Used to memoize channels - key creation for dependency tracking
-  void initialChannels.join(',');
-  const memoizedInitialChannels = useMemo(
-    () => initialChannels,
-    [initialChannels]
+  // Memoize initial channels using a string key to prevent unnecessary re-subscriptions.
+  // This ensures the effect only runs when the actual channel values change,
+  // not just when the array reference changes.
+  const initialChannelsKey = initialChannels.join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally using string key for stable reference instead of array
+  const memoizedInitialChannels = useMemo(() => initialChannels, [
+    initialChannelsKey,
+  ]);
+
+  // Track subscriptions made by the initial channels effect so we can clean them up
+  const initialChannelCallbacksRef = useRef<Map<Channel, SSECallback>>(
+    new Map()
   );
 
   useEffect(() => {
-    // Subscribe to initial channels provided in options
+    // Subscribe to initial channels provided in options with no-op callbacks.
+    // These are just to ensure the channel is requested; actual message handling
+    // is done by explicit subscribe() calls with real callbacks.
     if (memoizedInitialChannels.length > 0) {
-      memoizedInitialChannels.forEach((channel) =>
-        subscribe(channel, () => {})
-      );
+      for (const channel of memoizedInitialChannels) {
+        // Only subscribe if we haven't already from this effect
+        if (!initialChannelCallbacksRef.current.has(channel)) {
+          const noopCallback: SSECallback = () => {};
+          initialChannelCallbacksRef.current.set(channel, noopCallback);
+          subscribe(channel, noopCallback);
+        }
+      }
+
       return () => {
-        memoizedInitialChannels.forEach((channel) => unsubscribe(channel));
+        // Clean up only the callbacks we created
+        for (const channel of memoizedInitialChannels) {
+          const callback = initialChannelCallbacksRef.current.get(channel);
+          if (callback) {
+            // Remove our specific callback from the global subscribers
+            const globalSubs = channelSubscribers.get(channel);
+            if (globalSubs) {
+              globalSubs.delete(callback);
+              if (globalSubs.size === 0) {
+                channelSubscribers.delete(channel);
+                requestedChannels.delete(channel);
+              }
+            }
+            initialChannelCallbacksRef.current.delete(channel);
+          }
+        }
+        // Trigger reconnect if channels changed
+        if (requestedChannels.size === 0) {
+          closeEventSource();
+          connecting = false;
+          notifyConnectionStatus(false, null);
+        } else if (!channelsInSync()) {
+          void ensureConnection(true);
+        }
       };
     }
     return undefined;
-  }, [memoizedInitialChannels, subscribe, unsubscribe]);
+  }, [memoizedInitialChannels, subscribe]);
 
   useEffect(() => {
     return () => {
@@ -671,17 +743,12 @@ export function useSSEChannel(
   channel: Channel | null,
   onMessage: (data: Record<string, unknown>) => void
 ) {
-  // Memoize the channels array to prevent unnecessary re-subscriptions
-  // Without this, every render creates a new array reference, causing the
-  // useSSE hook's initialChannels effect to re-run and reconnect
-  const channels = useMemo(() => (channel ? [channel] : []), [channel]);
-
-  const { isConnected, subscribe, unsubscribe } = useSSE({
-    channels,
-  });
+  // Don't pass channels to useSSE - we'll subscribe explicitly below.
+  // This avoids double-subscription (once from initialChannels, once from subscribe()).
+  const { isConnected, subscribe, unsubscribe } = useSSE();
 
   const onMessageRef = useRef(onMessage);
-  const callbackRef = useRef<((message: SSEMessage) => void) | null>(null);
+  const callbackRef = useRef<SSECallback | null>(null);
 
   useEffect(() => {
     onMessageRef.current = onMessage;
@@ -690,7 +757,7 @@ export function useSSEChannel(
   useEffect(() => {
     if (!channel) return;
 
-    const callback = (message: SSEMessage) => {
+    const callback: SSECallback = (message) => {
       if (message.channel === channel) {
         onMessageRef.current(message.data);
       }
@@ -705,7 +772,7 @@ export function useSSEChannel(
         callbackRef.current = null;
       }
     };
-  }, [channel, subscribe, unsubscribe]); // Only re-subscribe when channel changes
+  }, [channel, subscribe, unsubscribe]);
 
   return { isConnected };
 }

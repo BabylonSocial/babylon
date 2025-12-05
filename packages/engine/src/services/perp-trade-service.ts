@@ -176,8 +176,8 @@ export class PerpTradeService {
       throw new NotFoundError('Market', input.ticker);
     }
 
-    const maxPositionSize = market.openInterest * 0.1;
     const minPositionSize = market.minOrderSize;
+    const maxPositionSize = market.maxPositionSize; // Calculated by engine based on open interest
     const size = input.size;
 
     if (size < minPositionSize) {
@@ -188,11 +188,11 @@ export class PerpTradeService {
       );
     }
 
-    if (size > maxPositionSize && maxPositionSize > 0) {
+    if (size > maxPositionSize) {
       throw new BusinessLogicError(
-        `Position size too large. Maximum: $${maxPositionSize.toFixed(2)}`,
+        `Position size exceeds market limit. Maximum: $${maxPositionSize.toLocaleString()} (based on market liquidity)`,
         'POSITION_SIZE_TOO_LARGE',
-        { max: maxPositionSize, requested: size }
+        { max: maxPositionSize, requested: size, openInterest: market.openInterest }
       );
     }
 

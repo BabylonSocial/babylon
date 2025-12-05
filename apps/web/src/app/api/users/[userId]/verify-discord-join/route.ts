@@ -20,7 +20,7 @@ import { requireUserByIdentifier } from '@babylon/api';
 import { UserIdParamSchema } from '@babylon/shared';
 
 // Babylon Discord Guild ID
-const BABYLON_DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '';
+const BABYLON_DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID || '1438561373012627456';
 
 /**
  * POST /api/users/[userId]/verify-discord-join

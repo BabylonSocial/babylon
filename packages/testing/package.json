@@ -10,11 +10,6 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "require": "./src/index.ts"
-    },
-    "./load-test": {
-      "types": "./load-test/index.ts",
-      "import": "./load-test/index.ts",
-      "require": "./load-test/index.ts"
     }
   },
   "scripts": {
@@ -37,7 +32,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "dotenv": "^16.4.5",
-    "next": "^16.0.5",
+    "next": "^16.0.7",
     "playwright": "^1.56.1"
   }
 }

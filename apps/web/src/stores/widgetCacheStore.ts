@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import type { A2AReputationResponse } from '@babylon/agents';
+import type { A2AReputationResponse } from '@babylon/agents/client';
 import type {
   PerpPositionFromAPI,
   PredictionPosition,

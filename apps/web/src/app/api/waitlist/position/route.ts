@@ -70,7 +70,7 @@ import { getCache, setCache } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import { WaitlistService } from '@babylon/api';
-import { db, users, eq, and, desc } from '@babylon/db';
+import { db, users, referrals, eq, and, desc } from '@babylon/db';
 
 type PositionResponse = {
   position: number | null;
@@ -183,24 +183,26 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   // Get completed referrals (qualified users) - limit to prevent unbounded payloads
-  // Use Drizzle query API to get referrals with related user
-  const completedReferralsRaw = await db.query.referrals.findMany({
-    where: (referrals, { eq, and }) =>
-      and(eq(referrals.referrerId, userId), eq(referrals.status, 'completed')),
-    with: {
-      User_Referral_referredUserIdToUser: {
-        columns: {
-          id: true,
-          username: true,
-          displayName: true,
-          profileImageUrl: true,
-          createdAt: true,
-        },
-      },
-    },
-    orderBy: (referrals, { desc }) => [desc(referrals.completedAt)],
-    limit: MAX_REFERRALS_PER_LIST,
-  });
+  // Use explicit column selection to avoid querying columns that may not exist in DB yet
+  const completedReferralsRaw = await db
+    .select({
+      id: referrals.id,
+      referredUserId: referrals.referredUserId,
+      completedAt: referrals.completedAt,
+      // Join user data
+      userId: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      profileImageUrl: users.profileImageUrl,
+      userCreatedAt: users.createdAt,
+    })
+    .from(referrals)
+    .leftJoin(users, eq(referrals.referredUserId, users.id))
+    .where(
+      and(eq(referrals.referrerId, userId), eq(referrals.status, 'completed'))
+    )
+    .orderBy(desc(referrals.completedAt))
+    .limit(MAX_REFERRALS_PER_LIST);
 
   const weeklyReferralCount = completedReferralsRaw.filter(
     (r) => r.completedAt && r.completedAt >= oneWeekAgo
@@ -239,21 +241,13 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   }));
 
   const qualifiedUsers = completedReferralsRaw
-    .filter(
-      (
-        r
-      ): r is typeof r & {
-        User_Referral_referredUserIdToUser: NonNullable<
-          typeof r.User_Referral_referredUserIdToUser
-        >;
-      } => !!r.User_Referral_referredUserIdToUser
-    )
+    .filter((r) => r.userId !== null)
     .map((r) => ({
-      id: r.User_Referral_referredUserIdToUser.id,
-      username: r.User_Referral_referredUserIdToUser.username,
-      displayName: r.User_Referral_referredUserIdToUser.displayName,
-      profileImageUrl: r.User_Referral_referredUserIdToUser.profileImageUrl,
-      createdAt: r.User_Referral_referredUserIdToUser.createdAt.toISOString(),
+      id: r.userId as string,
+      username: r.username,
+      displayName: r.displayName,
+      profileImageUrl: r.profileImageUrl,
+      createdAt: r.userCreatedAt?.toISOString() ?? new Date().toISOString(),
       completedAt: r.completedAt?.toISOString() ?? new Date().toISOString(),
       status: 'qualified' as const,
     }));

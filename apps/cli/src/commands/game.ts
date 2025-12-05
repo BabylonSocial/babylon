@@ -11,7 +11,7 @@
  *   validate  - Validate actor data integrity
  */
 
-import { db, eq, games, generateSnowflakeId as dbGenerateSnowflakeId, closeDatabase } from '@babylon/db';
+import { db, eq, games, gameConfigs, posts, desc, isNull, and, generateSnowflakeId as dbGenerateSnowflakeId, closeDatabase } from '@babylon/db';
 import { GameGenerator, loadActorsData } from '@babylon/engine';
 import { nanoid } from 'nanoid';
 import { getFlag, parseArgs, wantsHelp } from '../lib/args.js';
@@ -219,14 +219,15 @@ async function generateMinimalGameHistory(
   gameId: string,
   gameNumber: number
 ): Promise<GameHistory> {
-  const posts = await db.post.findMany({
-    where: { gameId, deletedAt: null },
-    orderBy: { timestamp: 'desc' },
-    take: 100,
-  });
+  const postsData = await db
+    .select()
+    .from(posts)
+    .where(and(eq(posts.gameId, gameId), isNull(posts.deletedAt)))
+    .orderBy(desc(posts.timestamp))
+    .limit(100);
 
-  const topPosts = posts.slice(0, 10);
-  const summary = `Game ${gameNumber} featured ${posts.length} posts over 30 days.`;
+  const topPosts = postsData.slice(0, 10);
+  const summary = `Game ${gameNumber} featured ${postsData.length} posts over 30 days.`;
 
   const highlights = topPosts.map((p) =>
     p.content.length > 100 ? p.content.substring(0, 100) + '...' : p.content
@@ -316,25 +317,26 @@ async function generateGame(args: ReturnType<typeof parseArgs>): Promise<void> {
   const startTime = Date.now();
 
   // Check for existing games
-  const existingGames = await db.game.findMany({
-    orderBy: { currentDate: 'desc' },
-  });
+  const existingGames = await db
+    .select()
+    .from(games)
+    .orderBy(desc(games.currentDate));
 
   if (existingGames.length === 0) {
     logger.step('No genesis game found, generating...');
     const generator = new GameGenerator();
     const genesis = await generator.generateGenesis();
 
-    await db.game.create({
-      data: {
+    await db
+      .insert(games)
+      .values({
         id: await generateSnowflakeId(),
         isContinuous: false,
         isRunning: false,
         currentDate: new Date(),
         speed: 60000,
         updatedAt: new Date(),
-      },
-    });
+      });
 
     logger.success('Genesis game created');
     console.log(`  Events: ${genesis.timeline.reduce((sum, day) => sum + day.events.length, 0)}`);
@@ -353,9 +355,12 @@ async function generateGame(args: ReturnType<typeof parseArgs>): Promise<void> {
       const gameData = existingGames[i];
       if (!gameData) continue;
 
-      const historyConfig = await db.gameConfig.findUnique({
-        where: { key: `game-history-${gameData.id}` },
-      });
+      const historyConfigResult = await db
+        .select()
+        .from(gameConfigs)
+        .where(eq(gameConfigs.key, `game-history-${gameData.id}`))
+        .limit(1);
+      const historyConfig = historyConfigResult[0] || null;
 
       if (historyConfig?.value) {
         history.push(validateGameHistory(historyConfig.value));
@@ -406,28 +411,40 @@ async function generateGame(args: ReturnType<typeof parseArgs>): Promise<void> {
 
   const gameHistory = generator.createGameHistory(game);
 
-  const savedGame = await db.game.create({
-    data: {
+  const savedGameResult = await db
+    .insert(games)
+    .values({
       id: await generateSnowflakeId(),
       isContinuous: false,
       isRunning: false,
       currentDate: new Date(nextStartDate),
       speed: 60000,
       updatedAt: new Date(),
-    },
-  });
+    })
+    .returning();
+  const savedGame = savedGameResult[0]!;
 
-  await db.gameConfig.upsert({
-    where: { key: `game-history-${savedGame.id}` },
-    update: { value: gameHistory as never, updatedAt: new Date() },
-    create: {
+  // Upsert gameConfig: check if exists, update or create
+  const existingConfig = await db
+    .select()
+    .from(gameConfigs)
+    .where(eq(gameConfigs.key, `game-history-${savedGame.id}`))
+    .limit(1);
+
+  if (existingConfig[0]) {
+    await db
+      .update(gameConfigs)
+      .set({ value: gameHistory as never, updatedAt: new Date() })
+      .where(eq(gameConfigs.key, `game-history-${savedGame.id}`));
+  } else {
+    await db.insert(gameConfigs).values({
       id: await generateSnowflakeId(),
       key: `game-history-${savedGame.id}`,
       value: gameHistory as never,
       createdAt: new Date(),
       updatedAt: new Date(),
-    },
-  });
+    });
+  }
 
   logger.success(`Game saved (ID: ${savedGame.id})`);
 }

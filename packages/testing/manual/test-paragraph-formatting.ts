@@ -2,7 +2,7 @@
  * Test to debug paragraph formatting in LLM responses
  */
 
-import { BabylonLLMClient } from '../../src/engine/llm/openai-client';
+import { BabylonLLMClient } from '@babylon/engine';
 
 async function testParagraphFormatting() {
   console.log('🔍 Testing Paragraph Formatting\n');
@@ -14,7 +14,7 @@ async function testParagraphFormatting() {
 
   const llm = new BabylonLLMClient();
 
-  const testPrompt = `You are Bloomberg News, a news organization. Write a comprehensive news article about this prediction market: "Will AI achieve AGI by 2030?".
+  const testPrompt = `You are BloombAIrg News, a news organization. Write a comprehensive news article about this prediction market: "Will OpenAGI achieve AGI by 2030?".
 
 Provide:
 - "title": a compelling headline (max 100 characters)

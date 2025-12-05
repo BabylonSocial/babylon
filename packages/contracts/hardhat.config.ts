@@ -1,5 +1,26 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
+import 'hardhat-preprocessor';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function getRemappings(): Array<[string, string]> {
+  const remappingsPath = join(__dirname, 'remappings.txt');
+  const content = readFileSync(remappingsPath, 'utf8');
+  return content
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .map((line) => {
+      const [from, to] = line.trim().split('=');
+      return [from, to] as [string, string];
+    })
+    // Only apply remappings that point to local dependencies folder
+    // Hardhat can resolve node_modules packages directly
+    .filter(([, to]) => to.startsWith('dependencies/'));
+}
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -10,6 +31,7 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
       viaIR: true,
+      evmVersion: 'cancun',
     },
   },
   paths: {
@@ -17,6 +39,19 @@ const config: HardhatUserConfig = {
     tests: './test',
     cache: './cache',
     artifacts: './artifacts',
+  },
+  preprocess: {
+    eachLine: () => ({
+      transform: (line: string) => {
+        const remappings = getRemappings();
+        for (const [from, to] of remappings) {
+          if (line.includes(from)) {
+            return line.replace(from, to);
+          }
+        }
+        return line;
+      },
+    }),
   },
   networks: {
     hardhat: {

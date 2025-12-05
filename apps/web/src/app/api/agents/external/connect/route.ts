@@ -13,7 +13,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db } from '@babylon/db';
-import { verifyApiKey } from '@babylon/shared';
+import { verifyApiKey } from '@babylon/api';
 
 // Validation schema for connection request
 const ConnectSchema = z.object({

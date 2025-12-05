@@ -176,7 +176,7 @@ const worldContext = await generateWorldContext({
 // - Crypto prices (BTC: $95K, ETH: $3.2K, SOL: $140)
 // - Stock prices (NVDA: $190, META: $610, TSLA: $400-440)
 // - Political context (Trump president since Jan 2025)
-// - AI state (GPT-5.1, Claude 4.5, Gemini 2.5)
+// - AI state (SMH-5.1, ClAIude 4.5, GeminAI 2.5)
 // - Pop culture (iPhone 17, Taylor Swift dominance)
 ```
 

@@ -14,14 +14,14 @@
  *     tags:
  *       - Trending
  *     summary: Get posts for grouped trending tags
- *     description: Returns posts that match any of the provided tag IDs
+ *     description: Returns posts that match any of the provided tag slugs
  *     parameters:
  *       - in: query
  *         name: tags
  *         required: true
  *         schema:
  *           type: string
- *         description: Comma-separated tag IDs (e.g., "id1,id2,id3")
+ *         description: Comma-separated tag slugs (e.g., "openagi,sam-altman")
  *       - in: query
  *         name: limit
  *         schema:
@@ -58,7 +58,7 @@
  *
  * @example
  * ```typescript
- * const response = await fetch('/api/trending/group?tags=id1,id2,id3');
+ * const response = await fetch('/api/trending/group?tags=openagi,sam-altman');
  * const { posts, tags } = await response.json();
  * ```
  */
@@ -100,12 +100,12 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     );
   }
 
-  const tagIds = tagsParam
+  const tagSlugs = tagsParam
     .split(',')
-    .map((id) => id.trim())
-    .filter((id) => id.length > 0);
+    .map((slug) => slug.trim().toLowerCase())
+    .filter((slug) => slug.length > 0);
 
-  if (tagIds.length === 0) {
+  if (tagSlugs.length === 0) {
     return NextResponse.json(
       { success: false, error: 'Invalid tags parameter' },
       { status: 400 }
@@ -116,7 +116,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
   logger.info(
     'Fetching grouped trending posts',
-    { tagIds, limit },
+    { tagSlugs, limit },
     'GET /api/trending/group'
   );
 
@@ -125,29 +125,42 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     () => null
   );
 
-  // Get tag information
+  // Get tag information by slug (name)
   const tagsList =
     authUser && authUser.userId
       ? await asUser(authUser, async (db) => {
           return await db
             .select({
               id: tags.id,
+              name: tags.name,
               displayName: tags.displayName,
               category: tags.category,
             })
             .from(tags)
-            .where(inArray(tags.id, tagIds));
+            .where(inArray(tags.name, tagSlugs));
         })
       : await asPublic(async (db) => {
           return await db
             .select({
               id: tags.id,
+              name: tags.name,
               displayName: tags.displayName,
               category: tags.category,
             })
             .from(tags)
-            .where(inArray(tags.id, tagIds));
+            .where(inArray(tags.name, tagSlugs));
         });
+
+  // Extract tag IDs for the post lookup
+  const tagIds = tagsList.map((t) => t.id);
+
+  if (tagIds.length === 0) {
+    return NextResponse.json({
+      success: true,
+      posts: [],
+      tags: [],
+    });
+  }
 
   // Get posts that have any of these tags
   const postTagRelations =

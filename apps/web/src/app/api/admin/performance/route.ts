@@ -51,7 +51,7 @@ import { requireAdmin } from '@babylon/api';
 import { queryMonitor } from '@babylon/db';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
-import { performanceMonitor } from '@babylon/shared';
+import { performanceMonitor } from '@babylon/api';
 
 /**
  * GET /api/admin/performance

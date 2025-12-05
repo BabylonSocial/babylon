@@ -9,11 +9,21 @@
   ],
   "scripts": {
     "postinstall": "bun run scripts/postinstall-solidity-deps.ts && bun run scripts/postinstall-install-python-deps.ts",
-    "dev": "turbo dev",
+    "dev": "bun run scripts/pre-dev/pre-dev-local.ts && bun run scripts/dev-wrapper.ts",
     "dev:web": "turbo dev --filter=web",
+    "dev:web:staging": "NODE_ENV=development bun --env-file=.env.staging.local run dev:web",
+    "dev:web:production": "NODE_ENV=development bun --env-file=.env.production.local run dev:web",
+    "vercel:dev:web:staging": "bun run env:pull:staging && bun run dev:web:staging",
+    "vercel:dev:web:production": "bun run env:pull:production && bun run dev:web:production",
     "dev:next-only": "turbo dev:next-only --filter=web",
+    "env:pull:staging": "vercel env pull --yes .env.staging.local --environment=staging",
+    "env:pull:production": "vercel env pull --yes .env.production.local --environment=production",
     "build": "turbo build",
+    "build:staging": "NODE_ENV=production bun --env-file=.env.staging.local run build",
+    "build:production": "NODE_ENV=production bun --env-file=.env.production.local run build",
     "start": "turbo start --filter=web",
+    "start:staging": "NODE_ENV=production bun --env-file=.env.staging.local run start",
+    "start:production": "NODE_ENV=production bun --env-file=.env.production.local run start",
     "check": "biome check --write .",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
@@ -32,7 +42,8 @@
     "db:pull": "bun run --cwd packages/db db:pull",
     "db:studio": "bun run --cwd packages/db db:studio",
     "db:check": "bun run --cwd packages/db db:check",
-    "db:seed": "bun run scripts/seed-test-data.ts all",
+    "db:seed": "bun run scripts/seed-database.ts",
+    "db:seed:test": "bun run scripts/seed-test-data.ts all",
     "deploy:local": "bun run apps/cli/src/index.ts deploy local",
     "deploy:testnet": "bun run apps/cli/src/index.ts deploy testnet",
     "deploy:mainnet": "bun run apps/cli/src/index.ts deploy mainnet --force",
@@ -51,26 +62,28 @@
     "hf:upload": "bun run apps/cli/src/index.ts model upload-dataset",
     "stress-test": "bun run apps/cli/src/index.ts test load",
     "stress-test:a2a": "bun run apps/cli/src/index.ts test a2a",
-    "prepare": "husky"
+    "prepare": "husky",
+    "docs:generate": "bun scripts/docs/generate_all_docs.ts"
   },
   "dependencies": {
     "@a2a-js/sdk": "^0.3.5",
     "@neondatabase/serverless": "^1.0.2",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.44.7",
-    "ethers": "^6.15.0",
+    "ethers": "^6.16.0",
     "import-in-the-middle": "^2.0.0",
     "ioredis": "^5.8.2",
+    "js-tiktoken": "^1.0.21",
     "openai": "^6.8.1",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "require-in-the-middle": "^8.0.1",
-    "viem": "^2.38.6",
+    "viem": "^2.41.2",
     "ws": "^8.18.3",
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.0",
+    "@biomejs/biome": "^2.3.8",
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@prb/math": "^4.1.0",
     "@playwright/test": "^1.56.1",
@@ -82,7 +95,7 @@
     "hardhat": "2.22.18",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "turbo": "^2.5.4",
     "typescript": "^5.9.3"
   },
@@ -91,5 +104,13 @@
       "biome check --write --no-errors-on-unmatched"
     ]
   },
-  "packageManager": "bun@1.3.0"
+  "packageManager": "bun@1.3.0",
+  "trustedDependencies": [
+    "@reown/appkit",
+    "@sentry/cli",
+    "@tree-sitter-grammars/tree-sitter-yaml",
+    "core-js",
+    "core-js-pure",
+    "protobufjs"
+  ]
 }

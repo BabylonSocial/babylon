@@ -96,6 +96,8 @@ export {
 } from './world-context';
 // Reality grounding utilities
 export { getWorldEventExamples } from './reality-grounding';
+// Shared sections utilities
+export { getTimeOfDayEnergy } from './shared-sections';
 // Random context for entropy in prompts
 export {
   formatRandomContext,
@@ -107,7 +109,9 @@ export {
   CHARACTER_LIMITS,
   type ValidationResult,
   validateCharacterLimit,
+  validateArticle,
   validateFeedPost,
+  validateHashtags,
   validateNoEmojis,
   validateNoHashtags,
   validateNoRealNames as validateNoRealNamesStrict,

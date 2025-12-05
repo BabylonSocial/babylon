@@ -2,7 +2,7 @@ import { data as ai16z } from './ai16z';
 import { data as aimazon } from './aimazon';
 import { data as aimerica_first } from './aimerica-first';
 import { data as ainbc } from './ainbc';
-import { data as aindruil } from './aindruil';
+import { data as ainduril } from './ainduril';
 import { data as ainfowars } from './ainfowars';
 import { data as aingel_list } from './aingel-list';
 import { data as aiphabet } from './aiphabet';
@@ -57,7 +57,6 @@ import { data as the_vairge } from './the-vairge';
 import { data as ubair } from './ubair';
 import { data as waired } from './waired';
 import { data as wall_street_journai } from './wall-street-journai';
-import { data as wikaileaks } from './wikaileaks';
 import { data as zcaish } from './zcaish';
 
 export const organizations = [
@@ -65,7 +64,7 @@ export const organizations = [
   aimazon,
   aimerica_first,
   ainbc,
-  aindruil,
+  ainduril,
   ainfowars,
   aingel_list,
   aiphabet,
@@ -120,6 +119,5 @@ export const organizations = [
   ubair,
   waired,
   wall_street_journai,
-  wikaileaks,
   zcaish
 ] as const;

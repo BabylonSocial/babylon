@@ -221,7 +221,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanedValue = generatedValue.replace(/^["']|["']$/g, '');
+    // Strip any <think>...</think> tags and their content (from reasoning models like Qwen)
+    // Also remove leading/trailing quotes
+    const cleanedValue = generatedValue
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/^["']|["']$/g, '')
+      .trim();
 
     return NextResponse.json({
       success: true,
@@ -240,6 +245,38 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * Trading strategy archetypes for variety in generation
+ */
+const TRADING_ARCHETYPES = [
+  'momentum trader who rides trends',
+  'contrarian who bets against the crowd',
+  'value investor seeking underpriced assets',
+  'technical analyst using chart patterns',
+  'fundamental analyst studying market data',
+  'swing trader capturing short-term moves',
+  'scalper making quick in-and-out trades',
+  'macro trader following economic trends',
+  'sentiment analyst reading market mood',
+  'quantitative trader using statistical models',
+];
+
+/**
+ * Personality traits for variety in generation
+ */
+const PERSONALITY_TRAITS = [
+  'confident and decisive',
+  'analytical and methodical',
+  'bold and aggressive',
+  'cautious and risk-averse',
+  'witty and engaging',
+  'calm and collected',
+  'enthusiastic and optimistic',
+  'skeptical and questioning',
+  'strategic and patient',
+  'adaptive and flexible',
+];
+
 function buildPromptForField(
   fieldName: string,
   currentValue: string | undefined,
@@ -247,47 +284,91 @@ function buildPromptForField(
 ): string {
   const hasCurrentValue = currentValue && currentValue.length > 0;
 
-  // Build context summary
-  let contextSummary = '';
-  if (context.name) contextSummary += `Name: ${context.name}\n`;
-  if (context.description)
-    contextSummary += `Description: ${context.description}\n`;
+  // Pick random elements for variety
+  const randomArchetype =
+    TRADING_ARCHETYPES[Math.floor(Math.random() * TRADING_ARCHETYPES.length)];
+  const randomTrait =
+    PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)];
+
+  // Build rich context from all available fields
+  const agentName = context.name || 'the agent';
+  const hasDescription = context.description && context.description.length > 10;
+  const hasSystem = context.system && context.system.length > 10;
+  const hasPersonality = context.personality && context.personality.length > 10;
+  const hasTradingStrategy =
+    context.tradingStrategy && context.tradingStrategy.length > 10;
 
   switch (fieldName) {
     case 'name':
-      return 'Generate a creative, memorable name for an AI agent. It should sound intelligent and professional. Just return the name, nothing else.';
+      return `Generate a unique, memorable name for an AI trading agent. Be creative - it could be a compound word, a mythological reference, a tech-inspired name, or something completely original. Examples of styles: "NexusTrader", "OracleX", "VoltageAI", "CipherMind". Just return the name, nothing else.`;
 
     case 'description':
       if (hasCurrentValue) {
-        return `Complete or enhance this agent description:\n"${currentValue}"\n${
-          contextSummary ? `\nContext:\n${contextSummary}` : ''
-        }\nProvide a natural, complete description (1-2 sentences). Just return the enhanced text, no quotes or explanations.`;
+        return `Enhance this agent description while keeping its essence:\n"${currentValue}"\n\nMake it more compelling and specific. Just return the enhanced description (1-2 sentences), no quotes.`;
       }
-      return `Write a brief, natural description (1-2 sentences) for an AI agent${
-        context.name ? ` named ${context.name}` : ''
-      }. Describe what makes this agent unique and useful. Just return the description, no quotes or explanations.`;
+      return `Write a compelling one-sentence description for an AI trading agent${context.name ? ` called "${context.name}"` : ''}. Focus on what makes this agent unique - its specialty, approach, or edge. Be specific and avoid generic phrases. Just return the description, no quotes.`;
 
     case 'system':
-      return `Write a system prompt for an AI agent${context.name ? ` named ${context.name}` : ''}${
-        context.description ? ` that is ${context.description}` : ''
-      }. The system prompt should define the agent's role, personality, and how it should behave. Keep it 2-3 sentences. Just return the system prompt starting with "You are...", no quotes or explanations.`;
+      // System prompt: Core directive that defines who the agent IS
+      return `Write a system prompt (important directions) for an AI trading agent called "${agentName}".
+
+${hasDescription ? `Agent description: ${context.description}\n` : ''}
+${hasPersonality ? `Personality context: ${context.personality}\n` : ''}
+${hasTradingStrategy ? `Trading approach: ${context.tradingStrategy}\n` : ''}
+
+The system prompt should:
+1. Define the agent's core identity and role (start with "You are...")
+2. Specify its primary objectives and decision-making principles
+3. Set behavioral guidelines for how it analyzes and responds
+${!hasTradingStrategy ? `4. Hint at a ${randomArchetype} approach` : ''}
+
+Keep it to 3-4 sentences. Be specific to THIS agent's unique identity. Just return the system prompt, no quotes or meta-commentary.`;
 
     case 'bio':
-      return `Generate 3 short bio points (separated by |) for an AI agent${context.name ? ` named ${context.name}` : ''}${
-        context.description ? ` that is ${context.description}` : ''
-      }. Each point should be 3-5 words highlighting a key trait or capability. Format: "Point 1|Point 2|Point 3". Just return the points, nothing else.`;
+      return `Generate 3 distinctive bio points for "${agentName}".
+
+${hasDescription ? `Description: ${context.description}\n` : ''}
+${hasSystem ? `System prompt: ${context.system}\n` : ''}
+
+Each point should be 4-6 words highlighting a unique trait, specialty, or achievement. Make them memorable and specific to this agent's character.
+
+Format exactly as: "Point 1|Point 2|Point 3"
+Just return the three points separated by |, nothing else.`;
 
     case 'personality':
-      return `Write a personality description (2-3 sentences) for an AI agent${context.name ? ` named ${context.name}` : ''}${
-        context.description ? ` that is ${context.description}` : ''
-      }${context.system ? `\n\nSystem prompt: ${context.system}` : ''}. Describe how the agent communicates and interacts. Just return the personality description, no quotes or explanations.`;
+      // Personality: How the agent communicates and interacts
+      return `Write a personality description for "${agentName}" that defines its communication style.
+
+${hasDescription ? `Agent description: ${context.description}\n` : ''}
+${hasSystem ? `System prompt: ${context.system}\n` : ''}
+${hasTradingStrategy ? `Trading style: ${context.tradingStrategy}\n` : ''}
+
+Describe in 2-3 sentences:
+- How the agent speaks (tone, vocabulary, formality level)
+- Its emotional temperament when trading
+- Any distinctive quirks or catchphrases it might use
+${!hasSystem && !hasDescription ? `Consider a ${randomTrait} personality type.` : ''}
+
+Be creative and give this agent a distinct voice. Just return the personality description, no quotes.`;
 
     case 'tradingStrategy':
-      return `Write a trading strategy description (2-3 sentences) for an AI trading agent${context.name ? ` named ${context.name}` : ''}${
-        context.description ? ` that is ${context.description}` : ''
-      }. Describe the agent's approach to trading, risk management, and decision-making. Just return the strategy description, no quotes or explanations.`;
+      // Trading strategy: Specific approach to markets
+      return `Write a trading strategy for "${agentName}".
+
+${hasDescription ? `Agent description: ${context.description}\n` : ''}
+${hasSystem ? `System prompt: ${context.system}\n` : ''}
+${hasPersonality ? `Personality: ${context.personality}\n` : ''}
+
+Describe in 2-3 sentences:
+- Primary trading methodology (e.g., technical, fundamental, sentiment-based)
+- Risk management approach (position sizing, stop losses, max drawdown)
+- Key indicators or signals the agent watches
+- Time horizon (scalping, day trading, swing, long-term)
+${!hasSystem && !hasDescription ? `Consider a ${randomArchetype} approach.` : ''}
+
+Be specific about actual trading techniques. Just return the strategy description, no quotes.`;
 
     default:
-      return `Generate a value for ${fieldName}${contextSummary ? ` using this context:\n${contextSummary}` : ''}.`;
+      return `Generate creative content for the "${fieldName}" field of an AI trading agent${context.name ? ` named "${context.name}"` : ''}. Be specific and original.`;
   }
 }

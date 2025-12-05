@@ -15,16 +15,18 @@ import {
 import { baseSepolia } from 'viem/chains';
 import { agentPerformanceMetrics, db, eq } from '@babylon/db';
 import { logger } from '../../shared/logger';
-import { REPUTATION_SYSTEM_ABI } from '@babylon/shared';
+import {
+  REPUTATION_SYSTEM_ABI,
+  REPUTATION_SYSTEM_BASE_SEPOLIA,
+  getCurrentRpcUrl,
+} from '@babylon/shared';
 
-// Contract addresses (should be from environment in production)
-const REPUTATION_SYSTEM_ADDRESS = (process.env
-  .NEXT_PUBLIC_REPUTATION_SYSTEM_ADDRESS ||
-  '0x0000000000000000000000000000000000000000') as Address;
+// Contract addresses from canonical config
+const REPUTATION_SYSTEM_ADDRESS = REPUTATION_SYSTEM_BASE_SEPOLIA as Address;
 
 const publicClient = createPublicClient({
   chain: baseSepolia,
-  transport: http(process.env.NEXT_PUBLIC_RPC_URL),
+  transport: http(getCurrentRpcUrl()),
 });
 
 interface OnChainReputation {

@@ -16,6 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import Link from 'next/link';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LoginButton } from '@/components/auth/LoginButton';
 import { CreateGroupModal } from '@/components/groups/CreateGroupModal';
@@ -88,6 +89,12 @@ interface ChatDetails {
     isGroup: boolean;
     createdAt: string;
     updatedAt: string;
+    otherUser?: {
+      id: string;
+      displayName: string | null;
+      username: string | null;
+      profileImageUrl: string | null;
+    } | null;
   };
   messages: Message[];
   participants: Array<{
@@ -97,6 +104,13 @@ interface ChatDetails {
     profileImageUrl?: string;
   }>;
 }
+
+// Helper to get the best profile URL identifier (prefer username over id)
+const getProfilePath = (user: { id: string; username?: string | null }) => {
+  // Use username if available (cleaner URLs), otherwise fall back to id
+  const identifier = user.username || user.id;
+  return `/profile/${identifier}`;
+};
 
 export default function ChatsPage() {
   const { ready, authenticated } = useAuth();
@@ -148,6 +162,7 @@ export default function ChatsPage() {
     isLoadingMore,
     hasMore,
     loadMore,
+    addMessage,
   } = useChatMessages(selectedChatId);
 
   // Pull-to-refresh state
@@ -501,6 +516,9 @@ export default function ChatsPage() {
     [getAccessToken, user]
   );
 
+  // Track pending DM to load once user is available
+  const [pendingDM, setPendingDM] = useState<{ chatId: string; targetUserId: string } | null>(null);
+
   // Check for chat ID in URL query params
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -511,16 +529,24 @@ export default function ChatsPage() {
       if (chatParam && chatParam !== selectedChatId) {
         setSelectedChatId(chatParam);
 
-        // If this is a new DM, load the target user info
+        // If this is a new DM, store it as pending until user is available
         if (newDMParam && chatParam.startsWith('dm-')) {
-          loadNewDMChat(chatParam, newDMParam);
+          setPendingDM({ chatId: chatParam, targetUserId: newDMParam });
         }
 
         // Clean up URL
         window.history.replaceState({}, '', '/chats');
       }
     }
-  }, [selectedChatId, loadNewDMChat]);
+  }, [selectedChatId]);
+
+  // Load pending DM once user is available
+  useEffect(() => {
+    if (pendingDM && user) {
+      loadNewDMChat(pendingDM.chatId, pendingDM.targetUserId);
+      setPendingDM(null);
+    }
+  }, [pendingDM, user, loadNewDMChat]);
 
   // Load user's chats from database
   useEffect(() => {
@@ -693,7 +719,21 @@ export default function ChatsPage() {
     setSendSuccess(true);
     setTimeout(() => setSendSuccess(false), 2000);
 
-    // SSE will handle adding the message in real-time
+    // Add the message optimistically to show it immediately
+    // This ensures the sender sees their message right away without waiting for SSE
+    if (data.message) {
+      addMessage({
+        id: data.message.id,
+        content: data.message.content,
+        chatId: data.message.chatId,
+        senderId: data.message.senderId,
+        createdAt:
+          typeof data.message.createdAt === 'string'
+            ? data.message.createdAt
+            : new Date(data.message.createdAt).toISOString(),
+      });
+    }
+
     setMessageInput('');
     void loadChats(); // Refresh chat list to update last message
 
@@ -1015,36 +1055,45 @@ export default function ChatsPage() {
                               style={{ color: '#b82323' }}
                             />
                           </div>
+                        ) : chatDetails.chat.otherUser ? (
+                          <Link
+                            href={getProfilePath(chatDetails.chat.otherUser)}
+                            className="transition-opacity hover:opacity-80"
+                          >
+                            <Avatar
+                              id={chatDetails.chat.otherUser.id}
+                              name={chatDetails.chat.otherUser.displayName || 'User'}
+                              type="user"
+                              size="md"
+                              imageUrl={chatDetails.chat.otherUser.profileImageUrl || undefined}
+                            />
+                          </Link>
                         ) : (
                           <Avatar
-                            id={
-                              chatDetails.participants.find(
-                                (p) => p.id !== user?.id
-                              )?.id || ''
-                            }
-                            name={
-                              chatDetails.participants.find(
-                                (p) => p.id !== user?.id
-                              )?.displayName || 'User'
-                            }
+                            id=""
+                            name="User"
                             type="user"
                             size="md"
-                            imageUrl={
-                              chatDetails.participants.find(
-                                (p) => p.id !== user?.id
-                              )?.profileImageUrl
-                            }
                           />
                         )}
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-foreground text-lg">
-                              {chatDetails.chat.name ||
-                                chatDetails.participants.find(
-                                  (p) => p.id !== user?.id
-                                )?.displayName ||
-                                'Chat'}
-                            </h3>
+                            {chatDetails.chat.isGroup ? (
+                              <h3 className="font-bold text-foreground text-lg">
+                                {chatDetails.chat.name || 'Chat'}
+                              </h3>
+                            ) : chatDetails.chat.otherUser ? (
+                              <Link
+                                href={getProfilePath(chatDetails.chat.otherUser)}
+                                className="font-bold text-foreground text-lg transition-colors hover:text-primary"
+                              >
+                                {chatDetails.chat.otherUser.displayName || 'Chat'}
+                              </Link>
+                            ) : (
+                              <h3 className="font-bold text-foreground text-lg">
+                                Chat
+                              </h3>
+                            )}
                             {/* Show chat-specific SSE connection status */}
                             {sseConnected ? (
                               <span
@@ -1198,13 +1247,26 @@ export default function ChatsPage() {
                                 isCurrentUser ? 'justify-end' : 'items-start'
                               )}
                             >
-                              {!isCurrentUser && (
+                              {!isCurrentUser && sender && (
+                                <Link
+                                  href={getProfilePath(sender)}
+                                  className="shrink-0 transition-opacity hover:opacity-80"
+                                >
+                                  <Avatar
+                                    id={sender.id}
+                                    name={senderName}
+                                    type="user"
+                                    size="md"
+                                    imageUrl={sender.profileImageUrl}
+                                  />
+                                </Link>
+                              )}
+                              {!isCurrentUser && !sender && (
                                 <Avatar
                                   id={msg.senderId}
                                   name={senderName}
                                   type="user"
                                   size="md"
-                                  imageUrl={sender?.profileImageUrl}
                                 />
                               )}
                               <div
@@ -1214,7 +1276,15 @@ export default function ChatsPage() {
                                 )}
                               >
                                 <div className="mb-1 flex flex-wrap items-center gap-3">
-                                  {!isCurrentUser && (
+                                  {!isCurrentUser && sender && (
+                                    <Link
+                                      href={getProfilePath(sender)}
+                                      className="font-bold text-foreground text-sm transition-colors hover:text-primary"
+                                    >
+                                      {senderName}
+                                    </Link>
+                                  )}
+                                  {!isCurrentUser && !sender && (
                                     <span className="font-bold text-foreground text-sm">
                                       {senderName}
                                     </span>
@@ -1635,36 +1705,45 @@ export default function ChatsPage() {
                             style={{ color: '#b82323' }}
                           />
                         </div>
+                      ) : chatDetails.chat.otherUser ? (
+                        <Link
+                          href={getProfilePath(chatDetails.chat.otherUser)}
+                          className="transition-opacity hover:opacity-80"
+                        >
+                          <Avatar
+                            id={chatDetails.chat.otherUser.id}
+                            name={chatDetails.chat.otherUser.displayName || 'User'}
+                            type="user"
+                            size="md"
+                            imageUrl={chatDetails.chat.otherUser.profileImageUrl || undefined}
+                          />
+                        </Link>
                       ) : (
                         <Avatar
-                          id={
-                            chatDetails.participants.find(
-                              (p) => p.id !== user?.id
-                            )?.id || ''
-                          }
-                          name={
-                            chatDetails.participants.find(
-                              (p) => p.id !== user?.id
-                            )?.displayName || 'User'
-                          }
+                          id=""
+                          name="User"
                           type="user"
                           size="md"
-                          imageUrl={
-                            chatDetails.participants.find(
-                              (p) => p.id !== user?.id
-                            )?.profileImageUrl
-                          }
                         />
                       )}
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-foreground text-lg">
-                            {chatDetails.chat.name ||
-                              chatDetails.participants.find(
-                                (p) => p.id !== user?.id
-                              )?.displayName ||
-                              'Chat'}
-                          </h3>
+                          {chatDetails.chat.isGroup ? (
+                            <h3 className="font-bold text-foreground text-lg">
+                              {chatDetails.chat.name || 'Chat'}
+                            </h3>
+                          ) : chatDetails.chat.otherUser ? (
+                            <Link
+                              href={getProfilePath(chatDetails.chat.otherUser)}
+                              className="font-bold text-foreground text-lg transition-colors hover:text-primary"
+                            >
+                              {chatDetails.chat.otherUser.displayName || 'Chat'}
+                            </Link>
+                          ) : (
+                            <h3 className="font-bold text-foreground text-lg">
+                              Chat
+                            </h3>
+                          )}
                           {/* Show chat-specific SSE connection status */}
                           {sseConnected ? (
                             <span
@@ -1780,13 +1859,26 @@ export default function ChatsPage() {
                               isCurrentUser ? 'justify-end' : 'items-start'
                             )}
                           >
-                            {!isCurrentUser && (
+                            {!isCurrentUser && sender && (
+                              <Link
+                                href={getProfilePath(sender)}
+                                className="shrink-0 transition-opacity hover:opacity-80"
+                              >
+                                <Avatar
+                                  id={sender.id}
+                                  name={senderName}
+                                  type="user"
+                                  size="md"
+                                  imageUrl={sender.profileImageUrl}
+                                />
+                              </Link>
+                            )}
+                            {!isCurrentUser && !sender && (
                               <Avatar
                                 id={msg.senderId}
                                 name={senderName}
                                 type="user"
                                 size="md"
-                                imageUrl={sender?.profileImageUrl}
                               />
                             )}
                             <div
@@ -1796,7 +1888,15 @@ export default function ChatsPage() {
                               )}
                             >
                               <div className="mb-1 flex flex-wrap items-center gap-2">
-                                {!isCurrentUser && (
+                                {!isCurrentUser && sender && (
+                                  <Link
+                                    href={getProfilePath(sender)}
+                                    className="font-bold text-foreground text-sm transition-colors hover:text-primary"
+                                  >
+                                    {senderName}
+                                  </Link>
+                                )}
+                                {!isCurrentUser && !sender && (
                                   <span className="font-bold text-foreground text-sm">
                                     {senderName}
                                   </span>

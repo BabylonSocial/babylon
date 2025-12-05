@@ -53,7 +53,7 @@ async function runLoadTest(args: ReturnType<typeof parseArgs>): Promise<void> {
   console.log(`Base URL: ${baseUrl}\n`);
 
   // Import dynamically to avoid loading testing infrastructure if not needed
-  const { LoadTestSimulator, TEST_SCENARIOS } = await import('@babylon/testing/load-test');
+  const { LoadTestSimulator, TEST_SCENARIOS } = await import('@babylon/testing');
 
   const scenarioKey = scenario.toUpperCase() as keyof typeof TEST_SCENARIOS;
   const config = TEST_SCENARIOS[scenarioKey];
@@ -139,7 +139,7 @@ async function runA2AStressTest(args: ReturnType<typeof parseArgs>): Promise<voi
   console.log(`Base URL: ${baseUrl}\n`);
 
   // Import dynamically
-  const { LoadTestSimulator, A2A_TEST_SCENARIOS } = await import('@babylon/testing/load-test');
+  const { LoadTestSimulator, A2A_TEST_SCENARIOS } = await import('@babylon/testing');
 
   const scenarioKey = scenario.toUpperCase().replace('-', '_') as keyof typeof A2A_TEST_SCENARIOS;
   const config = A2A_TEST_SCENARIOS[scenarioKey];

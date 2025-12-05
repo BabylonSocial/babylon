@@ -76,6 +76,7 @@ interface EntitySearchAutocompleteProps {
   className?: string;
   compact?: boolean;
   onNavigate?: () => void;
+  searchType?: 'all' | 'users' | 'actors' | 'agents' | 'apps';
 }
 
 export function EntitySearchAutocomplete({
@@ -85,6 +86,7 @@ export function EntitySearchAutocomplete({
   className,
   compact = false,
   onNavigate,
+  searchType = 'all',
 }: EntitySearchAutocompleteProps) {
   const router = useRouter();
   const [suggestions, setSuggestions] = useState<RegistryEntity[]>([]);
@@ -104,9 +106,11 @@ export function EntitySearchAutocomplete({
       }
 
       setLoading(true);
-      const response = await fetch(
-        `/api/registry/all?search=${encodeURIComponent(value)}`
-      );
+      const params = new URLSearchParams({
+        search: value,
+        type: searchType,
+      });
+      const response = await fetch(`/api/registry/all?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         const users: RegistryEntity[] = (data.users || []).map(
@@ -143,7 +147,7 @@ export function EntitySearchAutocomplete({
 
     const timer = setTimeout(fetchSuggestions, 250);
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [value, searchType]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

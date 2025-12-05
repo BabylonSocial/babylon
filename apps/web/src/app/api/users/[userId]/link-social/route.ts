@@ -75,7 +75,7 @@ import { authenticate, successResponse } from '@babylon/api';
 import { AuthorizationError, ConflictError, NotFoundError } from '@babylon/api';
 import { withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import { PointsService } from '@babylon/api';
 import { requireUserByIdentifier } from '@babylon/api';
 import { UserIdParamSchema } from '@babylon/shared';

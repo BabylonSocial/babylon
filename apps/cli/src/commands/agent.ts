@@ -11,7 +11,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { db, closeDatabase } from '@babylon/db';
+import { db, closeDatabase, users, eq, desc, or, and } from '@babylon/db';
 import { createTestAgent } from '@babylon/agents';
 import { parseArgs, wantsHelp, getOption, getFlag } from '../lib/args.js';
 import { logger } from '../lib/logger.js';
@@ -108,40 +108,38 @@ async function listAgents(args: ReturnType<typeof parseArgs>): Promise<void> {
 
   logger.header('Agents');
 
-  interface AgentWhereClause {
-    isAgent: boolean;
-    OR?: Array<Record<string, boolean>>;
-  }
-
-  const whereClause: AgentWhereClause = { isAgent: true };
+  let whereCondition = eq(users.isAgent, true);
 
   if (activeOnly) {
-    whereClause.OR = [
-      { autonomousTrading: true },
-      { autonomousPosting: true },
-      { autonomousCommenting: true },
-      { autonomousDMs: true },
-      { autonomousGroupChats: true },
-    ];
+    whereCondition = and(
+      eq(users.isAgent, true),
+      or(
+        eq(users.autonomousTrading, true),
+        eq(users.autonomousPosting, true),
+        eq(users.autonomousCommenting, true),
+        eq(users.autonomousDMs, true),
+        eq(users.autonomousGroupChats, true)
+      )!
+    )!;
   }
 
-  const agents = await db.user.findMany({
-    where: whereClause,
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-    select: {
-      id: true,
-      username: true,
-      displayName: true,
-      agentPointsBalance: true,
-      autonomousTrading: true,
-      autonomousPosting: true,
-      autonomousCommenting: true,
-      autonomousDMs: true,
-      autonomousGroupChats: true,
-      createdAt: true,
-    },
-  });
+  const agents = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      agentPointsBalance: users.agentPointsBalance,
+      autonomousTrading: users.autonomousTrading,
+      autonomousPosting: users.autonomousPosting,
+      autonomousCommenting: users.autonomousCommenting,
+      autonomousDMs: users.autonomousDMs,
+      autonomousGroupChats: users.autonomousGroupChats,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(whereCondition)
+    .orderBy(desc(users.createdAt))
+    .limit(limit);
 
   if (agents.length === 0) {
     console.log('No agents found.');
@@ -282,9 +280,12 @@ async function toggleAgentFeatures(
     process.exit(1);
   }
 
-  const agent = await db.user.findUnique({
-    where: { id: agentId },
-  });
+  const agentResult = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, agentId))
+    .limit(1);
+  const agent = agentResult[0] || null;
 
   if (!agent) {
     logger.fail(`Agent not found: ${agentId}`);
@@ -319,10 +320,10 @@ async function toggleAgentFeatures(
     process.exit(1);
   }
 
-  await db.user.update({
-    where: { id: agentId },
-    data: updates,
-  });
+  await db
+    .update(users)
+    .set(updates)
+    .where(eq(users.id, agentId));
 
   const action = enable ? 'Enabled' : 'Disabled';
   logger.success(`${action} features for ${agent.username || agentId}`);

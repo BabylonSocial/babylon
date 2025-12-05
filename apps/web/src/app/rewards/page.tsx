@@ -14,7 +14,9 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { LoginButton } from '@/components/auth/LoginButton';
 import { LinkSocialAccountsModal } from '@/components/profile/LinkSocialAccountsModal';
 import { RewardsSkeleton } from '@/components/rewards/RewardsSkeleton';
@@ -77,14 +79,47 @@ interface ReferralData {
 }
 
 export default function RewardsPage() {
-  const { ready, authenticated, getAccessToken, login } = useAuth();
+  const { ready, authenticated, getAccessToken, login, refresh } = useAuth();
   const { user } = useAuthStore();
+  const searchParams = useSearchParams();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showLinkSocialModal, setShowLinkSocialModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  // Handle OAuth callback from Twitter/Discord linking
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const points = searchParams.get('points');
+    const errorParam = searchParams.get('error');
+
+    if (success === 'twitter_linked' && points) {
+      toast.success(`X account linked! +${points} points awarded`);
+      // Dispatch event to notify other components (like UserMenu) to refresh
+      window.dispatchEvent(new CustomEvent('rewards-updated'));
+      // Refresh auth state to get latest reputation points
+      refresh();
+      // Clean up URL params
+      window.history.replaceState({}, '', '/rewards');
+    } else if (success === 'discord_linked' && points) {
+      toast.success(`Discord account linked! +${points} points awarded`);
+      window.dispatchEvent(new CustomEvent('rewards-updated'));
+      refresh();
+      window.history.replaceState({}, '', '/rewards');
+    } else if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        twitter_already_linked: 'This X account is already linked to another user',
+        discord_already_linked: 'This Discord account is already linked to another user',
+        token_exchange_failed: 'Failed to authenticate. Please try again.',
+        invalid_state: 'Session expired. Please try again.',
+        state_expired: 'Session expired. Please try again.',
+      };
+      toast.error(errorMessages[errorParam] || 'An error occurred. Please try again.');
+      window.history.replaceState({}, '', '/rewards');
+    }
+  }, [searchParams, refresh]);
 
   const fetchReferralData = useCallback(async () => {
     if (!user?.id || !authenticated) return;

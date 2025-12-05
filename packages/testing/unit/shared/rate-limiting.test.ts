@@ -5,15 +5,15 @@
 
 import { beforeEach, describe, expect, it } from 'bun:test';
 import {
-  checkDuplicate,
   checkRateLimit,
-  clearAllDuplicates,
   clearAllRateLimits,
-  DUPLICATE_DETECTION_CONFIGS,
-  getDuplicateStats,
   getRateLimitStatus,
   RATE_LIMIT_CONFIGS,
-} from '@babylon/shared';
+  checkDuplicate,
+  clearAllDuplicates,
+  DUPLICATE_DETECTION_CONFIGS,
+  getDuplicateStats,
+} from '@babylon/api';
 
 describe('Rate Limiting (Shared)', () => {
   beforeEach(() => {

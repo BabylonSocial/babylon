@@ -7,11 +7,13 @@
 import { NextResponse } from 'next/server';
 import { logger } from '@babylon/shared';
 import {
-  checkDuplicate,
-  type DUPLICATE_DETECTION_CONFIGS,
   checkRateLimit,
   type RATE_LIMIT_CONFIGS,
-} from '@babylon/shared';
+} from './user-rate-limiter';
+import {
+  checkDuplicate,
+  type DUPLICATE_DETECTION_CONFIGS,
+} from '../utils/duplicate-detector';
 
 /**
  * Error response for rate limit exceeded

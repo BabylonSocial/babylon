@@ -61,7 +61,7 @@ contract MarketFactory is Ownable, Pausable {
         require(_defaultLiquidity > 0, "Invalid liquidity");
         
         predimarket = IPredimarket(_predimarket);
-        oracle = IPredictionOracle(_oracle);
+        oracle = IPredictionOracleExtended(_oracle);
         defaultLiquidity = _defaultLiquidity;
     }
 

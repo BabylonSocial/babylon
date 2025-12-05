@@ -154,9 +154,13 @@ export const GET = withErrorHandling(
       throw new NotFoundError('User', canonicalUserId);
     }
 
-    // Get all completed referrals
+    // Get all completed referrals - explicitly select only needed columns
     const completedReferralsData = await db
-      .select()
+      .select({
+        id: referrals.id,
+        referredUserId: referrals.referredUserId,
+        completedAt: referrals.completedAt,
+      })
       .from(referrals)
       .where(
         and(

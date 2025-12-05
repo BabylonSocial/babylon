@@ -2,42 +2,11 @@
  * Redis Streams Support
  *
  * @description Provides Redis Streams operations for pub/sub messaging.
- * Works with both Upstash REST API and standard Redis protocol.
+ * Works with any Redis server via the standard Redis protocol.
  */
 
-import { Redis as UpstashRedis } from '@upstash/redis';
-import { logger } from '@babylon/shared';
-import { redis, redisClientType, type RedisClientType } from './client';
+import { getRedisClient } from './client';
 import type { JsonValue } from '../types';
-
-// Type for ioredis instance (avoid importing at top level to prevent bundling in edge runtime)
-type IORedisInstance = {
-  xadd: (...args: unknown[]) => Promise<string>;
-  xread: (...args: unknown[]) => Promise<unknown>;
-};
-
-// Redis client union type
-type RedisClient = UpstashRedis | IORedisInstance | null;
-
-/**
- * Type guard to check if Redis client is IORedisInstance
- */
-function isIORedisInstance(
-  client: RedisClient,
-  type: RedisClientType
-): client is IORedisInstance {
-  return type === 'standard' && client !== null;
-}
-
-/**
- * Type guard to check if Redis client is UpstashRedis
- */
-function isUpstashRedis(
-  client: RedisClient,
-  type: RedisClientType
-): client is UpstashRedis {
-  return type === 'upstash' && client !== null;
-}
 
 /**
  * Convert a payload object into Redis stream field/value pairs (stringified).
@@ -62,48 +31,26 @@ export async function streamAdd(
   payload: Record<string, JsonValue>,
   opts?: { maxlen?: number }
 ): Promise<string | null> {
-  if (!redis || !redisClientType) return null;
+  const client = getRedisClient();
+  if (!client) return null;
 
   const entry = encodeStreamPayload(payload);
 
-  if (redisClientType === 'upstash' && isUpstashRedis(redis, redisClientType)) {
-    const trim =
-      opts?.maxlen !== undefined
-        ? {
-            type: 'MAXLEN' as const,
-            threshold: opts.maxlen,
-            comparison: '~' as const,
-            limit: Math.max(1000, Math.min(opts.maxlen * 2, 50000)),
-          }
-        : undefined;
+  // Build args in correct Redis XADD order:
+  // XADD key [MAXLEN [= | ~] threshold] <* | id> field value [field value ...]
+  const args: (string | number)[] = [stream];
 
-    return await redis.xadd(
-      stream,
-      '*',
-      entry,
-      trim ? { trim } : undefined
-    );
+  // MAXLEN must come after the stream key and before the entry ID
+  if (opts?.maxlen !== undefined) {
+    args.push('MAXLEN', '~', opts.maxlen);
   }
 
-  if (redisClientType === 'standard' && isIORedisInstance(redis, redisClientType)) {
-    // Build args in correct Redis XADD order:
-    // XADD key [MAXLEN [= | ~] threshold] <* | id> field value [field value ...]
-    const args: (string | number)[] = [stream];
+  args.push('*');
+  Object.entries(entry).forEach(([key, value]) => {
+    args.push(key, String(value));
+  });
 
-    // MAXLEN must come after the stream key and before the entry ID
-    if (opts?.maxlen !== undefined) {
-      args.push('MAXLEN', '~', opts.maxlen);
-    }
-
-    args.push('*');
-    Object.entries(entry).forEach(([key, value]) => {
-      args.push(key, String(value));
-    });
-
-    return await redis.xadd(...(args as [string, string]));
-  }
-
-  return null;
+  return await client.xadd(...(args as [string, string]));
 }
 
 export interface StreamMessage<T = Record<string, unknown>> {
@@ -126,11 +73,11 @@ const extractPayload = (fields: unknown[]): Record<string, unknown> | null => {
   }
 
   if (typeof obj.payload === 'string') {
-    try {
-      return JSON.parse(obj.payload);
-    } catch {
-      return { payload: obj.payload };
+    const parsed: unknown = JSON.parse(obj.payload);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed as Record<string, unknown>;
     }
+    return { payload: obj.payload };
   }
 
   return obj;
@@ -139,83 +86,57 @@ const extractPayload = (fields: unknown[]): Record<string, unknown> | null => {
 /**
  * Read entries from Redis streams starting from the provided IDs.
  *
- * Note: Upstash REST does not support BLOCK. We emulate a short-polling loop
- * on the caller side rather than relying on blocking reads.
- *
  * @param {string[]} streams - Stream names to read from
  * @param {string[]} ids - Starting IDs for each stream
- * @param {{ count?: number }} opts - Options (count for limiting results)
+ * @param {{ count?: number; block?: number }} opts - Options (count for limiting results, block for blocking read in ms)
  * @returns {Promise<StreamMessage[]>} Array of stream messages
  */
 export async function streamRead(
   streams: string[],
   ids: string[],
-  opts?: { count?: number }
+  opts?: { count?: number; block?: number }
 ): Promise<StreamMessage[]> {
-  if (!redis || !redisClientType || streams.length === 0 || ids.length === 0) return [];
+  const client = getRedisClient();
+  if (!client || streams.length === 0 || ids.length === 0) return [];
 
-  try {
-    if (redisClientType === 'upstash' && isUpstashRedis(redis, redisClientType)) {
-      // Upstash xread returns complex nested array structure
-      const res: unknown = await redis.xread(streams, ids, {
-        count: opts?.count,
-      });
+  const streamArgs = [...streams, ...ids] as string[];
 
-      // Upstash returns: [[streamName, [[id, [field, value, ...]], ...]], ...]
-      const parsed: StreamMessage[] = [];
-      if (Array.isArray(res)) {
-        for (const entry of res) {
-          if (!Array.isArray(entry) || entry.length < 2) continue;
-          const [streamName, records] = entry as [string, unknown];
-          if (!Array.isArray(records)) continue;
-
-          for (const record of records) {
-            if (!Array.isArray(record) || record.length < 2) continue;
-            const [id, fields] = record as [string, unknown];
-            if (!Array.isArray(fields)) continue;
-
-            const payload = extractPayload(fields);
-            if (payload) {
-              parsed.push({ stream: streamName, id, payload });
-            }
-          }
-        }
-      }
-      return parsed;
-    }
-
-    if (redis && redisClientType === 'standard' && isIORedisInstance(redis, redisClientType)) {
-      const client = redis;
-      const streamArgs = [...streams, ...ids] as string[];
-
-      // Call appropriate overload based on whether COUNT is specified
-      const res = opts?.count
-        ? await client.xread('COUNT', opts.count, 'STREAMS', ...streamArgs)
-        : await client.xread('STREAMS', ...streamArgs);
-
-      const parsed: StreamMessage[] = [];
-      if (Array.isArray(res)) {
-        for (const streamEntry of res) {
-          if (!Array.isArray(streamEntry) || streamEntry.length < 2) continue;
-          const [streamName, records] = streamEntry as [string, unknown];
-          if (!Array.isArray(records)) continue;
-          for (const record of records) {
-            if (!Array.isArray(record) || record.length < 2) continue;
-            const [id, fields] = record as [string, unknown];
-            if (!Array.isArray(fields)) continue;
-            const payload = extractPayload(fields);
-            if (payload) {
-              parsed.push({ stream: streamName, id, payload });
-            }
-          }
-        }
-      }
-      return parsed;
-    }
-  } catch (error) {
-    logger.warn('streamRead failed', { error }, 'Redis');
+  // Build XREAD command with optional BLOCK and COUNT
+  // XREAD [COUNT count] [BLOCK milliseconds] STREAMS key [key ...] id [id ...]
+  let res: unknown;
+  if (opts?.block !== undefined && opts?.count !== undefined) {
+    res = await client.xread(
+      'COUNT',
+      opts.count,
+      'BLOCK',
+      opts.block,
+      'STREAMS',
+      ...streamArgs
+    );
+  } else if (opts?.block !== undefined) {
+    res = await client.xread('BLOCK', opts.block, 'STREAMS', ...streamArgs);
+  } else if (opts?.count !== undefined) {
+    res = await client.xread('COUNT', opts.count, 'STREAMS', ...streamArgs);
+  } else {
+    res = await client.xread('STREAMS', ...streamArgs);
   }
 
-  return [];
+  const parsed: StreamMessage[] = [];
+  if (Array.isArray(res)) {
+    for (const streamEntry of res) {
+      if (!Array.isArray(streamEntry) || streamEntry.length < 2) continue;
+      const [streamName, records] = streamEntry as [string, unknown];
+      if (!Array.isArray(records)) continue;
+      for (const record of records) {
+        if (!Array.isArray(record) || record.length < 2) continue;
+        const [id, fields] = record as [string, unknown];
+        if (!Array.isArray(fields)) continue;
+        const payload = extractPayload(fields);
+        if (payload) {
+          parsed.push({ stream: streamName, id, payload });
+        }
+      }
+    }
+  }
+  return parsed;
 }
-

@@ -94,14 +94,33 @@ function createPostgresClient(): ReturnType<typeof postgres> {
   const isTest = isTestEnvironment();
   const isProd = process.env.NODE_ENV === 'production';
 
-  // Explicitly determine SSL setting - localhost connections never use SSL
-  // Production non-localhost connections require SSL
+  // Determine if this is a local database connection
   const isLocalhost = url.includes('localhost') || url.includes('127.0.0.1');
-  const sslMode: 'require' | false = isProd && !isLocalhost ? 'require' : false;
+  
+  // Check if SSL is already specified in the URL (sslmode=require or ssl=true)
+  const hasExplicitSSL = url.includes('sslmode=require') || url.includes('ssl=true');
+  
+  // Check for cloud database providers that require SSL (Neon, Supabase, etc.)
+  const isCloudProvider = 
+    url.includes('neon.tech') ||
+    url.includes('supabase.co') ||
+    url.includes('pooler.supabase') ||
+    url.includes('db.bit.io') ||
+    url.includes('.postgres.database.azure.com') ||
+    url.includes('.rds.amazonaws.com');
+
+  // SSL is required for:
+  // - URL explicitly specifies sslmode=require
+  // - Production with non-localhost connections
+  // - Any cloud database provider (even in development)
+  const sslMode: 'require' | false = 
+    hasExplicitSSL || (!isLocalhost && (isProd || isCloudProvider)) ? 'require' : false;
 
   logger.debug('[Drizzle] Creating postgres client', {
     isProd,
     isLocalhost,
+    isCloudProvider,
+    hasExplicitSSL,
     sslMode,
     urlHost: url.split('@')[1]?.split('/')[0] || 'unknown',
   });

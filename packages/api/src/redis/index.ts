@@ -6,13 +6,13 @@
 
 export {
   redis,
-  redisClientType,
+  getRedis,
+  getRedisClient,
   isRedisAvailable,
   safePublish,
   safePoll,
   closeRedis,
-  type RedisClientType,
+  type RedisInstance,
 } from './client';
 
 export { streamAdd, streamRead, type StreamMessage } from './streams';
-

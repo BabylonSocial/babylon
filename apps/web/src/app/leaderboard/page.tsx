@@ -9,10 +9,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { OnChainBadge } from '@/components/profile/OnChainBadge';
 import { Avatar } from '@/components/shared/Avatar';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { RankBadge, RankNumber } from '@/components/shared/RankBadge';
 import { LeaderboardSkeleton } from '@/components/shared/Skeleton';
+import { VerifiedBadge } from '@/components/shared/VerifiedBadge';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@babylon/shared';
 
@@ -34,6 +36,8 @@ interface LeaderboardUser {
   rank: number;
   isActor?: boolean;
   tier?: string | null;
+  onChainRegistered?: boolean;
+  nftTokenId?: number | null;
 }
 
 interface LeaderboardData {
@@ -332,6 +336,15 @@ export default function LeaderboardPage() {
                                   player.username ||
                                   'Anonymous'}
                               </h3>
+                              {player.isActor ? (
+                                <VerifiedBadge size="sm" />
+                              ) : (
+                                <OnChainBadge
+                                  isRegistered={player.onChainRegistered ?? false}
+                                  nftTokenId={player.nftTokenId ?? null}
+                                  size="sm"
+                                />
+                              )}
                               {isCurrentUser && (
                                 <span className="rounded bg-[#0066FF] px-2 py-0.5 font-semibold text-primary-foreground text-xs">
                                   YOU
@@ -652,6 +665,15 @@ export default function LeaderboardPage() {
                                   player.username ||
                                   'Anonymous'}
                               </h3>
+                              {player.isActor ? (
+                                <VerifiedBadge size="sm" />
+                              ) : (
+                                <OnChainBadge
+                                  isRegistered={player.onChainRegistered ?? false}
+                                  nftTokenId={player.nftTokenId ?? null}
+                                  size="sm"
+                                />
+                              )}
                               {isCurrentUser && (
                                 <span className="shrink-0 rounded bg-[#0066FF]/20 px-2 py-0.5 text-[#0066FF] text-xs">
                                   You

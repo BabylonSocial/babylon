@@ -5,8 +5,8 @@
  */
 
 import { userApiKeys, eq, asSystem } from '@babylon/db';
-import { hashApiKey } from '@babylon/shared';
 import { logger } from '@babylon/shared';
+import { hashApiKey } from '@babylon/api';
 
 /**
  * Validate user API key and return userId

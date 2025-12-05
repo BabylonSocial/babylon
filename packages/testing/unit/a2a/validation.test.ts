@@ -14,7 +14,7 @@ import {
   PaymentRequestParamsSchema,
   SearchUsersParamsSchema,
   TransferPointsParamsSchema,
-} from '@babylon/a2a/validation';
+} from '@babylon/a2a';
 
 describe('A2A Validation Schemas', () => {
   describe('DiscoverParamsSchema', () => {

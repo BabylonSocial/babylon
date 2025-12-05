@@ -9,7 +9,7 @@ import {
   getSafeContextLimit,
   budgetTokens,
   MODEL_TOKEN_LIMITS,
-} from '@babylon/shared';
+} from '@babylon/api';
 
 describe('Token Counter Utilities', () => {
   describe('countTokensSync', () => {

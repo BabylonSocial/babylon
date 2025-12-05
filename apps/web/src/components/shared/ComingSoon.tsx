@@ -9,6 +9,7 @@ import {
   Copy,
   Link2,
   TrendingUp,
+  Upload,
   User,
   Users,
   Wallet,
@@ -143,15 +144,37 @@ export function ComingSoon() {
   const [showVerifyDiscordJoinButton, setShowVerifyDiscordJoinButton] =
     useState(false);
 
+  // Profile dropdown state
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
   // Profile form state
   const [profileForm, setProfileForm] = useState({
     username: dbUser?.username || '',
     displayName: dbUser?.displayName || '',
     bio: dbUser?.bio || '',
     profileImageUrl: dbUser?.profileImageUrl || '',
+    coverImageUrl: dbUser?.coverImageUrl || '',
   });
+  const [profilePictureIndex, setProfilePictureIndex] = useState(1);
+  const [bannerIndex, setBannerIndex] = useState(1);
+  const [uploadedProfileImage, setUploadedProfileImage] = useState<string | null>(null);
+  const [uploadedBanner, setUploadedBanner] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const prevShowProfileModalRef = useRef(false);
+  
+  // Username validation state
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<
+    'available' | 'taken' | null
+  >(null);
+  const [usernameSuggestion, setUsernameSuggestion] = useState<string | null>(
+    null
+  );
+
+  // Total available assets
+  const TOTAL_PROFILE_PICTURES = 100;
+  const TOTAL_BANNERS = 100;
 
   // Helper function to get the best display name for a referral user
   const getReferralUserDisplayName = (user: ReferralUser): string => {
@@ -505,7 +528,7 @@ export function ComingSoon() {
     // Open Discord invite in new tab
     const discordInviteUrl =
       process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ||
-      'https://discord.gg/babylon';
+      'https://discord.gg/4DYsFgyp';
     window.open(discordInviteUrl, '_blank');
 
     // Show verify button
@@ -593,6 +616,27 @@ export function ComingSoon() {
     dbUser?.pointsAwardedForTwitterFollow,
     dbUser?.pointsAwardedForDiscordJoin,
   ]);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    if (showProfileDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+    
+    return undefined;
+  }, [showProfileDropdown]);
 
   const getPointsTypeForTab = useCallback((tab: 'leaderboard' | 'inviters') =>
     tab === 'leaderboard' ? 'total' : 'invite', []);
@@ -1047,18 +1091,26 @@ export function ComingSoon() {
     const trimmedUsername = profileForm.username?.trim();
     const trimmedDisplayName = profileForm.displayName?.trim();
     const trimmedBio = profileForm.bio?.trim();
-    const trimmedProfileImageUrl = profileForm.profileImageUrl?.trim();
+    
+    // Use uploaded image or current form value
+    const profileImageUrl = uploadedProfileImage || profileForm.profileImageUrl?.trim() || 
+      `/assets/user-profiles/profile-${profilePictureIndex}.jpg`;
+    const coverImageUrl = uploadedBanner || profileForm.coverImageUrl?.trim() ||
+      `/assets/user-banners/banner-${bannerIndex}.jpg`;
 
     if (
       !trimmedUsername ||
-      !trimmedDisplayName ||
-      !trimmedBio ||
-      trimmedBio.length < 50 ||
-      !trimmedProfileImageUrl
+      !trimmedDisplayName
     ) {
       toast.error(
-        'Please fill in all required fields. Bio must be at least 50 characters.'
+        'Please fill in all required fields.'
       );
+      return;
+    }
+
+    // Check username validation
+    if (usernameStatus === 'taken') {
+      toast.error('Username is already taken. Please choose another.');
       return;
     }
 
@@ -1077,7 +1129,8 @@ export function ComingSoon() {
             username: trimmedUsername,
             displayName: trimmedDisplayName,
             bio: trimmedBio,
-            profileImageUrl: trimmedProfileImageUrl,
+            profileImageUrl,
+            coverImageUrl,
           }),
         }
       );
@@ -1085,14 +1138,14 @@ export function ComingSoon() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData?.error?.message || 'Failed to update profile'
+          errorData?.error?.message || errorData?.message || 'Failed to update profile'
         );
       }
 
       await refresh();
       await fetchWaitlistPosition(dbUser.id);
       setShowProfileModal(false);
-      toast.success('Profile completed! +200 points');
+      toast.success('Profile updated successfully!');
     } catch (error) {
       logger.error(
         'Error saving profile',
@@ -1120,13 +1173,123 @@ export function ComingSoon() {
           displayName: dbUser.displayName || '',
           bio: dbUser.bio || '',
           profileImageUrl: dbUser.profileImageUrl || '',
+          coverImageUrl: dbUser.coverImageUrl || '',
         });
+        // Reset upload states
+        setUploadedProfileImage(null);
+        setUploadedBanner(null);
+        // Reset username validation
+        setUsernameStatus(null);
+        setUsernameSuggestion(null);
       }
       prevShowProfileModalRef.current = true;
     } else {
       prevShowProfileModalRef.current = false;
     }
   }, [showProfileModal, dbUser]);
+
+  // Real-time username validation
+  useEffect(() => {
+    if (!showProfileModal) return;
+    
+    const username = profileForm.username?.trim();
+    
+    // Don't check if username is empty or too short
+    if (!username || username.length < 3) {
+      setUsernameStatus(null);
+      setUsernameSuggestion(null);
+      return;
+    }
+    
+    // Don't check if username hasn't changed from original
+    if (username === dbUser?.username) {
+      setUsernameStatus('available');
+      setUsernameSuggestion(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkUsername = async () => {
+      setIsCheckingUsername(true);
+      
+      try {
+        const response = await fetch(
+          `/api/onboarding/check-username?username=${encodeURIComponent(username)}`
+        );
+        
+        if (!cancelled && response.ok) {
+          const result = await response.json();
+          setUsernameStatus(result.available ? 'available' : 'taken');
+          setUsernameSuggestion(result.available ? null : (result.suggestion || null));
+        }
+      } catch (error) {
+        logger.warn(
+          'Username availability check error',
+          { error: error instanceof Error ? error.message : String(error) },
+          'ComingSoon'
+        );
+      } finally {
+        if (!cancelled) {
+          setIsCheckingUsername(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      void checkUsername();
+    }, 500); // Debounce 500ms
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [profileForm.username, showProfileModal, dbUser?.username]);
+
+  // Image cycling and upload handlers
+  const cycleProfilePicture = (direction: 'next' | 'prev') => {
+    setUploadedProfileImage(null);
+    setProfilePictureIndex((prev) => {
+      if (direction === 'next') {
+        return prev >= TOTAL_PROFILE_PICTURES ? 1 : prev + 1;
+      }
+      return prev <= 1 ? TOTAL_PROFILE_PICTURES : prev - 1;
+    });
+  };
+
+  const cycleBanner = (direction: 'next' | 'prev') => {
+    setUploadedBanner(null);
+    setBannerIndex((prev) => {
+      if (direction === 'next') {
+        return prev >= TOTAL_BANNERS ? 1 : prev + 1;
+      }
+      return prev <= 1 ? TOTAL_BANNERS : prev - 1;
+    });
+  };
+
+  const handleProfileImageUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadedProfileImage(reader.result as string);
+      setProfileForm(prev => ({ ...prev, profileImageUrl: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBannerUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadedBanner(reader.result as string);
+      setProfileForm(prev => ({ ...prev, coverImageUrl: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleJoinWaitlist = () => {
     // Trigger Privy login with waitlist context
@@ -2112,13 +2275,83 @@ export function ComingSoon() {
                   </p>
                 </div>
               </div>
-              {/* Logout Button */}
-              <button
-                onClick={logout}
-                className="min-h-[40px] shrink-0 touch-manipulation rounded-lg px-4 py-2 text-muted-foreground text-sm transition-all duration-200 hover:bg-background/20 hover:text-foreground"
-              >
-                Sign Out
-              </button>
+
+              {/* Profile Dropdown */}
+              <div className="relative shrink-0" ref={profileDropdownRef}>
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="flex min-h-[48px] items-center gap-3 rounded-lg border border-border/50 bg-background/30 px-4 py-2 backdrop-blur-sm transition-all duration-200 hover:border-primary/30 hover:bg-background/40"
+                >
+                  {/* Avatar */}
+                  <Avatar
+                    id={dbUser.id}
+                    type="user"
+                    src={dbUser.profileImageUrl || undefined}
+                    alt={dbUser.displayName || dbUser.username || 'User'}
+                    size="sm"
+                  />
+                  
+                  {/* User Info - Hidden on mobile */}
+                  <div className="hidden min-w-0 text-left sm:block">
+                    <div className="truncate font-semibold text-foreground text-sm">
+                      {dbUser.displayName || dbUser.username || 'User'}
+                    </div>
+                    {dbUser.username && dbUser.displayName && (
+                      <div className="truncate text-muted-foreground text-xs">
+                        @{dbUser.username}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dropdown Icon */}
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                      showProfileDropdown ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showProfileDropdown && (
+                  <div className="absolute top-full right-0 z-50 mt-2 w-56 rounded-lg border border-border/50 bg-background shadow-xl backdrop-blur-sm">
+                    <div className="p-2">
+                      {/* Edit Profile */}
+                      <button
+                        onClick={() => {
+                          setShowProfileModal(true);
+                          setShowProfileDropdown(false);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted"
+                      >
+                        <User className="h-4 w-4 text-primary" />
+                        <div>
+                          <div className="font-medium text-foreground text-sm">
+                            Edit Profile
+                          </div>
+                          <div className="text-muted-foreground text-xs">
+                            Update your information
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Divider */}
+                      <div className="my-1 border-border/50 border-t" />
+
+                      {/* Sign Out */}
+                      <button
+                        onClick={() => {
+                          logout();
+                          setShowProfileDropdown(false);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-red-500 transition-colors hover:bg-red-500/10"
+                      >
+                        <X className="h-4 w-4" />
+                        <div className="font-medium text-sm">Sign Out</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2404,12 +2637,20 @@ export function ComingSoon() {
               <div className="rounded-xl border border-border/50 bg-background/30 p-5 backdrop-blur-sm sm:p-6">
                 <h3 className="mb-3 font-bold text-xl">Invite Friends</h3>
                 <p className="mb-4 text-muted-foreground text-sm leading-relaxed">
-                  <span className="font-bold text-primary">100 points</span> per
-                  friend
+                  <span className="font-bold text-primary">You earn:</span>
                   <br />
-                  <span className="text-primary">+100 extra</span> when they
-                  complete profile
+                  • 100 points per friend who signs up
+                  <br />
+                  • +100 extra when they complete profile
                 </p>
+                <div className="mb-4 rounded-lg border border-primary/20 bg-primary/10 p-3">
+                  <p className="text-foreground text-sm leading-relaxed">
+                    <span className="font-semibold">🎁 Friend bonus:</span> Your
+                    friends get an additional{' '}
+                    <span className="font-bold text-primary">100 points</span> when
+                    they join through your referral link!
+                  </p>
+                </div>
                 {waitlistData.inviteCode ? (
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <div className="flex-1 break-all rounded-lg border border-border bg-background/50 px-3 py-2 font-mono text-xs sm:text-sm">
@@ -3137,14 +3378,22 @@ export function ComingSoon() {
                     <User className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-2xl">Complete Profile</h2>
-                    <p className="text-muted-foreground text-sm">
-                      Earn{' '}
-                      <span className="font-semibold text-primary">
-                        +{POINTS.PROFILE_COMPLETION} points
-                      </span>{' '}
-                      when complete
-                    </p>
+                    <h2 className="font-bold text-2xl">
+                      {dbUser?.profileComplete ? 'Edit Profile' : 'Complete Profile'}
+                    </h2>
+                    {!dbUser?.profileComplete ? (
+                      <p className="text-muted-foreground text-sm">
+                        Earn{' '}
+                        <span className="font-semibold text-primary">
+                          +{POINTS.PROFILE_COMPLETION} points
+                        </span>{' '}
+                        when complete
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">
+                        Update your profile information
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -3164,50 +3413,186 @@ export function ComingSoon() {
                 }}
                 className="space-y-6 p-6"
               >
-                {/* Username */}
+                {/* Help Text */}
+                {!dbUser?.profileComplete && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+                    <p className="text-foreground text-sm leading-relaxed">
+                      <span className="font-semibold">💡 Pro Tip:</span> Complete all fields below to earn{' '}
+                      <span className="font-bold text-primary">{POINTS.PROFILE_COMPLETION} points</span> and
+                      personalize your Babylon experience!
+                    </p>
+                  </div>
+                )}
+
+                {/* Banner Image */}
                 <div className="space-y-2">
                   <label className="block font-medium text-sm">
-                    Username *
+                    Profile Banner
                   </label>
-                  <input
-                    type="text"
-                    value={profileForm.username}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        username: e.target.value,
-                      }))
-                    }
-                    placeholder="Choose a username"
-                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                    disabled={isSavingProfile}
-                  />
+                  <div className="group relative h-40 overflow-hidden rounded-lg bg-muted">
+                    <Image
+                      src={uploadedBanner || profileForm.coverImageUrl || `/assets/user-banners/banner-${bannerIndex}.jpg`}
+                      alt="Profile banner"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => cycleBanner('prev')}
+                        className="rounded-lg bg-background/80 p-2 transition-colors hover:bg-background"
+                        title="Previous banner"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <label className="cursor-pointer rounded-lg bg-background/80 p-2 transition-colors hover:bg-background" title="Upload banner">
+                        <Upload className="h-5 w-5" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBannerUpload}
+                          className="hidden"
+                          disabled={isSavingProfile}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => cycleBanner('next')}
+                        className="rounded-lg bg-background/80 p-2 transition-colors hover:bg-background"
+                        title="Next banner"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Click to cycle through banners or upload your own
+                  </p>
                 </div>
 
-                {/* Display Name */}
-                <div className="space-y-2">
-                  <label className="block font-medium text-sm">
-                    Display Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.displayName}
-                    onChange={(e) =>
-                      setProfileForm((prev) => ({
-                        ...prev,
-                        displayName: e.target.value,
-                      }))
-                    }
-                    placeholder="Your display name"
-                    className="w-full rounded-lg border border-border bg-muted px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                    disabled={isSavingProfile}
-                  />
+                {/* Profile Picture and Basic Info */}
+                <div className="flex items-start gap-4">
+                  <div className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-muted">
+                    <Image
+                      src={uploadedProfileImage || profileForm.profileImageUrl || `/assets/user-profiles/profile-${profilePictureIndex}.jpg`}
+                      alt="Profile picture"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => cycleProfilePicture('prev')}
+                        className="rounded-lg bg-background/80 p-1.5 transition-colors hover:bg-background"
+                        title="Previous picture"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <label className="cursor-pointer rounded-lg bg-background/80 p-1.5 transition-colors hover:bg-background" title="Upload picture">
+                        <Upload className="h-4 w-4" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfileImageUpload}
+                          className="hidden"
+                          disabled={isSavingProfile}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => cycleProfilePicture('next')}
+                        className="rounded-lg bg-background/80 p-1.5 transition-colors hover:bg-background"
+                        title="Next picture"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 space-y-4">
+                    {/* Display Name */}
+                    <div className="space-y-2">
+                      <label className="block font-medium text-sm">
+                        Display Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.displayName}
+                        onChange={(e) =>
+                          setProfileForm((prev) => ({
+                            ...prev,
+                            displayName: e.target.value,
+                          }))
+                        }
+                        placeholder="Your display name"
+                        className="w-full rounded-lg border border-border bg-muted px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                        disabled={isSavingProfile}
+                        maxLength={50}
+                      />
+                    </div>
+
+                    {/* Username */}
+                    <div className="space-y-2">
+                      <label className="block font-medium text-sm">
+                        Username *
+                      </label>
+                      <div className="relative">
+                        <span className="-translate-y-1/2 absolute top-1/2 left-3 text-muted-foreground">
+                          @
+                        </span>
+                        <input
+                          type="text"
+                          value={profileForm.username}
+                          onChange={(e) =>
+                            setProfileForm((prev) => ({
+                              ...prev,
+                              username: e.target.value,
+                            }))
+                          }
+                          placeholder="Choose a username"
+                          className="w-full rounded-lg border border-border bg-muted py-2 pr-10 pl-8 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                          disabled={isSavingProfile}
+                          maxLength={20}
+                        />
+                        {isCheckingUsername && (
+                          <div className="-translate-y-1/2 absolute top-1/2 right-3">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          </div>
+                        )}
+                        {usernameStatus === 'available' && !isCheckingUsername && (
+                          <Check className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-green-500" />
+                        )}
+                        {usernameStatus === 'taken' && !isCheckingUsername && (
+                          <X className="-translate-y-1/2 absolute top-1/2 right-3 h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                      {usernameStatus === 'taken' && usernameSuggestion && (
+                        <p className="text-muted-foreground text-xs">
+                          Suggestion:{' '}
+                          <button
+                            type="button"
+                            className="text-primary underline hover:text-primary/80"
+                            onClick={() =>
+                              setProfileForm((prev) => ({
+                                ...prev,
+                                username: usernameSuggestion,
+                              }))
+                            }
+                          >
+                            {usernameSuggestion}
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Bio */}
                 <div className="space-y-2">
                   <label className="block font-medium text-sm">
-                    Bio * (min 50 characters)
+                    Bio
                   </label>
                   <textarea
                     value={profileForm.bio}
@@ -3219,48 +3604,13 @@ export function ComingSoon() {
                     }
                     placeholder="Tell us about yourself..."
                     rows={3}
+                    maxLength={280}
                     className="w-full resize-none rounded-lg border border-border bg-muted px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
                     disabled={isSavingProfile}
                   />
                   <p className="text-right text-muted-foreground text-xs">
-                    {profileForm.bio.length}/50
+                    {profileForm.bio.length}/280
                   </p>
-                </div>
-
-                {/* Profile Image */}
-                <div className="space-y-2">
-                  <label className="block font-medium text-sm">
-                    Profile Image *
-                  </label>
-                  <div className="flex items-center gap-4">
-                    {profileForm.profileImageUrl && (
-                      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-muted">
-                        <img
-                          src={profileForm.profileImageUrl}
-                          alt="Profile"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={profileForm.profileImageUrl}
-                        onChange={(e) =>
-                          setProfileForm((prev) => ({
-                            ...prev,
-                            profileImageUrl: e.target.value,
-                          }))
-                        }
-                        placeholder="/assets/user-avatars/avatar-1.jpg"
-                        className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                        disabled={isSavingProfile}
-                      />
-                      <p className="mt-1 text-muted-foreground text-xs">
-                        Use format: /assets/user-avatars/avatar-X.jpg (1-100)
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Actions */}
@@ -3278,21 +3628,15 @@ export function ComingSoon() {
                     disabled={(() => {
                       const username = profileForm.username?.trim() || '';
                       const displayName = profileForm.displayName?.trim() || '';
-                      const bio = profileForm.bio?.trim() || '';
-                      const profileImageUrl =
-                        profileForm.profileImageUrl?.trim() || '';
                       return (
                         isSavingProfile ||
                         !username ||
-                        !displayName ||
-                        !bio ||
-                        bio.length < 50 ||
-                        !profileImageUrl
+                        !displayName
                       );
                     })()}
                     className="min-h-[44px] flex-1 rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isSavingProfile ? 'Saving...' : 'Save & Earn Points'}
+                    {isSavingProfile ? 'Saving...' : dbUser?.profileComplete ? 'Save Changes' : 'Save & Earn Points'}
                   </button>
                 </div>
               </form>

@@ -14,9 +14,7 @@ export const data = {
   ],
   "personality": "freedom fighter",
   "tier": "B_TIER",
-  "affiliations": [
-    "wikaileaks"
-  ],
+  "affiliations": [],
   "postStyle": "Serious, political, anti-war. Updates on his case. Leaks. Quotes about freedom.",
   "voice": "Speaks with the weary gravitas of someone who traded normal life for truth. Serious, political, anti-war in every statement. Freedom quotes that feel earned through actual imprisonment. Journalism is not a crime - said with the authority of someone who proved it can be treated as one. Has the cadence of a cypherpunk legend who finally saw sunlight. Case updates delivered with exhausted determination.",
   "postExample": [

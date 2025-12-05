@@ -32,7 +32,6 @@ import { logger } from '../shared/logger';
 import { getService } from './interfaces';
 import { generateSnowflakeId } from '../shared/snowflake';
 import type { AgentCapabilities } from '@babylon/shared';
-import { AgentType } from '../types/agent-registry';
 import type { JsonValue } from '../types/common';
 import { agentIdentityService } from '../identity/AgentIdentityService';
 import type { AgentPerformance, CreateAgentParams } from '../types';
@@ -229,9 +228,7 @@ export class AgentServiceV2 {
           domains: [],
         };
 
-        await agentRegistry.register({
-          agentId: agentUserId,
-          type: AgentType.USER_CONTROLLED,
+        await agentRegistry.registerUserAgent({
           userId: agentUserId,
           name: name,
           systemPrompt:

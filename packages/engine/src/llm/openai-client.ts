@@ -212,9 +212,21 @@ export class BabylonLLMClient {
         ? { type: 'json_object' as const }
         : undefined;
 
+    // Babylon world context - pre-condition LLM to expect parody names
+    const babylonContext = `You are generating content for Babylon, a satirical prediction market game.
+WORLD RULES:
+- Use ONLY parody names (e.g., "AIlon Musk" not "Elon Musk", "TeslAI" not "Tesla", "OpenAGI" not "OpenAI")
+- NEVER use real-world person or organization names
+- NO hashtags (#) in any content
+- NO emojis in any content
+- Each character has a UNIQUE voice - match their writing style exactly
+
+`;
+
     const systemContent =
       format === 'xml'
-        ? 'You are an XML-only assistant. CRITICAL INSTRUCTIONS:\n' +
+        ? babylonContext +
+          'You are an XML-only assistant. CRITICAL INSTRUCTIONS:\n' +
           '1. Respond ONLY with valid XML - NO explanations, NO reasoning, NO markdown\n' +
           '2. Start your response IMMEDIATELY with < (the opening tag)\n' +
           '3. End your response with > (the closing tag)\n' +
@@ -223,7 +235,8 @@ export class BabylonLLMClient {
           '6. Just output the pure XML structure directly\n' +
           'WRONG: "Okay, let\'s see. I need to..."\n' +
           'CORRECT: "<decisions><decision>..."'
-        : 'You are a JSON-only assistant. You must respond ONLY with valid JSON. No explanations, no markdown, no other text.';
+        : babylonContext +
+          'You are a JSON-only assistant. You must respond ONLY with valid JSON. No explanations, no markdown, no other text.';
 
     const messages = [
       {

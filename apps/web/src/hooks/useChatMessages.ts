@@ -256,7 +256,7 @@ export function useChatMessages(chatId: string | null) {
   );
 
   // Subscribe to chat channel
-  const channel = chatId ? `chat:${chatId}` : null;
+  const channel: `chat:${string}` | null = chatId ? `chat:${chatId}` : null;
   const { isConnected } = useSSEChannel(channel, handleChatUpdate);
 
   // Load messages when switching chats
@@ -284,19 +284,62 @@ export function useChatMessages(chatId: string | null) {
   useEffect(() => {
     if (!chatId || !hasLoadedRef.current.has(chatId)) return;
 
-    const interval = setInterval(() => {
-      // Silently reload messages (don't show loading state)
-      loadMessages(chatId).catch((err) => {
-        logger.debug(
-          'Background chat refresh failed',
-          { error: err, chatId },
-          'useChatMessages'
-        );
-      });
+    const interval = setInterval(async () => {
+      // Fetch new messages without blocking - bypass the hasLoadedRef check
+      // by fetching directly instead of calling loadMessages
+      logger.debug(
+        `Polling for new messages in chat ${chatId}`,
+        { chatId },
+        'useChatMessages'
+      );
+
+      const response = await fetch(`/api/chats/${chatId}?limit=50`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.messages) {
+          const formattedMessages: ChatMessage[] = data.messages.map(
+            (msg: {
+              id: string;
+              content: string;
+              senderId: string;
+              createdAt: string | Date;
+            }) => ({
+              id: msg.id,
+              content: msg.content,
+              chatId: chatId,
+              senderId: msg.senderId,
+              createdAt:
+                typeof msg.createdAt === 'string'
+                  ? msg.createdAt
+                  : msg.createdAt.toISOString(),
+            })
+          );
+          // Merge with existing messages, avoiding duplicates
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newMessages = formattedMessages.filter(
+              (m) => !existingIds.has(m.id)
+            );
+            if (newMessages.length > 0) {
+              logger.debug(
+                `Polling found ${newMessages.length} new messages`,
+                { chatId, count: newMessages.length },
+                'useChatMessages'
+              );
+              return [...prev, ...newMessages].sort(
+                (a, b) =>
+                  new Date(a.createdAt).getTime() -
+                  new Date(b.createdAt).getTime()
+              );
+            }
+            return prev;
+          });
+        }
+      }
     }, 15000); // 15 seconds (more frequent for chat)
 
     return () => clearInterval(interval);
-  }, [chatId, loadMessages]);
+  }, [chatId]);
 
   // Mark as loaded when connected
   useEffect(() => {

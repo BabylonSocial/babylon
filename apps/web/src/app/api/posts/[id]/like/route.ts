@@ -58,7 +58,7 @@ import { BusinessLogicError, NotFoundError } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import { parsePostId } from '@babylon/engine';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import {
   checkRateLimitAndDuplicates,
   RATE_LIMIT_CONFIGS,

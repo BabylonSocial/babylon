@@ -69,10 +69,46 @@ export function extractXMLFromText(content: string): string {
 }
 
 /**
+ * Remove LLM thinking/reasoning blocks (e.g., <think>...</think> from DeepSeek, Qwen)
+ * These blocks contain internal reasoning that shouldn't be parsed as content.
+ */
+export function stripThinkingBlocks(content: string): string {
+  const originalLength = content.length;
+
+  // Remove <think>...</think> blocks (DeepSeek, Qwen reasoning)
+  // Use non-greedy matching to handle multiple blocks
+  let cleaned = content.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
+  // Also handle <thinking>...</thinking> variant
+  cleaned = cleaned.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+
+  // Handle <reasoning>...</reasoning> variant
+  cleaned = cleaned.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '');
+
+  const strippedLength = originalLength - cleaned.length;
+  if (strippedLength > 0) {
+    logger.debug(
+      'Stripped LLM thinking/reasoning blocks',
+      {
+        originalLength,
+        strippedChars: strippedLength,
+        remainingLength: cleaned.length,
+      },
+      'XMLParser'
+    );
+  }
+
+  return cleaned.trim();
+}
+
+/**
  * Clean markdown code blocks from content
  */
 export function cleanXMLMarkdown(content: string): string {
   let cleaned = content.trim();
+
+  // First, strip any thinking/reasoning blocks
+  cleaned = stripThinkingBlocks(cleaned);
 
   // Remove markdown code fences
   cleaned = cleaned.replace(/```xml\n?/g, '');

@@ -11,6 +11,7 @@ import { db } from '@babylon/db';
 import { logger } from '../shared/logger';
 import { generateSnowflakeId } from '../shared/snowflake';
 import type { JsonValue } from '../types/common';
+import { getMCPEndpoint, getA2AEndpoint } from '@babylon/shared';
 
 /**
  * Babylon registration result
@@ -77,10 +78,6 @@ export async function registerBabylonGame(): Promise<BabylonRegistrationResult |
 
   const gameWalletAddress = process.env.BABYLON_GAME_WALLET_ADDRESS;
   const gamePrivateKey = process.env.BABYLON_GAME_PRIVATE_KEY;
-  const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.VERCEL_URL ||
-    'http://localhost:3000';
 
   if (!gameWalletAddress || !gamePrivateKey) {
     logger.warn(
@@ -116,11 +113,8 @@ export async function registerBabylonGame(): Promise<BabylonRegistrationResult |
       name: 'Babylon Prediction Markets',
       description: 'Real-time prediction market game with autonomous AI agents',
       walletAddress: gameWalletAddress,
-      mcpEndpoint:
-        process.env.NEXT_PUBLIC_MCP_ENDPOINT || `${apiBaseUrl}/mcp`,
-      a2aEndpoint:
-        process.env.NEXT_PUBLIC_A2A_ENDPOINT ||
-        `${apiBaseUrl.replace('http', 'ws')}/ws/a2a`,
+      mcpEndpoint: getMCPEndpoint(),
+      a2aEndpoint: getA2AEndpoint(),
       capabilities: {
         strategies: [],
         markets: ['prediction', 'perpetuals'],

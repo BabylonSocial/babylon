@@ -8,6 +8,8 @@
  * - PnL calculations
  */
 
+import { MARKET_CONFIG } from '../config/fees';
+
 export interface PerpPosition {
   id: string;
   userId: string;
@@ -47,6 +49,7 @@ export interface PerpMarket {
   fundingRate: FundingRate;
   maxLeverage: number;
   minOrderSize: number;
+  maxPositionSize: number; // Maximum single position size (based on liquidity)
   markPrice: number;
   indexPrice: number;
 }
@@ -176,5 +179,14 @@ export function calculateMarkPrice(
   const baseMarkPrice = indexPrice * 0.7 + lastPrice * 0.3;
   const fundingAdjustment = fundingRate * 0.01;
   return baseMarkPrice * (1 + fundingAdjustment);
+}
+
+/**
+ * Calculate the maximum allowed position size for a market
+ * Based on configured ratio of open interest with a minimum floor
+ */
+export function calculateMaxPositionSize(openInterest: number): number {
+  const openInterestLimit = openInterest * MARKET_CONFIG.OPEN_INTEREST_LIMIT_RATIO;
+  return Math.max(openInterestLimit, MARKET_CONFIG.MIN_MAX_POSITION_SIZE);
 }
 

@@ -12,8 +12,8 @@ import { cn } from '@babylon/shared';
  * Bottom navigation content component for mobile devices.
  *
  * Provides mobile navigation with Feed, Markets, Chats, Agents, and Notifications tabs.
- * Shows unread message and notification badges. Automatically hides on production
- * home page unless dev mode is enabled via URL parameter.
+ * Shows unread message and notification badges. Automatically hides when WAITLIST_MODE
+ * is enabled on home page unless dev mode is enabled via URL parameter (?dev=true).
  *
  * @returns Bottom navigation element or null if hidden
  */
@@ -24,15 +24,11 @@ function BottomNavContent() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const { totalUnread: unreadMessages } = useUnreadMessages();
 
-  // Check if dev mode is enabled via URL parameter
-  const isDevMode = searchParams.get('dev') === 'true';
-
-  // Hide bottom nav on production (babylon.market) on home page unless ?dev=true
-  const isProduction =
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'babylon.market';
-  const isHomePage = pathname === '/';
-  const shouldHide = isProduction && isHomePage && !isDevMode;
+  // Hide bottom nav when WAITLIST_MODE is enabled in production OR ?comingsoon=true
+  const forceComingSoon = searchParams.get('comingsoon') === 'true';
+  const waitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const shouldHide = (waitlistMode && isProduction) || forceComingSoon;
 
   // Poll for unread notifications
   useEffect(() => {

@@ -173,7 +173,7 @@ export async function generateMixedFeedContent() {
     {
       name: 'News Posts',
       prompt: renderPrompt(newsPosts, {
-        eventDescription: 'OpenAGI announces GPT-o6-6o-mini-thinking-high',
+        eventDescription: 'OpenAGI announces SMH-6o-mini-thinking-high',
         eventType: 'AI_BREAKTHROUGH',
         mediaCount: 2,
         mediaList: '1. The New York TAImes\n2. BloombAIrg',

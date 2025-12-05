@@ -1,47 +1,25 @@
 'use client';
 
 import { TrendingDown, TrendingUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
-import { usePredictionMarketsSubscription } from '@/hooks/usePredictionMarketStream';
-import { logger } from '@babylon/shared';
+import {
+  usePerpTopMovers,
+  usePerpMarketsPolling,
+  type PerpMarket,
+} from '@/stores/perpMarketsStore';
 import { cn } from '@babylon/shared';
-
-/**
- * Top mover market structure for top movers panel.
- */
-interface TopMover {
-  ticker: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-  organizationId?: string;
-  high24h?: number;
-  low24h?: number;
-  volume24h?: number;
-  openInterest?: number;
-  fundingRate?: {
-    rate: number;
-    nextFundingTime: string;
-    predictedRate: number;
-  };
-  maxLeverage?: number;
-  minOrderSize?: number;
-}
 
 /**
  * Top movers panel component for displaying biggest gainers and losers.
  *
  * Displays the top 4 gainers and top 4 losers from perpetual markets based on
- * 24h price change percentage. Subscribes to real-time price updates via SSE.
- * Automatically refreshes every 30 seconds. Navigates to market detail page on click.
+ * 24h price change percentage. Uses shared perp markets store for data.
+ * Automatically refreshes every 30 seconds via shared polling.
  *
  * Features:
  * - Top gainers list (4 markets)
  * - Top losers list (4 markets)
- * - Real-time price updates via SSE
- * - Auto-refresh (30s interval)
+ * - Auto-refresh (30s interval via shared store)
  * - Loading states
  * - Empty state handling
  *
@@ -49,107 +27,15 @@ interface TopMover {
  * @returns Top movers panel element
  */
 interface TopMoversPanelProps {
-  onMarketClick?: (market: TopMover) => void;
+  onMarketClick?: (market: PerpMarket) => void;
 }
 
 export function TopMoversPanel({ onMarketClick }: TopMoversPanelProps) {
-  const [topGainers, setTopGainers] = useState<TopMover[]>([]);
-  const [topLosers, setTopLosers] = useState<TopMover[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchMovers = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/markets/perps');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.markets && Array.isArray(data.markets)) {
-          const markets: TopMover[] = data.markets.map(
-            (m: {
-              ticker: string;
-              name: string;
-              currentPrice?: number;
-              change24h?: number;
-              changePercent24h?: number;
-              organizationId?: string;
-              high24h?: number;
-              low24h?: number;
-              volume24h?: number;
-              openInterest?: number;
-              fundingRate?: {
-                rate: number;
-                nextFundingTime: string;
-                predictedRate: number;
-              };
-              maxLeverage?: number;
-              minOrderSize?: number;
-            }) => ({
-              ticker: m.ticker,
-              name: m.name,
-              currentPrice: m.currentPrice || 0,
-              change24h: m.change24h || 0,
-              changePercent24h: m.changePercent24h || 0,
-              organizationId: m.organizationId,
-              high24h: m.high24h,
-              low24h: m.low24h,
-              volume24h: m.volume24h,
-              openInterest: m.openInterest,
-              fundingRate: m.fundingRate,
-              maxLeverage: m.maxLeverage,
-              minOrderSize: m.minOrderSize,
-            })
-          );
-
-          // Sort by change percentage
-          const sorted = [...markets].sort(
-            (a, b) => b.changePercent24h - a.changePercent24h
-          );
-          setTopGainers(sorted.slice(0, 4));
-          setTopLosers(sorted.slice(-4).reverse());
-        }
-      } catch (error) {
-        logger.error('Failed to fetch top movers', { error }, 'TopMoversPanel');
-        // Keep existing data on error
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMovers();
-    const interval = setInterval(fetchMovers, 30000); // Refresh every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
+  // Use shared store with polling
+  const { topGainers, topLosers, loading } = usePerpTopMovers(4);
+  usePerpMarketsPolling(30000); // Enable 30s polling
 
   const formatPrice = (p: number) => `$${p.toFixed(2)}`;
-
-  usePredictionMarketsSubscription({
-    onTrade: (event) => {
-      const probability = event.yesPrice * 100;
-      setTopGainers((prev) =>
-        prev.map((market) =>
-          market.organizationId === event.marketId
-            ? {
-                ...market,
-                currentPrice: probability,
-              }
-            : market
-        )
-      );
-      setTopLosers((prev) =>
-        prev.map((market) =>
-          market.organizationId === event.marketId
-            ? {
-                ...market,
-                currentPrice: probability,
-              }
-            : market
-        )
-      );
-    },
-  });
 
   return (
     <div className="flex flex-1 flex-col rounded-2xl bg-sidebar px-4 py-3">

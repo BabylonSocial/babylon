@@ -5,7 +5,7 @@
  */
 
 import { db, eq, users } from '@babylon/db';
-import { logger, generateSnowflakeId } from '@babylon/shared';
+import { logger, generateSnowflakeId, getAPIBaseUrl } from '@babylon/shared';
 import type { JsonValue, StringRecord } from '@babylon/shared';
 import type { AuthenticatedAgent } from '../types/mcp';
 import type {
@@ -302,7 +302,7 @@ export async function executePlaceBet(
 
   // Call the existing market API logic
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(
     `${apiBaseUrl}/api/markets/${args.marketId}/bet`,
     {
@@ -408,7 +408,7 @@ export async function executeClosePosition(
 
   // Call the existing close position API logic
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(
     `${apiBaseUrl}/api/positions/${args.positionId}/close`,
     {
@@ -508,7 +508,7 @@ export async function executeBuyShares(
   args: BuySharesArgs
 ): Promise<BuySharesResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(
     `${apiBaseUrl}/api/markets/predictions/${args.marketId}/buy`,
     {
@@ -532,7 +532,7 @@ export async function executeSellShares(
   args: SellSharesArgs
 ): Promise<SellSharesResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const position = await db.position.findUnique({
     where: { id: args.positionId },
   });
@@ -561,7 +561,7 @@ export async function executeOpenPosition(
   args: OpenPositionArgs
 ): Promise<OpenPositionResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api/markets/perps/open`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -619,7 +619,7 @@ export async function executeGetTrades(
   args: GetTradesArgs
 ): Promise<GetTradesResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const url = new URL(`${apiBaseUrl}/api/trades`);
   if (args.marketId) url.searchParams.set('marketId', args.marketId);
   if (args.limit) url.searchParams.set('limit', args.limit.toString());
@@ -660,7 +660,7 @@ export async function executeGetTradeHistory(
   args: GetTradeHistoryArgs
 ): Promise<GetTradeHistoryResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const url = new URL(`${apiBaseUrl}/api/markets/predictions/${args.userId}/trades`);
   if (args.limit) url.searchParams.set('limit', args.limit.toString());
   const response = await fetch(url.toString());
@@ -1564,7 +1564,7 @@ export async function executeGetLeaderboard(
   args: GetLeaderboardArgs
 ): Promise<GetLeaderboardResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const url = new URL(`${apiBaseUrl}/api/leaderboard`);
   if (args.page) url.searchParams.set('page', args.page.toString());
   if (args.pageSize) url.searchParams.set('pageSize', args.pageSize.toString());
@@ -1704,7 +1704,7 @@ export async function executeGetReputation(
 ): Promise<GetReputationResult> {
   const userId = args.userId || agent.userId;
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api/reputation/${userId}`);
   const data = (await response.json()) as GetReputationResult;
   return data;
@@ -1718,7 +1718,7 @@ export async function executeGetReputationBreakdown(
   args: GetReputationBreakdownArgs
 ): Promise<GetReputationBreakdownResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(
     `${apiBaseUrl}/api/reputation/breakdown/${args.userId}`
   );
@@ -1793,7 +1793,7 @@ export async function executePaymentRequest(
 ): Promise<PaymentRequestResult> {
   // agent used for userId in request body
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api/payments/request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1816,7 +1816,7 @@ export async function executePaymentReceipt(
   args: PaymentReceiptArgs
 ): Promise<PaymentReceiptResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api/payments/receipt`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2189,7 +2189,7 @@ export async function executeAppealBan(
   args: AppealBanArgs
 ): Promise<AppealBanResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api/moderation/appeal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -2319,7 +2319,7 @@ export async function executeGetFavoritePosts(
   args: GetFavoritePostsArgs
 ): Promise<GetFavoritePostsResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const url = new URL(`${apiBaseUrl}/api/posts/feed/favorites`);
   if (args.limit) url.searchParams.set('limit', args.limit.toString());
   if (args.offset) url.searchParams.set('offset', args.offset.toString());
@@ -2360,7 +2360,7 @@ export async function executeTransferPoints(
   args: TransferPointsArgs
 ): Promise<TransferPointsResult> {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+    getAPIBaseUrl();
   const response = await fetch(`${apiBaseUrl}/api/points/transfer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

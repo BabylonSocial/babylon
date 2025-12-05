@@ -115,7 +115,7 @@ import {
   checkRateLimitAndDuplicates,
   RATE_LIMIT_CONFIGS,
 } from '@babylon/api';
-import { getStorageClient } from '@babylon/shared';
+import { getStorageClient } from '@babylon/api';
 import { ImageUploadSchema } from '@babylon/shared';
 
 // Map MIME types to file extensions

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { PageContainer } from '@/components/shared/PageContainer';
 import { useAuth } from '@/hooks/useAuth';
+import { IDENTITY_REGISTRY_BASE_SEPOLIA } from '@babylon/shared';
 
 interface ReputationStats {
   currentReputation: number;
@@ -209,7 +210,7 @@ export default function ReputationPage() {
                 Contract Address
               </label>
               <p className="truncate font-mono text-foreground text-sm">
-                {process.env.NEXT_PUBLIC_IDENTITY_REGISTRY_BASE_SEPOLIA}
+                {IDENTITY_REGISTRY_BASE_SEPOLIA}
               </p>
             </div>
           </div>

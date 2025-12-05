@@ -273,28 +273,6 @@ export default function PostPage({ params }: PostPageProps) {
                       </time>
                     </div>
 
-                    {/* Bias warning */}
-                    {post.biasScore !== null &&
-                      post.biasScore !== undefined &&
-                      Math.abs(post.biasScore) >= 0.3 && (
-                        <div className="mb-6 rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-4 py-3">
-                          <div className="flex items-start gap-3">
-                            <span className="text-lg text-yellow-500">⚠️</span>
-                            <div>
-                              <p className="mb-1 font-semibold text-sm text-yellow-500">
-                                Biased Coverage
-                              </p>
-                              <p className="text-muted-foreground text-sm">
-                                This article shows{' '}
-                                {post.biasScore > 0 ? 'favorable' : 'critical'}{' '}
-                                bias.
-                                {post.slant && ` ${post.slant}`}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                     {/* Full article content */}
                     <div className="prose prose-lg prose-invert mb-6 max-w-none">
                       {post.fullContent.split('\n\n').map((paragraph, i) => (
@@ -404,27 +382,6 @@ export default function PostPage({ params }: PostPageProps) {
                     })}
                   </time>
                 </div>
-
-                {/* Bias warning */}
-                {post.biasScore !== null &&
-                  post.biasScore !== undefined &&
-                  Math.abs(post.biasScore) >= 0.3 && (
-                    <div className="mb-4 rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="text-yellow-500">⚠️</span>
-                        <div>
-                          <p className="mb-1 font-semibold text-xs text-yellow-500">
-                            Biased Coverage
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {post.biasScore > 0 ? 'Favorable' : 'Critical'}{' '}
-                            bias.
-                            {post.slant && ` ${post.slant}`}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                 {/* Full article content */}
                 <div className="prose prose-invert mb-4 max-w-none">

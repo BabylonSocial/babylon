@@ -6,12 +6,8 @@
  */
 
 import { ethers } from 'ethers';
-import {
-  getContractAddresses,
-  getContractAddressesFromEnv,
-  getRpcUrl,
-} from '@babylon/contracts/deployment';
-import { logger } from '@babylon/shared';
+import { getContractAddresses, getRpcUrl } from '@babylon/contracts';
+import { logger, getCurrentChainId } from '@babylon/shared';
 import BabylonGameOracleABI from './abi/BabylonGameOracle.json';
 import { CommitmentStore } from '../oracle-commitment-store';
 import type {
@@ -29,24 +25,18 @@ export class OracleService {
   private config: OracleConfig;
 
   constructor(config?: Partial<OracleConfig>) {
-    // Load config from environment or use provided
-    const addresses = getContractAddressesFromEnv();
-    const deployedAddresses = getContractAddresses();
+    // Load config from canonical config (default-config.ts)
+    const contractAddresses = getContractAddresses();
 
     this.config = {
-      oracleAddress:
-        config?.oracleAddress ||
-        addresses.babylonOracle ||
-        deployedAddresses.babylonOracle,
+      oracleAddress: config?.oracleAddress || contractAddresses.babylonOracle,
       privateKey:
         config?.privateKey ||
         process.env.ORACLE_PRIVATE_KEY ||
         process.env.DEPLOYER_PRIVATE_KEY ||
         '',
       rpcUrl: config?.rpcUrl || getRpcUrl(),
-      chainId:
-        config?.chainId ||
-        Number.parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '31337'),
+      chainId: config?.chainId || getCurrentChainId(),
       gasMultiplier: config?.gasMultiplier || 1.2,
       maxGasPrice: config?.maxGasPrice,
       confirmations: config?.confirmations || 1,

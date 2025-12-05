@@ -8,10 +8,7 @@
     "baseUrl": ".",
     "paths": {
       "@babylon/contracts": ["./src/index.ts"],
-      "@babylon/contracts/*": ["./src/*"],
-      "@babylon/contracts/deployments/local": ["./deployments/local/index.ts"],
-      "@babylon/contracts/deployments/base-sepolia": ["./deployments/base-sepolia/index.ts"],
-      "@babylon/contracts/deployments/base": ["./deployments/base/index.ts"]
+      "@babylon/contracts/*": ["./*"]
     }
   },
   "include": ["src/**/*", "deployments/**/*.ts", "deployments/**/*.json"],

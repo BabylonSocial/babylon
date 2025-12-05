@@ -161,26 +161,6 @@ export const ArticleCard = memo(function ArticleCard({
         </button>
       </div>
 
-      {/* Article Metadata */}
-      <div className="mb-3 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
-        {post.byline && <span>{post.byline}</span>}
-        {post.biasScore !== null &&
-          post.biasScore !== undefined &&
-          Math.abs(post.biasScore) >= 0.3 && (
-            <>
-              <span>·</span>
-              <span
-                className={cn(
-                  'font-semibold text-xs',
-                  post.biasScore > 0 ? 'text-green-500' : 'text-red-500'
-                )}
-              >
-                {post.biasScore > 0 ? '↗ Favorable' : '↘ Critical'}
-              </span>
-            </>
-          )}
-      </div>
-
       {/* Article Summary */}
       <div className="mb-3 whitespace-pre-wrap break-words text-foreground leading-relaxed">
         {post.content}

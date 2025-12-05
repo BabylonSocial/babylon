@@ -12,7 +12,6 @@
 - [saveDeployment](functions/saveDeployment.md)
 - [validateDeployment](functions/validateDeployment.md)
 - [isContractDeployed](functions/isContractDeployed.md)
-- [getContractAddressesFromEnv](functions/getContractAddressesFromEnv.md)
 - [updateEnvFile](functions/updateEnvFile.md)
 - [printValidationResult](functions/printValidationResult.md)
 - [waitForTransaction](functions/waitForTransaction.md)

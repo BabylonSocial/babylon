@@ -59,7 +59,6 @@
       "@babylon/a2a": ["../../packages/a2a/src/index.ts"],
       "@babylon/a2a/*": ["../../packages/a2a/src/*"],
       "@babylon/mcp": ["../../packages/mcp/src/index.ts"],
-      "@babylon/mcp/*": ["../../packages/mcp/src/*"],
       "@babylon/engine": ["../../packages/engine/src/index.ts"],
       "@babylon/engine/*": ["../../packages/engine/src/*"],
       "@babylon/shared": ["../../packages/shared/src/index.ts"],

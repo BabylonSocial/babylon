@@ -70,6 +70,8 @@ export function renderPrompt(
       'examples',
       'contextInfo',
       'relatedQuestionContext',
+      'atmosphereContext',
+      'emotionalContext',
     ],
   } = options;
 

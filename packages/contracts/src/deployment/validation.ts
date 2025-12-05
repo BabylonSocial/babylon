@@ -91,15 +91,15 @@ export async function loadDeployment(
 ): Promise<DeploymentInfo | null> {
   try {
     if (env === 'localnet') {
-      const deployment = await import('@babylon/contracts/deployments/local');
+      const deployment = await import('../../deployments/local');
       return deployment.default as DeploymentInfo;
     }
     if (env === 'testnet') {
-      const deployment = await import('@babylon/contracts/deployments/base-sepolia');
+      const deployment = await import('../../deployments/base-sepolia');
       return deployment.default as DeploymentInfo;
     }
     if (env === 'mainnet') {
-      const deployment = await import('@babylon/contracts/deployments/base');
+      const deployment = await import('../../deployments/base');
       return deployment.default as DeploymentInfo;
     }
   } catch {
@@ -289,27 +289,6 @@ export async function isContractDeployed(
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   const code = await provider.getCode(address);
   return code !== '0x' && code !== '0x0';
-}
-
-/**
- * Get contract addresses from environment variables
- */
-export function getContractAddressesFromEnv(): Partial<ContractAddresses> {
-  return {
-    diamond: process.env.NEXT_PUBLIC_DIAMOND_ADDRESS,
-    identityRegistry: process.env.NEXT_PUBLIC_IDENTITY_REGISTRY,
-    reputationSystem: process.env.NEXT_PUBLIC_REPUTATION_SYSTEM,
-    babylonOracle: process.env.NEXT_PUBLIC_BABYLON_ORACLE,
-    predimarket: process.env.NEXT_PUBLIC_PREDIMARKET,
-    marketFactory: process.env.NEXT_PUBLIC_MARKET_FACTORY,
-    contestOracle: process.env.NEXT_PUBLIC_CONTEST_ORACLE,
-    banManager: process.env.NEXT_PUBLIC_BAN_MANAGER,
-    reportingSystem: process.env.NEXT_PUBLIC_REPORTING_SYSTEM,
-    labelManager: process.env.NEXT_PUBLIC_LABEL_MANAGER,
-    chainlinkOracle: process.env.NEXT_PUBLIC_CHAINLINK_ORACLE,
-    umaOracle: process.env.NEXT_PUBLIC_UMA_ORACLE,
-    testToken: process.env.NEXT_PUBLIC_TEST_TOKEN,
-  };
 }
 
 /**

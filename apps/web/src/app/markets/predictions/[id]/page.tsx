@@ -33,7 +33,7 @@ import { usePredictionMarketStream } from '@/hooks/usePredictionMarketStream';
 import {
   calculateExpectedPayout,
   PredictionPricing,
-} from '@babylon/engine';
+} from '@babylon/engine/client';
 import { cn } from '@babylon/shared';
 
 interface PredictionPosition {

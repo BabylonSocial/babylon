@@ -29,3 +29,6 @@ export * from './generation-lock-service';
 
 // On-chain Prediction Market Service
 export * from './prediction-market-onchain';
+
+// Claude LLM Service
+export * from './claude-service';

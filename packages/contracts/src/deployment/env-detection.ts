@@ -217,14 +217,9 @@ function validateLocalnet(_errors: string[], warnings: string[]): void {
 }
 
 function validateTestnet(errors: string[], warnings: string[]): void {
-  if (!process.env.NEXT_PUBLIC_DIAMOND_ADDRESS) {
-    errors.push('NEXT_PUBLIC_DIAMOND_ADDRESS is required for testnet');
-    errors.push('Deploy contracts with: bun run contracts:deploy:testnet');
-  }
-
-  if (!process.env.NEXT_PUBLIC_IDENTITY_REGISTRY) {
-    errors.push('NEXT_PUBLIC_IDENTITY_REGISTRY is required for testnet');
-  }
+  // Contract addresses are now in canonical config (packages/shared/src/config/default-config.ts)
+  // Only warn if config has zero addresses (not deployed yet)
+  warnings.push('Ensure Base Sepolia contracts are deployed. Check packages/shared/src/config/default-config.ts');
 
   if (!process.env.DEPLOYER_PRIVATE_KEY) {
     warnings.push(
@@ -263,18 +258,8 @@ function validateMainnet(errors: string[], warnings: string[]): void {
     );
   }
 
-  if (!process.env.NEXT_PUBLIC_DIAMOND_ADDRESS) {
-    errors.push('NEXT_PUBLIC_DIAMOND_ADDRESS is required for mainnet');
-  }
-
-  if (!process.env.NEXT_PUBLIC_IDENTITY_REGISTRY) {
-    errors.push('NEXT_PUBLIC_IDENTITY_REGISTRY is required for mainnet');
-  }
-
-  if (!process.env.NEXT_PUBLIC_REPUTATION_SYSTEM) {
-    errors.push('NEXT_PUBLIC_REPUTATION_SYSTEM is required for mainnet');
-  }
-
+  // Contract addresses are now in canonical config (packages/shared/src/config/default-config.ts)
+  // Only secrets should be validated from env vars
   if (!process.env.DEPLOYER_PRIVATE_KEY) {
     errors.push('DEPLOYER_PRIVATE_KEY is required for mainnet deployment');
   }
@@ -318,6 +303,9 @@ function validateMainnet(errors: string[], warnings: string[]): void {
 
 /**
  * Get required environment variables for an environment
+ * 
+ * Note: Contract addresses are now in canonical config (packages/shared/src/config/default-config.ts)
+ * Only secrets and runtime configuration should be in env vars.
  */
 export function getRequiredEnvVars(env: DeploymentEnv): string[] {
   const common = ['DATABASE_URL'];
@@ -329,21 +317,14 @@ export function getRequiredEnvVars(env: DeploymentEnv): string[] {
     case 'testnet':
       return [
         ...common,
-        'NEXT_PUBLIC_CHAIN_ID',
-        'NEXT_PUBLIC_RPC_URL',
-        'NEXT_PUBLIC_DIAMOND_ADDRESS',
-        'NEXT_PUBLIC_IDENTITY_REGISTRY',
+        // NEXT_PUBLIC_CHAIN_ID is optional - defaults to local if not set
+        // Contract addresses are in canonical config
       ];
 
     case 'mainnet':
       return [
         ...common,
-        'USE_MAINNET',
-        'NEXT_PUBLIC_CHAIN_ID',
-        'NEXT_PUBLIC_RPC_URL',
-        'NEXT_PUBLIC_DIAMOND_ADDRESS',
-        'NEXT_PUBLIC_IDENTITY_REGISTRY',
-        'NEXT_PUBLIC_REPUTATION_SYSTEM',
+        'USE_MAINNET', // Safety flag for mainnet
         'DEPLOYER_PRIVATE_KEY',
         'ETHERSCAN_API_KEY',
       ];
@@ -398,6 +379,8 @@ export function loadEnvFile(env: DeploymentEnv): void {
 
 /**
  * Get deployment info for display
+ * 
+ * Note: Contract deployment status is now checked via canonical config
  */
 export function getDeploymentInfo(): {
   environment: DeploymentEnv;
@@ -411,13 +394,17 @@ export function getDeploymentInfo(): {
   const environment = detectEnvironment();
   const config = CHAIN_CONFIGS[environment];
 
+  // For localnet, contracts are always considered deployed (canonical config has addresses)
+  // For testnet/mainnet, check if contracts are in canonical config
+  const contractsDeployed = environment === 'localnet';
+
   return {
     environment,
     chain: config.name,
     chainId: config.chainId,
     rpcUrl: config.rpcUrl,
     explorerUrl: config.explorerUrl,
-    contractsDeployed: !!process.env.NEXT_PUBLIC_DIAMOND_ADDRESS,
+    contractsDeployed,
     agent0Enabled: process.env.AGENT0_ENABLED === 'true',
   };
 }

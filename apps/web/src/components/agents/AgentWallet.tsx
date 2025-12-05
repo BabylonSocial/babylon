@@ -196,37 +196,39 @@ export function AgentWallet({ agent, onUpdate }: AgentWalletProps) {
       </div>
 
       {/* Transaction Form */}
-      <div className="rounded-lg border border-border bg-card/50 p-6 backdrop-blur">
+      <div className="rounded-lg border border-border bg-card/50 p-4 backdrop-blur sm:p-6">
         <h3 className="mb-4 font-semibold text-lg">Transfer Points</h3>
 
-        <div className="mb-4 flex gap-2">
+        {/* Action Toggle - Full width buttons */}
+        <div className="mb-4 grid grid-cols-2 gap-2">
           <button
             onClick={() => setAction('deposit')}
             className={cn(
-              'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition-all',
+              'flex items-center justify-center gap-2 rounded-lg px-3 py-3 font-medium transition-all sm:px-4',
               action === 'deposit'
                 ? 'bg-[#0066FF] text-primary-foreground'
                 : 'bg-muted text-foreground hover:bg-muted/80'
             )}
           >
-            <ArrowDownToLine className="h-4 w-4" />
-            Deposit
+            <ArrowDownToLine className="h-4 w-4 shrink-0" />
+            <span>Deposit</span>
           </button>
           <button
             onClick={() => setAction('withdraw')}
             className={cn(
-              'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition-all',
+              'flex items-center justify-center gap-2 rounded-lg px-3 py-3 font-medium transition-all sm:px-4',
               action === 'withdraw'
                 ? 'bg-[#0066FF] text-primary-foreground'
                 : 'bg-muted text-foreground hover:bg-muted/80'
             )}
           >
-            <ArrowUpFromLine className="h-4 w-4" />
-            Withdraw
+            <ArrowUpFromLine className="h-4 w-4 shrink-0" />
+            <span>Withdraw</span>
           </button>
         </div>
 
-        <div className="flex gap-2">
+        {/* Amount input and submit - Stack on mobile, inline on larger screens */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
           <Input
             type="number"
             value={amount}
@@ -234,11 +236,12 @@ export function AgentWallet({ agent, onUpdate }: AgentWalletProps) {
             placeholder="Enter amount..."
             min={1}
             max={action === 'deposit' ? userTotalPoints : agent.pointsBalance}
+            className="h-12 w-full text-base sm:h-10 sm:flex-1 sm:text-sm"
           />
           <button
             onClick={handleTransaction}
             disabled={processing || !amount}
-            className="rounded-lg bg-[#0066FF] px-6 py-2 font-medium text-primary-foreground transition-all hover:bg-[#2952d9] disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-12 w-full rounded-lg bg-[#0066FF] px-6 font-medium text-primary-foreground transition-all hover:bg-[#2952d9] disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:w-auto"
           >
             {processing
               ? 'Processing...'
@@ -248,7 +251,7 @@ export function AgentWallet({ agent, onUpdate }: AgentWalletProps) {
           </button>
         </div>
 
-        <p className="mt-2 text-muted-foreground text-xs">
+        <p className="mt-3 text-muted-foreground text-xs">
           {action === 'deposit'
             ? `Transfer points from your account to ${agent.name}`
             : `Transfer points from ${agent.name} to your account`}

@@ -1,81 +1,102 @@
 /**
- * Redis Client - Common interface for both local and production Redis
+ * Redis Client - Generic interface for any Redis server
  *
- * @description Provides a Redis client that works with both:
- * - Local Development: Uses standard Redis protocol via ioredis
- *   (REDIS_URL=redis://localhost:6379)
- * - Vercel Production: Uses Upstash REST API via @upstash/redis
- *   (UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN)
+ * @description Provides a Redis client that works with any Redis server
+ * using the standard Redis protocol via ioredis.
+ *
+ * Configuration:
+ * - In development mode: Automatically connects to redis://localhost:6380 (Docker Compose)
+ * - Set REDIS_URL environment variable to connect to any Redis server
+ * - Works with local Redis: redis://localhost:6379
+ * - Works with Upstash: redis://default:token@hostname:port
+ * - Works with any Redis-compatible server
  *
  * Falls back gracefully if Redis is not configured.
  */
 
-import { Redis as UpstashRedis } from '@upstash/redis';
+import type IORedis from 'ioredis';
 import { logger } from '@babylon/shared';
 
-// Type for ioredis instance (avoid importing at top level to prevent bundling in edge runtime)
-type IORedisInstance = {
-  rpush: (key: string, value: string) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<number>;
-  lpop: (key: string) => Promise<string | null>;
-  xadd: (...args: unknown[]) => Promise<string>;
-  xread: (...args: unknown[]) => Promise<unknown>;
-  scanStream: (options: { match: string }) => {
-    on: (event: string, callback: (keys: string[]) => void) => void;
-  };
-  del: (...keys: string[]) => Promise<number>;
-  set: (key: string, value: string, mode: string, ttl: number) => Promise<string>;
-  get: (key: string) => Promise<string | null>;
-  connect: () => Promise<void>;
-  quit: () => Promise<string>;
-  status: string;
-};
+// Type for ioredis instance
+export type RedisInstance = IORedis;
 
-// Redis client types
-type RedisClient = UpstashRedis | IORedisInstance | null;
-export type RedisClientType = 'upstash' | 'standard' | null;
-
-/**
- * Type guard to check if Redis client is IORedisInstance
- */
-function isIORedisInstance(
-  client: RedisClient,
-  type: RedisClientType
-): client is IORedisInstance {
-  return type === 'standard' && client !== null;
-}
-
-/**
- * Type guard to check if Redis client is UpstashRedis
- */
-function isUpstashRedis(
-  client: RedisClient,
-  type: RedisClientType
-): client is UpstashRedis {
-  return type === 'upstash' && client !== null;
-}
-
-// Check if Upstash Redis is configured (Vercel production)
-const hasUpstashConfig = () => {
-  return !!(
-    (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
-    (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
-  );
-};
-
-// Check if standard Redis URL is configured (local development)
-const hasStandardRedisUrl = () => {
-  return !!process.env.REDIS_URL;
-};
-
-// Create Redis client based on available configuration
-let redisClient: RedisClient = null;
-let redisType: RedisClientType = null;
+// Redis client state
+let redisClient: RedisInstance | null = null;
+let isInitialized = false;
 let isClosing = false;
 const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
 const isTestEnv = process.env.NODE_ENV === 'test';
+const isDev = process.env.NODE_ENV === 'development';
 
-// Skip Redis initialization during build time to avoid connection issues
+// Default Redis URL for local development (Docker Compose uses port 6380)
+const DEFAULT_DEV_REDIS_URL = 'redis://localhost:6380';
+
+/**
+ * Initialize Redis client
+ *
+ * @description Initializes the Redis client using REDIS_URL environment variable.
+ * This is called lazily to avoid bundling ioredis in edge runtime.
+ */
+async function initializeRedis(): Promise<void> {
+  if (isInitialized || isBuildTime || isTestEnv) {
+    return;
+  }
+  isInitialized = true;
+
+  // Use REDIS_URL from env, or default to local Docker Redis in development
+  const redisUrl = process.env.REDIS_URL || (isDev ? DEFAULT_DEV_REDIS_URL : undefined);
+  if (!redisUrl) {
+    logger.info(
+      'Redis not configured - caching will use in-memory fallback',
+      undefined,
+      'Redis'
+    );
+    logger.info(
+      'Set REDIS_URL to connect (e.g., redis://localhost:6379)',
+      undefined,
+      'Redis'
+    );
+    return;
+  }
+
+  if (!process.env.REDIS_URL && isDev) {
+    logger.info(
+      `Using default Redis URL for development: ${DEFAULT_DEV_REDIS_URL}`,
+      undefined,
+      'Redis'
+    );
+  }
+
+  // Check if we're in a Node.js environment (not edge runtime)
+  if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
+    logger.warn(
+      'Redis not available in edge runtime - use in-memory fallback or serverless Redis',
+      undefined,
+      'Redis'
+    );
+    return;
+  }
+
+  // Dynamic import to prevent bundling in edge runtime
+  const IORedisModule = await import('ioredis');
+  const IORedisClass = IORedisModule.default;
+
+  redisClient = new IORedisClass(redisUrl, {
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => {
+      if (times > 3) {
+        return null;
+      }
+      return Math.min(times * 100, 2000);
+    },
+    lazyConnect: true,
+  });
+
+  await redisClient.connect();
+  logger.info('Redis client connected', undefined, 'Redis');
+}
+
+// Skip initialization during build time and test
 if (isBuildTime || isTestEnv) {
   logger.info(
     isTestEnv
@@ -84,85 +105,25 @@ if (isBuildTime || isTestEnv) {
     undefined,
     'Redis'
   );
-} else if (hasUpstashConfig()) {
-  redisClient = new UpstashRedis({
-    url: process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL,
-    token:
-      process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN,
-  });
-  redisType = 'upstash';
-  logger.info(
-    'Redis client initialized (Upstash REST API)',
-    undefined,
-    'Redis'
-  );
-} else if (hasStandardRedisUrl()) {
-  // Use lazy initialization for ioredis to avoid bundling in edge runtime
-  // Check if we're in a Node.js environment (not edge runtime)
-  if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
-    // Lazy initialization - only loads ioredis when actually needed
-    // This prevents webpack from bundling ioredis for edge runtime
-    void (async () => {
-      try {
-        // Dynamic import - only loads in Node.js runtime
-        const IORedisModule = await import('ioredis');
-        const IORedis = IORedisModule.default;
-        
-        redisClient = new IORedis(process.env.REDIS_URL!, {
-          maxRetriesPerRequest: 3,
-          retryStrategy: (times) => {
-            if (times > 3) {
-              return null;
-            }
-            return Math.min(times * 100, 2000);
-          },
-          lazyConnect: true,
-        }) as IORedisInstance;
-        redisType = 'standard';
-
-        void redisClient.connect().then(() => {
-          logger.info(
-            'Redis client initialized (Standard Redis Protocol)',
-            undefined,
-            'Redis'
-          );
-        });
-      } catch (error) {
-        logger.warn(
-          'Failed to initialize ioredis client',
-          { error: error instanceof Error ? error.message : String(error) },
-          'Redis'
-        );
-      }
-    })();
-  } else {
-    logger.warn(
-      'Standard Redis URL configured but ioredis not available in edge runtime. Use Upstash Redis (UPSTASH_REDIS_REST_URL) for edge runtime compatibility.',
-      undefined,
-      'Redis'
-    );
-  }
 } else {
-  logger.info(
-    'Redis not configured - caching will use in-memory fallback',
-    undefined,
-    'Redis'
-  );
-  logger.info(
-    'For local dev: Set REDIS_URL=redis://localhost:6379',
-    undefined,
-    'Redis'
-  );
-  logger.info(
-    'For production: Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN',
-    undefined,
-    'Redis'
-  );
+  // Always attempt initialization - the function handles missing config gracefully
+  void initializeRedis();
 }
 
+/**
+ * Get the Redis client instance
+ *
+ * @description Returns the Redis client if available. May return null if
+ * Redis is not configured or failed to initialize.
+ *
+ * @returns {RedisInstance | null} Redis client or null
+ */
+export function getRedis(): RedisInstance | null {
+  return redisClient;
+}
+
+// Export for backwards compatibility
 export const redis = redisClient;
-// Explicitly type to include 'standard' since it can be set async
-export const redisClientType: RedisClientType = redisType;
 
 /**
  * Check if Redis is available
@@ -174,17 +135,27 @@ export const redisClientType: RedisClientType = redisType;
  * @returns {boolean} True if Redis is available, false otherwise
  */
 export function isRedisAvailable(): boolean {
-  return redis !== null;
+  return redisClient !== null;
+}
+
+/**
+ * Get the current Redis client (for dynamic access after initialization)
+ *
+ * @description Returns the current Redis client. Use this instead of the
+ * exported `redis` constant when you need to access the client after
+ * async initialization has completed.
+ */
+export function getRedisClient(): RedisInstance | null {
+  return redisClient;
 }
 
 /**
  * Safely publish to Redis (no-op if not available)
  *
- * @description Publishes a message to a Redis channel. Works with both Upstash
- * REST API and standard Redis protocol. Returns false if Redis is not available.
- * Automatically sets channel expiration to 60 seconds.
+ * @description Publishes a message to a Redis list. Returns false if Redis
+ * is not available. Automatically sets key expiration to 60 seconds.
  *
- * @param {string} channel - Redis channel name
+ * @param {string} channel - Redis key name
  * @param {string} message - Message to publish
  * @returns {Promise<boolean>} True if published successfully, false if Redis unavailable
  */
@@ -192,63 +163,43 @@ export async function safePublish(
   channel: string,
   message: string
 ): Promise<boolean> {
-  if (!redis || !redisType) return false;
+  const client = getRedisClient();
+  if (!client) return false;
 
-  const client = redis;
-  if (redisType === 'upstash' && isUpstashRedis(client, redisType)) {
-    await client.rpush(channel, message);
-    await client.expire(channel, 60);
-  } else if (redisType === 'standard' && isIORedisInstance(client, redisType)) {
-    await client.rpush(channel, message);
-    await client.expire(channel, 60);
-  }
+  await client.rpush(channel, message);
+  await client.expire(channel, 60);
   return true;
 }
 
 /**
  * Safely poll Redis for messages (returns empty array if not available)
  *
- * @description Polls a Redis channel for messages, removing them from the queue.
- * Works with both Upstash REST API and standard Redis protocol. Returns empty
- * array if Redis is not available or no messages found.
+ * @description Polls a Redis list for messages, removing them from the queue.
+ * Returns empty array if Redis is not available or no messages found.
  *
- * @param {string} channel - Redis channel name to poll
+ * @param {string} channel - Redis key name to poll
  * @param {number} count - Maximum number of messages to retrieve (default: 10)
  * @returns {Promise<string[]>} Array of messages, or empty array if none found/unavailable
  */
 export async function safePoll(channel: string, count = 10): Promise<string[]> {
-  if (!redis || !redisType) return [];
+  const client = getRedisClient();
+  if (!client) return [];
 
-  let messages: string[] | string | null = null;
-  const client = redis;
-
-  if (redisType === 'upstash' && isUpstashRedis(client, redisType)) {
-    const result = await client.lpop(channel, count);
-    messages = result as string[] | string | null;
-  } else if (redisType === 'standard' && isIORedisInstance(client, redisType)) {
-    const items: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const item: string | null = await client.lpop(channel);
-      if (item === null || typeof item !== 'string') break;
-      items.push(item);
-    }
-    messages = items.length > 0 ? items : null;
+  const items: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const item: string | null = await client.lpop(channel);
+    if (item === null) break;
+    items.push(item);
   }
 
-  if (!messages) return [];
-
-  if (Array.isArray(messages)) {
-    return messages.filter((m): m is string => typeof m === 'string');
-  }
-  return typeof messages === 'string' ? [messages] : [];
+  return items;
 }
 
 /**
  * Cleanup Redis connection on shutdown
  *
- * @description Gracefully closes the Redis connection. Only closes standard Redis
- * connections (not Upstash REST API). Safe to call multiple times. Used during
- * application shutdown to clean up resources.
+ * @description Gracefully closes the Redis connection. Safe to call multiple
+ * times. Used during application shutdown to clean up resources.
  *
  * @returns {Promise<void>} Promise that resolves when connection is closed
  */
@@ -256,12 +207,11 @@ export async function closeRedis(): Promise<void> {
   if (isClosing) return;
   isClosing = true;
 
-  if (isIORedisInstance(redis, redisType)) {
-    if (
-      redis.status === 'ready' ||
-      redis.status === 'connect'
-    ) {
-      await redis.quit();
+  const client = getRedisClient();
+  if (client) {
+    const status = client.status;
+    if (status === 'ready' || status === 'connect') {
+      await client.quit();
       logger.info('Redis connection closed', undefined, 'Redis');
     }
   }
@@ -276,4 +226,3 @@ if (typeof process !== 'undefined' && !isBuildTime) {
     void closeRedis();
   });
 }
-

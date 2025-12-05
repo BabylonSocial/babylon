@@ -13,6 +13,7 @@ import {
   isContractDeployed,
   loadDeployment,
 } from '@babylon/contracts';
+import { LOCAL_CONTRACT_ADDRESSES } from '@babylon/shared';
 
 const HARDHAT_RPC_URL = process.env.HARDHAT_RPC_URL || 'http://localhost:8545';
 
@@ -62,41 +63,23 @@ export async function ensureHardhatRunning(): Promise<boolean> {
  * Check if contracts are deployed on-chain
  */
 export async function areContractsDeployed(): Promise<boolean> {
-  // Try to load from deployment file first
-  let oracleAddress = process.env.NEXT_PUBLIC_BABYLON_ORACLE;
-  let diamondAddress =
-    process.env.NEXT_PUBLIC_DIAMOND_BASE_SEPOLIA ||
-    process.env.NEXT_PUBLIC_DIAMOND;
-  let identityRegistry =
-    process.env.NEXT_PUBLIC_IDENTITY_REGISTRY_BASE_SEPOLIA ||
-    process.env.NEXT_PUBLIC_IDENTITY_REGISTRY;
-  let reputationSystem =
-    process.env.NEXT_PUBLIC_REPUTATION_SYSTEM_BASE_SEPOLIA ||
-    process.env.NEXT_PUBLIC_REPUTATION_SYSTEM;
+  // Use canonical config addresses for local development
+  let oracleAddress: string | undefined = LOCAL_CONTRACT_ADDRESSES.babylonOracle;
+  let diamondAddress: string | undefined = LOCAL_CONTRACT_ADDRESSES.diamond;
 
-  // Load from deployment file if env vars not set
+  // Try to load from deployment file to check for fresh deployments
   try {
     const deployment = await loadDeployment('localnet');
     if (deployment) {
-      if (!oracleAddress && deployment.contracts.babylonOracle) {
+      if (deployment.contracts.babylonOracle) {
         oracleAddress = deployment.contracts.babylonOracle;
-        process.env.NEXT_PUBLIC_BABYLON_ORACLE = oracleAddress;
       }
-      if (!diamondAddress && deployment.contracts.diamond) {
+      if (deployment.contracts.diamond) {
         diamondAddress = deployment.contracts.diamond;
-        process.env.NEXT_PUBLIC_DIAMOND = diamondAddress;
-      }
-      if (!identityRegistry && deployment.contracts.identityRegistry) {
-        identityRegistry = deployment.contracts.identityRegistry;
-        process.env.NEXT_PUBLIC_IDENTITY_REGISTRY = identityRegistry;
-      }
-      if (!reputationSystem && deployment.contracts.reputationSystem) {
-        reputationSystem = deployment.contracts.reputationSystem;
-        process.env.NEXT_PUBLIC_REPUTATION_SYSTEM = reputationSystem;
       }
     }
   } catch {
-    // Deployment file might not exist yet
+    // Deployment file might not exist yet, use canonical config
   }
 
   if (!oracleAddress && !diamondAddress) {

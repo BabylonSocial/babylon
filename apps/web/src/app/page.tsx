@@ -7,9 +7,7 @@ import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useLoginModal } from '@/hooks/useLoginModal';
 
-const waitlistModeEnabled =
-  (process.env.WAITLIST_MODE ?? process.env.NEXT_PUBLIC_WAITLIST_MODE) ===
-  'true';
+const waitlistModeEnabled = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true';
 
 function HomePageContent() {
   const router = useRouter();

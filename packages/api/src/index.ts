@@ -91,14 +91,15 @@ export {
 // Redis
 export {
   redis,
-  redisClientType,
+  getRedis,
+  getRedisClient,
   isRedisAvailable,
   safePublish,
   safePoll,
   closeRedis,
   streamAdd,
   streamRead,
-  type RedisClientType,
+  type RedisInstance,
   type StreamMessage,
 } from './redis';
 
@@ -179,3 +180,31 @@ export * from './services';
 
 // Swagger
 export * from './swagger';
+
+// Server-side utilities (require Node.js crypto)
+export {
+  generateApiKey,
+  generateTestApiKey,
+  hashApiKey,
+  verifyApiKey,
+  getClientIp,
+  getHashedClientIp,
+  hashIpAddress,
+  // Token counter utilities (moved from @babylon/shared)
+  countTokens,
+  countTokensSync,
+  truncateToTokenLimit,
+  truncateToTokenLimitSync,
+  MODEL_TOKEN_LIMITS,
+  getModelTokenLimit,
+  getSafeContextLimit,
+  budgetTokens,
+} from './utils';
+
+// Storage utilities (moved from @babylon/shared)
+export { getStorageClient, type UploadOptions, type UploadResult } from './storage/s3-client';
+
+// Performance monitoring (moved from @babylon/shared)
+export { performanceMonitor } from './monitoring/performance-monitor';
+export * from './monitoring/monitored-storage';
+export * from './monitoring/monitored-cache';

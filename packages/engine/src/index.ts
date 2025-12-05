@@ -341,7 +341,7 @@ export {
 } from './data/question-examples';
 export { realityGroundingContent } from './data/reality-grounding';
 
-// Token Counter
+// Token Counter (now in @babylon/api)
 export {
   budgetTokens,
   countTokens,
@@ -351,7 +351,7 @@ export {
   MODEL_TOKEN_LIMITS,
   truncateToTokenLimit,
   truncateToTokenLimitSync,
-} from '@babylon/shared';
+} from '@babylon/api';
 
 // Post ID Parser
 export {

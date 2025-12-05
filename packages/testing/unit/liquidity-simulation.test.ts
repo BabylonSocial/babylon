@@ -15,7 +15,7 @@ import {
   type LiquidityScenarioConfig,
   LiquiditySimulator,
   SCENARIOS,
-} from '@babylon/testing/simulation';
+} from '@babylon/testing';
 
 describe('Funding Rate Calculator', () => {
   it('should return base rate when market is balanced', () => {

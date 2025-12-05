@@ -64,24 +64,27 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   // Optional auth - registry is public
   await optionalAuth(request).catch(() => null);
 
-  // Initialize subgraph client for agent data
-  const subgraphClient = new SubgraphClient();
-
   // Fetch users from database
   const fetchUsers = async () => {
     try {
       const dbOperation = async (db: DrizzleClient) => {
-        const where: Record<string, unknown> = {};
+        const conditions: Record<string, unknown>[] = [];
+        
         if (onChainOnly) {
-          where.onChainRegistered = true;
+          conditions.push({ onChainRegistered: true });
         }
+        
         if (search) {
-          where.OR = [
-            { username: { contains: search, mode: 'insensitive' } },
-            { displayName: { contains: search, mode: 'insensitive' } },
-            { bio: { contains: search, mode: 'insensitive' } },
-          ];
+          conditions.push({
+            OR: [
+              { username: { contains: search, mode: 'insensitive' as const } },
+              { displayName: { contains: search, mode: 'insensitive' as const } },
+              { bio: { contains: search, mode: 'insensitive' as const } },
+            ],
+          });
         }
+
+        const where = conditions.length > 0 ? { AND: conditions } : {};
 
         const users = await db.user.findMany({
           where,
@@ -180,14 +183,15 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   const fetchActors = async () => {
     try {
       const dbOperation = async (db: DrizzleClient) => {
-        const where: Record<string, unknown> = {};
-        if (search) {
-          where.OR = [
-            { name: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-            { role: { contains: search, mode: 'insensitive' } },
-          ];
-        }
+        const where = search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { description: { contains: search, mode: 'insensitive' as const } },
+                { role: { contains: search, mode: 'insensitive' as const } },
+              ],
+            }
+          : {};
 
         const actors = await db.actor.findMany({
           where,
@@ -254,6 +258,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
   const fetchAgents = async () => {
     try {
+      const subgraphClient = new SubgraphClient();
       const agents = await subgraphClient.searchAgents({
         type: 'agent',
         limit: 100,
@@ -294,6 +299,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
   const fetchApps = async () => {
     try {
+      const subgraphClient = new SubgraphClient();
       const apps = await subgraphClient.getGamePlatforms({
         minTrustScore: 0,
       });

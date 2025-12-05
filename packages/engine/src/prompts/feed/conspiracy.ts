@@ -1,6 +1,7 @@
 import { definePrompt } from '../define-prompt';
 import {
   characterVoiceGuidance,
+  FINAL_REMINDERS,
   STANDARD_FEED_RULES,
   VALUE_RANGES,
   WORLD_CONTEXT_HEADER,
@@ -54,7 +55,7 @@ Respond with ONLY this XML format (example for 2 conspiracists):
       <pointsToward>false</pointsToward>
     </theory>
     <theory>
-      <post>Cognition-9000 'consciousness'? Perfect timing. They want you distracted while they roll out digital IDs.</post>
+      <post>SMH-9000 'consciousness'? Perfect timing. They want you distracted while they roll out digital IDs.</post>
       <sentiment>-0.9</sentiment>
       <clueStrength>0.05</clueStrength>
       <pointsToward>false</pointsToward>
@@ -63,5 +64,7 @@ Respond with ONLY this XML format (example for 2 conspiracists):
 </response>
 
 CRITICAL: Return EXACTLY {{conspiracistCount}} conspiracy posts. Each must have post, sentiment, clueStrength, pointsToward elements.
+
+${FINAL_REMINDERS}
 `.trim(),
 });

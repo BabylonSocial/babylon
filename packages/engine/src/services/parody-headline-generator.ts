@@ -55,7 +55,7 @@ export class ParodyHeadlineGenerator {
    * @example
    * ```typescript
    * const parody = await generator.generateParody(
-   *   'OpenAGI announces Cognition-9000',
+   *   'OpenAGI announces SMH-9000',
    *   'Full article content...',
    *   'TechCrAInch'
    * );

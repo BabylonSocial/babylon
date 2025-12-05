@@ -105,7 +105,7 @@ import {
 } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import {
   checkRateLimitAndDuplicates,
   RATE_LIMIT_CONFIGS,

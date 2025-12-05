@@ -69,7 +69,7 @@ import { NextResponse } from 'next/server';
 import { X402Manager } from '@babylon/a2a';
 import { authenticate } from '@babylon/api';
 import { logger } from '@babylon/shared';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 
 // Initialize x402 manager (you'll need to configure RPC URL)
 const x402Manager = new X402Manager({

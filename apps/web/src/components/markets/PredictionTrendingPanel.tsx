@@ -1,10 +1,12 @@
 'use client';
 
 import { Flame } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
-import { usePredictionMarketsSubscription } from '@/hooks/usePredictionMarketStream';
-import { logger } from '@babylon/shared';
+import {
+  usePredictionMarkets,
+  usePredictionMarketsPolling,
+} from '@/stores/predictionMarketsStore';
 import { cn } from '@babylon/shared';
 
 /**
@@ -19,27 +21,15 @@ interface PredictionSummary {
 }
 
 /**
- * Prediction question structure from API.
- */
-interface PredictionQuestion {
-  id: string | number;
-  text: string;
-  yesShares?: number | null;
-  noShares?: number | null;
-  resolutionDate?: string | null;
-}
-
-/**
  * Prediction trending panel component for displaying trending prediction markets.
  *
  * Displays a list of trending prediction markets sorted by total volume (yes + no shares).
- * Subscribes to real-time trade and resolution updates via SSE. Automatically refreshes
- * every 60 seconds. Navigates to market detail page on click.
+ * Uses shared prediction markets store for data. Automatically refreshes
+ * every 60 seconds via shared polling.
  *
  * Features:
  * - Trending markets list sorted by volume
- * - Real-time share count updates via SSE
- * - Auto-refresh (60s interval)
+ * - Auto-refresh (60s interval via shared store)
  * - Loading states
  * - Empty state handling
  *
@@ -53,74 +43,22 @@ interface PredictionTrendingPanelProps {
 export function PredictionTrendingPanel({
   onMarketClick,
 }: PredictionTrendingPanelProps) {
-  const [markets, setMarkets] = useState<PredictionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use shared prediction markets store
+  const { markets: rawMarkets, loading } = usePredictionMarkets();
+  usePredictionMarketsPolling(60000); // Enable 60s polling
 
-  useEffect(() => {
-    const fetchPredictions = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/markets/predictions');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-        const data = await response.json();
-        if (Array.isArray(data.questions)) {
-          setMarkets(
-            (data.questions as PredictionQuestion[]).map((question) => ({
-              id: question.id.toString(),
-              text: question.text,
-              yesShares: Number(question.yesShares ?? 0),
-              noShares: Number(question.noShares ?? 0),
-              resolutionDate: question.resolutionDate ?? undefined,
-            }))
-          );
-        }
-      } catch (error) {
-        logger.error(
-          'Failed to fetch hot predictions',
-          { error },
-          'PredictionTrendingPanel'
-        );
-        // Keep existing data on error
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPredictions();
-    const interval = setInterval(fetchPredictions, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  usePredictionMarketsSubscription({
-    onTrade: (event) => {
-      setMarkets((prev) =>
-        prev.map((market) =>
-          market.id === event.marketId
-            ? {
-                ...market,
-                yesShares: event.yesShares,
-                noShares: event.noShares,
-              }
-            : market
-        )
-      );
-    },
-    onResolution: (event) => {
-      setMarkets((prev) =>
-        prev.map((market) =>
-          market.id === event.marketId
-            ? {
-                ...market,
-                yesShares: event.yesShares,
-                noShares: event.noShares,
-              }
-            : market
-        )
-      );
-    },
-  });
+  // Transform markets to summary format
+  const markets = useMemo(
+    () =>
+      rawMarkets.map((m) => ({
+        id: m.id.toString(),
+        text: m.text,
+        yesShares: Number(m.yesShares ?? 0),
+        noShares: Number(m.noShares ?? 0),
+        resolutionDate: m.resolutionDate ?? undefined,
+      })),
+    [rawMarkets]
+  );
 
   const sortedMarkets = useMemo(() => {
     return [...markets]

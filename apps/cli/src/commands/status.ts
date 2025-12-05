@@ -12,7 +12,7 @@
 
 import { execSync } from 'child_process';
 import { ethers } from 'ethers';
-import { db, closeDatabase } from '@babylon/db';
+import { db, closeDatabase, checkDatabaseHealth, actors, questions, posts, games, gameConfigs, worldEvents, organizations, eq, and, gte, isNotNull, count as drizzleCount } from '@babylon/db';
 import { getAgentLLMStatus } from '@babylon/agents/llm';
 import { parseArgs, wantsHelp } from '../lib/args.js';
 import { logger } from '../lib/logger.js';
@@ -41,35 +41,46 @@ EXAMPLES:
 async function checkGameStatus(): Promise<void> {
   logger.header('🎮 Game Status');
 
-  try {
-    await db.$connect();
+  const isHealthy = await checkDatabaseHealth();
+  if (isHealthy) {
     logger.success('Database connected');
-  } catch {
+  } else {
     logger.fail('Database connection failed');
     process.exit(1);
   }
 
-  const actorCount = await db.actor.count();
+  const actorCountResult = await db
+    .select({ count: drizzleCount() })
+    .from(actors);
+  const actorCount = Number(actorCountResult[0]?.count || 0);
   console.log(`Actors: ${actorCount}`);
 
   if (actorCount === 0) {
     logger.warn('No actors in database! Run: babylon db seed');
   }
 
-  const questionCount = await db.question.count();
-  const activeQuestions = await db.question.count({
-    where: { status: 'active' },
-  });
+  const questionCountResult = await db
+    .select({ count: drizzleCount() })
+    .from(questions);
+  const questionCount = Number(questionCountResult[0]?.count || 0);
+
+  const activeQuestionsResult = await db
+    .select({ count: drizzleCount() })
+    .from(questions)
+    .where(eq(questions.status, 'active'));
+  const activeQuestions = Number(activeQuestionsResult[0]?.count || 0);
   console.log(`Questions: ${questionCount} total, ${activeQuestions} active`);
 
-  const postCount = await db.post.count();
-  const recentPosts = await db.post.count({
-    where: {
-      createdAt: {
-        gte: new Date(Date.now() - 5 * 60 * 1000),
-      },
-    },
-  });
+  const postCountResult = await db
+    .select({ count: drizzleCount() })
+    .from(posts);
+  const postCount = Number(postCountResult[0]?.count || 0);
+
+  const recentPostsResult = await db
+    .select({ count: drizzleCount() })
+    .from(posts)
+    .where(gte(posts.createdAt, new Date(Date.now() - 5 * 60 * 1000)));
+  const recentPosts = Number(recentPostsResult[0]?.count || 0);
   console.log(`Posts: ${postCount} total, ${recentPosts} in last 5 minutes`);
 
   if (recentPosts === 0 && postCount > 0) {
@@ -78,7 +89,12 @@ async function checkGameStatus(): Promise<void> {
     logger.success('Content is being generated');
   }
 
-  const game = await db.game.findFirst({ where: { isContinuous: true } });
+  const gameResult = await db
+    .select()
+    .from(games)
+    .where(eq(games.isContinuous, true))
+    .limit(1);
+  const game = gameResult[0] || null;
   if (game) {
     console.log('\nGame State:');
     console.log(`  Status: ${game.isRunning ? '✅ RUNNING' : '⏸️  PAUSED'}`);
@@ -95,23 +111,28 @@ async function checkGameStatus(): Promise<void> {
     logger.warn('No game state found');
   }
 
-  const eventCount = await db.worldEvent.count();
-  const recentEvents = await db.worldEvent.count({
-    where: {
-      createdAt: {
-        gte: new Date(Date.now() - 5 * 60 * 1000),
-      },
-    },
-  });
+  const eventCountResult = await db
+    .select({ count: drizzleCount() })
+    .from(worldEvents);
+  const eventCount = Number(eventCountResult[0]?.count || 0);
+
+  const recentEventsResult = await db
+    .select({ count: drizzleCount() })
+    .from(worldEvents)
+    .where(gte(worldEvents.createdAt, new Date(Date.now() - 5 * 60 * 1000)));
+  const recentEvents = Number(recentEventsResult[0]?.count || 0);
   console.log(`\nEvents: ${eventCount} total, ${recentEvents} in last 5 minutes`);
 
-  const orgCount = await db.organization.count();
-  const companiesWithPrices = await db.organization.count({
-    where: {
-      type: 'company',
-      currentPrice: { not: null },
-    },
-  });
+  const orgCountResult = await db
+    .select({ count: drizzleCount() })
+    .from(organizations);
+  const orgCount = Number(orgCountResult[0]?.count || 0);
+
+  const companiesWithPricesResult = await db
+    .select({ count: drizzleCount() })
+    .from(organizations)
+    .where(and(eq(organizations.type, 'company'), isNotNull(organizations.currentPrice)));
+  const companiesWithPrices = Number(companiesWithPricesResult[0]?.count || 0);
   console.log(`Organizations: ${orgCount} total, ${companiesWithPrices} companies with prices`);
 }
 
@@ -205,9 +226,12 @@ async function checkAgent0Status(): Promise<void> {
   console.log(`  PINATA_JWT: ${process.env.PINATA_JWT ? '✅ Set' : '❌ Not set'}`);
 
   try {
-    const config = await db.gameConfig.findUnique({
-      where: { key: 'agent0_registration' },
-    });
+    const configResult = await db
+      .select()
+      .from(gameConfigs)
+      .where(eq(gameConfigs.key, 'agent0_registration'))
+      .limit(1);
+    const config = configResult[0] || null;
 
     if (config?.value && typeof config.value === 'object' && 'tokenId' in config.value) {
       const regValue = config.value as {

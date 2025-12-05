@@ -10,13 +10,20 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useRegisterAgentTx } from '@/hooks/useRegisterAgentTx';
 import { apiFetch } from '@/utils/api-fetch';
-import { POINTS } from '@babylon/shared';
+import { CHAIN, POINTS } from '@babylon/shared';
 import { logger } from '@babylon/shared';
 import type { OnboardingProfilePayload } from '@babylon/shared';
 import {
   getWalletErrorMessage,
   WALLET_ERROR_MESSAGES,
 } from '@babylon/shared';
+
+/**
+ * Check if we're on a local network where smart wallets aren't supported.
+ * Smart wallets (ERC-4337) require bundler infrastructure that only exists
+ * on supported chains like Base/Base Sepolia, not on local Hardhat networks.
+ */
+const isLocalNetwork = CHAIN.id === 31337;
 
 import { type User as StoreUser, useAuthStore } from '@/stores/authStore';
 import type { JsonValue } from '@babylon/shared';
@@ -473,6 +480,19 @@ export function OnboardingProvider({
       };
 
       const completeWithClient = async () => {
+        // On local networks (Hardhat), smart wallets (ERC-4337) don't work because
+        // there's no bundler infrastructure. Fall back to backend-signed transactions.
+        if (isLocalNetwork) {
+          logger.info(
+            'Local network detected - using backend-signed registration (no bundler available)',
+            { chainId: CHAIN.id },
+            'OnboardingProvider'
+          );
+          const data = await callEndpoint(body);
+          applyResponse(data);
+          return;
+        }
+
         if (!smartWalletReady || !smartWalletAddress) {
           throw new Error(WALLET_ERROR_MESSAGES.NO_EMBEDDED_WALLET);
         }
@@ -550,11 +570,13 @@ export function OnboardingProvider({
   );
 
   useEffect(() => {
+    // On local networks, we use backend signing so smart wallet isn't required
+    const walletReady = isLocalNetwork || (smartWalletReady && smartWalletAddress);
+    
     if (
       stage !== 'ONCHAIN' ||
       !pendingOnchainSubmission ||
-      !smartWalletReady ||
-      !smartWalletAddress ||
+      !walletReady ||
       isSubmitting
     ) {
       return;

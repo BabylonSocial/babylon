@@ -54,7 +54,7 @@ import { requireUserByIdentifier } from '@babylon/api';
 import { UserIdParamSchema } from '@babylon/shared';
 
 // Babylon Farcaster FID (playbabylon)
-const BABYLON_FARCASTER_FID = '1521916'; // playbabylon FID
+const BABYLON_FARCASTER_FID = process.env.FARCASTER_FID || '1521916'; // playbabylon FID
 
 /**
  * POST /api/users/[userId]/verify-farcaster-follow

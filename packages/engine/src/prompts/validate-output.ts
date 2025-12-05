@@ -89,18 +89,37 @@ function escapeRegex(str: string): string {
 }
 
 /**
- * Validates that text doesn't contain hashtags
+ * Validates hashtag usage - allows rare/limited hashtags
+ * @param text - The text to validate
+ * @param maxAllowed - Maximum hashtags allowed (default 0 for strict mode, 2 for lenient)
  */
-export function validateNoHashtags(text: string): string[] {
+export function validateHashtags(
+  text: string,
+  maxAllowed: number = 0
+): string[] {
   const violations: string[] = [];
   const hashtagRegex = /#\w+/g;
   const hashtags = text.match(hashtagRegex);
 
-  if (hashtags && hashtags.length > 0) {
-    violations.push(`FORBIDDEN: Contains hashtags: ${hashtags.join(', ')}`);
+  if (hashtags && hashtags.length > maxAllowed) {
+    if (maxAllowed === 0) {
+      violations.push(`FORBIDDEN: Contains hashtags: ${hashtags.join(', ')}`);
+    } else {
+      violations.push(
+        `EXCESSIVE: Contains ${hashtags.length} hashtags (max: ${maxAllowed}): ${hashtags.join(', ')}`
+      );
+    }
   }
 
   return violations;
+}
+
+/**
+ * Legacy function for strict no-hashtag validation
+ * @deprecated Use validateHashtags with maxAllowed=0
+ */
+export function validateNoHashtags(text: string): string[] {
+  return validateHashtags(text, 0);
 }
 
 /**
@@ -165,16 +184,8 @@ export function validateFeedPost(
     warnings.push(`Post is very short (${text.length} chars)`);
   }
 
-  // Check for common mistakes
-  if (
-    text.includes('AIlon') ||
-    text.includes('Sam AIltman') ||
-    text.includes('Mark Zuckerborg')
-  ) {
-    violations.push(
-      'CRITICAL: Contains partial real name - use full parody name'
-    );
-  }
+  // Parody names are CORRECT - no need to check for them
+  // The real name detection above handles incorrect real names
 
   return {
     isValid: violations.length === 0,
@@ -222,6 +233,65 @@ export function validatePostBatch(
   return {
     allValid: results.every((r) => r.isValid),
     results,
+  };
+}
+
+/**
+ * Validate article content (title, summary, body)
+ * Articles have different rules than posts:
+ * - Longer content allowed
+ * - No hashtags in title/summary
+ * - Real name detection still applies
+ */
+export function validateArticle(article: {
+  title: string;
+  summary: string;
+  content: string;
+}): ValidationResult {
+  const violations: string[] = [];
+  const warnings: string[] = [];
+
+  // Validate title
+  const titleRealNames = validateNoRealNames(article.title);
+  if (titleRealNames.length > 0) {
+    violations.push(`TITLE: ${titleRealNames.join(', ')}`);
+  }
+  const titleHashtags = validateHashtags(article.title, 0);
+  if (titleHashtags.length > 0) {
+    violations.push(`TITLE: ${titleHashtags.join(', ')}`);
+  }
+
+  // Validate summary
+  const summaryRealNames = validateNoRealNames(article.summary);
+  if (summaryRealNames.length > 0) {
+    violations.push(`SUMMARY: ${summaryRealNames.join(', ')}`);
+  }
+  const summaryHashtags = validateHashtags(article.summary, 0);
+  if (summaryHashtags.length > 0) {
+    violations.push(`SUMMARY: ${summaryHashtags.join(', ')}`);
+  }
+
+  // Validate content
+  const contentRealNames = validateNoRealNames(article.content);
+  if (contentRealNames.length > 0) {
+    violations.push(`CONTENT: ${contentRealNames.join(', ')}`);
+  }
+
+  // Warnings for short content
+  if (article.title.length < 10) {
+    warnings.push(`Title is very short (${article.title.length} chars)`);
+  }
+  if (article.summary.length < 50) {
+    warnings.push(`Summary is very short (${article.summary.length} chars)`);
+  }
+  if (article.content.length < 200) {
+    warnings.push(`Content is very short (${article.content.length} chars)`);
+  }
+
+  return {
+    isValid: violations.length === 0,
+    violations,
+    warnings,
   };
 }
 

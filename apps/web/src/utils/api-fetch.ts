@@ -51,11 +51,12 @@ export async function getPrivyAccessToken(): Promise<string | null> {
 /**
  * Lightweight wrapper around fetch that decorates requests with authentication
  *
- * Uses Privy's HTTP-only cookie authentication. The `privy-token` cookie is
- * automatically sent by the browser when `credentials: 'include'` is set.
+ * Supports both HTTP-only cookie authentication (privy-token cookie) and
+ * Authorization header authentication. The cookie is preferred when available,
+ * but falls back to Bearer token in the Authorization header.
  *
- * On 401 errors, triggers a token refresh via `getAccessToken()` which updates the
- * cookie, then retries the request.
+ * On 401 errors, triggers a token refresh via `getAccessToken()` and retries
+ * with the fresh token in the Authorization header.
  *
  * @param input - Request URL or Request object
  * @param init - Fetch options with auth configuration
@@ -63,7 +64,7 @@ export async function getPrivyAccessToken(): Promise<string | null> {
  *
  * @example
  * ```typescript
- * // With authentication (default) - cookie sent automatically
+ * // With authentication (default)
  * const response = await apiFetch('/api/posts');
  *
  * // Without authentication
@@ -77,8 +78,21 @@ export async function apiFetch(
   const { auth = true, autoRetryOn401 = true, headers, ...rest } = init;
   const finalHeaders = new Headers(headers ?? {});
 
-  // With HTTP-only cookies enabled, authentication is handled via the privy-token cookie
-  // which is automatically sent when credentials: 'include' is set.
+  // Always try to add the Authorization header with the access token.
+  // This provides a fallback when HTTP-only cookies aren't available
+  // (e.g., initial login, cross-origin requests, or cookie misconfiguration).
+  if (auth && !finalHeaders.has('Authorization')) {
+    const token = await getPrivyAccessToken();
+    if (token) {
+      finalHeaders.set('Authorization', `Bearer ${token}`);
+    } else if (typeof window !== 'undefined') {
+      // Log when we can't get a token - helps debug auth issues
+      console.warn(
+        '[apiFetch] No access token available for authenticated request:',
+        typeof input === 'string' ? input : (input as Request).url
+      );
+    }
+  }
 
   let response = await fetch(input, {
     ...rest,
@@ -87,17 +101,21 @@ export async function apiFetch(
   });
 
   // If we get a 401 and auto-retry is enabled, refresh the token and retry
-  // getAccessToken() updates the privy-token cookie automatically
   if (response.status === 401 && auth && autoRetryOn401) {
-    // Trigger token refresh - this updates the cookie
-    await getPrivyAccessToken();
+    // Get a fresh token (this also refreshes the cookie if HTTP-only cookies are enabled)
+    const freshToken = await getPrivyAccessToken();
 
-    // Retry with the refreshed cookie
-    response = await fetch(input, {
-      ...rest,
-      headers: finalHeaders,
-      credentials: 'include',
-    });
+    if (freshToken) {
+      // Update the Authorization header with the fresh token
+      finalHeaders.set('Authorization', `Bearer ${freshToken}`);
+
+      // Retry with the refreshed token
+      response = await fetch(input, {
+        ...rest,
+        headers: finalHeaders,
+        credentials: 'include',
+      });
+    }
   }
 
   return response;

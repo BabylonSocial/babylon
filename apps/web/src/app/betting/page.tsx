@@ -15,34 +15,20 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnChainBetting } from '@/hooks/useOnChainBetting';
 import { useSmartWallet } from '@/hooks/useSmartWallet';
+import { usePerpMarkets } from '@/stores/perpMarketsStore';
+import {
+  usePredictionMarkets,
+  type PredictionMarket,
+} from '@/stores/predictionMarketsStore';
 import { getContractAddresses } from '@babylon/contracts';
 import { cn } from '@babylon/shared';
-
-interface Question {
-  id: number | string;
-  text: string;
-  status: 'active' | 'resolved' | 'cancelled';
-  yesShares: number;
-  noShares: number;
-  resolutionDate?: string;
-  oracleCommitTxHash?: string | null;
-  oracleRevealTxHash?: string | null;
-}
-
-interface PerpMarket {
-  ticker: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-}
 
 export default function OnChainBettingPage() {
   const router = useRouter();
@@ -50,12 +36,18 @@ export default function OnChainBettingPage() {
   const { smartWalletReady, smartWalletAddress } = useSmartWallet();
   const { buyShares, loading: txLoading } = useOnChainBetting();
 
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [perpMarkets, setPerpMarkets] = useState<PerpMarket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMarket, setSelectedMarket] = useState<Question | null>(null);
+  // Use shared stores
+  const { markets: perpMarkets, loading: perpLoading } = usePerpMarkets();
+  const { markets: questions, loading: questionsLoading } =
+    usePredictionMarkets();
+
+  const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(
+    null
+  );
   const [betAmount, setBetAmount] = useState('');
   const [betSide, setBetSide] = useState<'YES' | 'NO'>('YES');
+
+  const loading = perpLoading && questionsLoading;
 
   // Get network info
   const { network, diamond, chainId } = getContractAddresses();
@@ -65,33 +57,6 @@ export default function OnChainBettingPage() {
     : chainId === 84532
       ? 'https://sepolia.basescan.org'
       : 'https://basescan.org';
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [questionsRes, perpsRes] = await Promise.all([
-          fetch('/api/markets/predictions'),
-          fetch('/api/markets/perps'),
-        ]);
-
-        if (questionsRes.ok) {
-          const data = await questionsRes.json();
-          setQuestions(data.questions || []);
-        }
-
-        if (perpsRes.ok) {
-          const data = await perpsRes.json();
-          setPerpMarkets(data.markets || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch betting data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
 
   const handleBet = async () => {
     if (!selectedMarket || !betAmount) return;
@@ -252,14 +217,16 @@ export default function OnChainBettingPage() {
             {questions
               .filter((q) => q.status === 'active')
               .map((question) => {
-                const totalShares = question.yesShares + question.noShares;
+                const yesShares = question.yesShares ?? 0;
+                const noShares = question.noShares ?? 0;
+                const totalShares = yesShares + noShares;
                 const yesPercent =
                   totalShares > 0
-                    ? ((question.yesShares / totalShares) * 100).toFixed(1)
+                    ? ((yesShares / totalShares) * 100).toFixed(1)
                     : '50.0';
                 const noPercent =
                   totalShares > 0
-                    ? ((question.noShares / totalShares) * 100).toFixed(1)
+                    ? ((noShares / totalShares) * 100).toFixed(1)
                     : '50.0';
                 const daysLeft = getDaysLeft(question.resolutionDate);
 

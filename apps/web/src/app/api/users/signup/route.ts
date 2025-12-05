@@ -98,12 +98,12 @@ import { ConflictError, InternalServerError } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import type { OnboardingProfilePayload } from '@babylon/shared';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import { notifyNewAccount } from '@babylon/api';
 import { PointsService } from '@babylon/api';
 import { getOrCreateReferralCode } from '@babylon/api';
 import { generateSnowflakeId } from '@babylon/shared';
-import { getHashedClientIp } from '@babylon/shared';
+import { getHashedClientIp } from '@babylon/api';
 import { OnboardingProfileSchema } from '@babylon/shared';
 import type { JsonValue } from '@babylon/api';
 
@@ -118,6 +118,76 @@ interface SignupRequestBody {
   isWaitlist?: boolean; // Mark user as waitlist during signup
   tosAccepted?: boolean;
   privacyPolicyAccepted?: boolean;
+}
+
+type PrivyWalletLite = {
+  id?: string | null;
+  address?: string;
+  chainType?: string;
+  walletClientType?: string | null;
+};
+
+type PrivyUserWithSmartWallet = PrivyUser & {
+  smartWallet?: { address?: string | null };
+  wallet?: PrivyWalletLite;
+  linkedAccounts?: Array<
+    PrivyWalletLite & {
+      type?: string;
+    }
+  >;
+};
+
+function pickEmbeddedEvmWallet(user: PrivyUserWithSmartWallet): PrivyWalletLite | null {
+  const candidates: PrivyWalletLite[] = [];
+  if (user.wallet) candidates.push(user.wallet);
+  if (Array.isArray(user.linkedAccounts)) {
+    for (const acc of user.linkedAccounts) {
+      if (acc?.type === 'wallet') candidates.push(acc);
+    }
+  }
+  return (
+    candidates.find(
+      (w) =>
+        (w.walletClientType === 'privy' || Boolean(w.id)) &&
+        (!w.chainType || w.chainType === 'ethereum') &&
+        typeof w.address === 'string'
+    ) ?? null
+  );
+}
+
+async function ensureSmartWalletAddress(
+  privyClient: ReturnType<typeof getPrivyClient>,
+  privyId: string
+): Promise<{ smartWalletAddress: string | null; embeddedWalletAddress: string | null }> {
+  try {
+    const user = (await privyClient.getUser(privyId)) as PrivyUserWithSmartWallet;
+    let smartWalletAddress = user.smartWallet?.address?.toLowerCase() ?? null;
+    let embeddedWallet = pickEmbeddedEvmWallet(user);
+
+    if (!smartWalletAddress) {
+      const updated = (await privyClient.createWallets({
+        userId: privyId,
+        createEthereumSmartWallet: true,
+        // Only create a new embedded wallet if none exists
+        createEthereumWallet: !embeddedWallet,
+      })) as PrivyUserWithSmartWallet;
+
+      smartWalletAddress = updated.smartWallet?.address?.toLowerCase() ?? null;
+      embeddedWallet = embeddedWallet ?? pickEmbeddedEvmWallet(updated);
+    }
+
+    return {
+      smartWalletAddress,
+      embeddedWalletAddress: embeddedWallet?.address?.toLowerCase() ?? null,
+    };
+  } catch (error) {
+    logger.warn(
+      'Failed to ensure smart wallet for user',
+      { privyId, error },
+      'POST /api/users/signup'
+    );
+    return { smartWalletAddress: null, embeddedWalletAddress: null };
+  }
 }
 
 const SignupSchema = OnboardingProfileSchema.extend({
@@ -147,7 +217,8 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
   const canonicalUserId = authUser.dbUserId ?? authUser.userId;
   const privyId = authUser.privyId ?? authUser.userId;
-  const walletAddress = authUser.walletAddress?.toLowerCase() ?? null;
+  // Prefer Privy smart wallet (AA) address over legacy/linked wallets
+  let walletAddress = authUser.walletAddress?.toLowerCase() ?? null;
 
   // Capture and hash IP address for self-referral detection
   const registrationIpHash = getHashedClientIp(request.headers);
@@ -182,6 +253,18 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   // Check for imported social data from onboarding flow
   const importedTwitter = parsedProfile.importedFrom === 'twitter';
   const importedFarcaster = parsedProfile.importedFrom === 'farcaster';
+
+  // Ensure smart wallet exists and prefer its address for DB persistence
+  const privyClient = getPrivyClient();
+  const { smartWalletAddress, embeddedWalletAddress } = await ensureSmartWalletAddress(
+    privyClient,
+    privyId
+  );
+  walletAddress =
+    smartWalletAddress ??
+    embeddedWalletAddress ??
+    authUser.walletAddress?.toLowerCase() ??
+    null;
 
   // Wrap transaction with retry logic for connection errors
   const result = await withRetry(

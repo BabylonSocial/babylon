@@ -25,6 +25,7 @@ interface Notification {
   } | null;
   postId: string | null;
   commentId: string | null;
+  chatId: string | null;
   groupId: string | null;
   inviteId: string | null;
   message: string;
@@ -278,6 +279,11 @@ export default function NotificationsPage() {
   };
 
   const getNotificationLink = (notification: Notification) => {
+    // DM or group chat message - go to the specific chat if chatId is available
+    if (notification.chatId) {
+      return `/chats?chat=${notification.chatId}`;
+    }
+
     // Group chat invite - go to chat
     if (
       notification.type === 'system' &&
@@ -288,7 +294,7 @@ export default function NotificationsPage() {
       return '/chats';
     }
 
-    // DM or group chat message - go to the specific chat
+    // DM or group chat message without chatId (legacy notifications) - go to chats page
     if (
       notification.type === 'system' &&
       (notification.message.includes('Message') ||

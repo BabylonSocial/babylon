@@ -1,5 +1,9 @@
 import { definePrompt } from '../define-prompt';
-import { STANDARD_FEED_RULES, WORLD_CONTEXT_HEADER } from '../shared-sections';
+import {
+  FINAL_REMINDERS,
+  STANDARD_FEED_RULES,
+  WORLD_CONTEXT_HEADER,
+} from '../shared-sections';
 
 /**
  * Prompt for generating individual reply posts to existing content.
@@ -45,6 +49,8 @@ Respond with ONLY this XML:
   <clueStrength>0.5</clueStrength>
   <pointsToward>true</pointsToward>
 </response>
+
+${FINAL_REMINDERS}
 
 No other text.
 `.trim(),

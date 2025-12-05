@@ -10,9 +10,11 @@
 import { parseStringPromise } from 'xml2js';
 import type { RSSHeadline } from '@babylon/db';
 import {
+  and,
   db,
   desc,
   eq,
+  gte,
   lt,
   parodyHeadlines,
   rssFeedSources,
@@ -338,10 +340,13 @@ export class RSSFeedService {
       .select()
       .from(rssHeadlines)
       .where(
-        sql`${rssHeadlines.publishedAt} >= ${sevenDaysAgo} AND NOT EXISTS (
-          SELECT 1 FROM ${parodyHeadlines} 
-          WHERE ${parodyHeadlines.originalHeadlineId} = ${rssHeadlines.id}
-        )`
+        and(
+          gte(rssHeadlines.publishedAt, sevenDaysAgo),
+          sql`NOT EXISTS (
+            SELECT 1 FROM ${parodyHeadlines} 
+            WHERE ${parodyHeadlines.originalHeadlineId} = ${rssHeadlines.id}
+          )`
+        )
       )
       .orderBy(desc(rssHeadlines.publishedAt))
       .limit(limit);

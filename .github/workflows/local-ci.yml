@@ -132,7 +132,7 @@ jobs:
         run: |
           echo "🗄️ Setting up database with Drizzle..."
           echo "   DATABASE_URL: $DATABASE_URL"
-          bunx drizzle-kit push --force
+          bunx drizzle-kit push --force --config=packages/db/drizzle.config.ts
 
       - name: Type Check
         env:

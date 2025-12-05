@@ -98,7 +98,7 @@ import {
 } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import { PredictionPricing } from '@babylon/engine';
 import { FeeService } from '@babylon/engine';
 import {

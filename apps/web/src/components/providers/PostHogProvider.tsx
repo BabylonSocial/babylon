@@ -17,7 +17,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
  * @returns PostHog provider element
  */
 import { useEffect, useRef } from 'react';
-import { initPostHog, posthog } from '@babylon/shared';
+import { initPostHog, posthog } from '@/lib/posthog';
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

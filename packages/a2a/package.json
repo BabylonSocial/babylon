@@ -10,51 +10,6 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "require": "./src/index.ts"
-    },
-    "./types": {
-      "types": "./src/types/index.ts",
-      "import": "./src/types/index.ts",
-      "require": "./src/types/index.ts"
-    },
-    "./types/a2a": {
-      "types": "./src/types/a2a.ts",
-      "import": "./src/types/a2a.ts",
-      "require": "./src/types/a2a.ts"
-    },
-    "./validation": {
-      "types": "./src/validation.ts",
-      "import": "./src/validation.ts",
-      "require": "./src/validation.ts"
-    },
-    "./blockchain": {
-      "types": "./src/blockchain/index.ts",
-      "import": "./src/blockchain/index.ts",
-      "require": "./src/blockchain/index.ts"
-    },
-    "./executors": {
-      "types": "./src/executors/index.ts",
-      "import": "./src/executors/index.ts",
-      "require": "./src/executors/index.ts"
-    },
-    "./handlers": {
-      "types": "./src/handlers/index.ts",
-      "import": "./src/handlers/index.ts",
-      "require": "./src/handlers/index.ts"
-    },
-    "./payments": {
-      "types": "./src/payments/index.ts",
-      "import": "./src/payments/index.ts",
-      "require": "./src/payments/index.ts"
-    },
-    "./sdk": {
-      "types": "./src/sdk/index.ts",
-      "import": "./src/sdk/index.ts",
-      "require": "./src/sdk/index.ts"
-    },
-    "./utils": {
-      "types": "./src/utils/index.ts",
-      "import": "./src/utils/index.ts",
-      "require": "./src/utils/index.ts"
     }
   },
   "scripts": {
@@ -71,7 +26,7 @@
     "@babylon/db": "workspace:*",
     "@babylon/shared": "workspace:*",
     "drizzle-orm": "^0.44.7",
-    "ethers": "^6.15.0",
+    "ethers": "^6.16.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

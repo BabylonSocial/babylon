@@ -88,8 +88,6 @@ export const GET = withErrorHandling(
     await optionalAuth(request).catch(() => null);
 
     const { ticker: tickerParam } = await context.params;
-    // Organization IDs are stored lowercase in the database
-    const ticker = tickerParam.toLowerCase();
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -100,38 +98,59 @@ export const GET = withErrorHandling(
 
     logger.info(
       'Perp market trades requested',
-      { ticker, queryParams },
+      { ticker: tickerParam, queryParams },
       'GET /api/markets/perps/trades/[ticker]'
     );
 
-    // Check Redis cache first
-    const cacheKey = `perp-trades:${ticker}:${queryParams.limit}:${queryParams.offset}`;
+    // Check Redis cache first (use lowercase for consistent cache keys)
+    const cacheKey = `perp-trades:${tickerParam.toLowerCase()}:${queryParams.limit}:${queryParams.offset}`;
     const cached = await getCache<Record<string, JsonValue>>(cacheKey);
 
     if (cached) {
-      logger.debug('Cache hit for perp trades', { ticker }, 'PerpTrades');
+      logger.debug('Cache hit for perp trades', { ticker: tickerParam }, 'PerpTrades');
       return successResponse(cached);
     }
 
-    // Verify organization/ticker exists
-    const organization = await db.organization.findUnique({
-      where: { id: ticker },
+    // Verify organization/ticker exists - search by ticker field OR id (case-insensitive)
+    // The ticker in the URL may be uppercase (e.g., "BTC") or match the organization id
+    const organization = await db.organization.findFirst({
+      where: {
+        OR: [
+          { ticker: tickerParam },
+          { ticker: tickerParam.toUpperCase() },
+          { ticker: tickerParam.toLowerCase() },
+          { id: tickerParam },
+          { id: tickerParam.toLowerCase() },
+        ],
+      },
       select: {
         id: true,
         name: true,
         type: true,
+        ticker: true,
         currentPrice: true,
       },
     });
 
     if (!organization) {
+      logger.warn(
+        'Perp market not found for ticker',
+        { tickerParam },
+        'GET /api/markets/perps/trades/[ticker]'
+      );
       return NextResponse.json({ error: 'Market not found' }, { status: 404 });
     }
 
-    // Get perp positions for this ticker
+    // Use the organization's actual ticker or derive from id for perp position lookups
+    const perpTicker = organization.ticker || organization.id.toUpperCase().replace(/-/g, '').substring(0, 12);
+
+    // Get perp positions for this ticker (try both the ticker and organizationId)
     const perpPositions = await db.perpPosition.findMany({
       where: {
-        ticker: ticker,
+        OR: [
+          { ticker: perpTicker },
+          { organizationId: organization.id },
+        ],
       },
       orderBy: { openedAt: 'desc' },
       take: queryParams.limit,
@@ -140,7 +159,12 @@ export const GET = withErrorHandling(
 
     // Get total count for pagination
     const totalPositions = await db.perpPosition.count({
-      where: { ticker: ticker },
+      where: {
+        OR: [
+          { ticker: perpTicker },
+          { organizationId: organization.id },
+        ],
+      },
     });
 
     // Fetch users for perp positions
@@ -157,11 +181,15 @@ export const GET = withErrorHandling(
     });
     const perpUsersMap = new Map(perpUsers.map((u) => [u.id, u]));
 
-    // Get NPC trades for this ticker
+    // Get NPC trades for this ticker (try multiple formats)
     const npcTrades = await db.npcTrade.findMany({
       where: {
         marketType: 'perp',
-        ticker: ticker,
+        OR: [
+          { ticker: perpTicker },
+          { ticker: tickerParam },
+          { ticker: tickerParam.toLowerCase() },
+        ],
       },
       orderBy: { executedAt: 'desc' },
       take: queryParams.limit,
@@ -261,7 +289,7 @@ export const GET = withErrorHandling(
         amount: Number(tx.amount),
         description: tx.description,
         relatedId: tx.relatedId,
-        ticker,
+        ticker: perpTicker,
         timestamp: tx.createdAt,
       })),
     ]
@@ -290,7 +318,7 @@ export const GET = withErrorHandling(
     await setCache(cacheKey, result, { ttl: 30, namespace: 'market-trades' });
 
     logger.info(
-      `Returned ${trades.length} trades for perp market ${ticker}`,
+      `Returned ${trades.length} trades for perp market ${tickerParam}`,
       { total, hasMore },
       'PerpTrades'
     );

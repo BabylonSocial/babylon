@@ -114,7 +114,7 @@ export async function generateNewsPostsWithContext() {
   `.trim();
 
   const prompt = renderPrompt(newsPosts, {
-    eventDescription: 'OpenAGI announces Cognition-9000 with AGI capabilities',
+    eventDescription: 'OpenAGI announces SMH-9000 with AGI capabilities',
     eventType: 'AI_BREAKTHROUGH',
     sourceContext: 'Multiple sources confirm',
     outcomeFrame: 'This could change everything',

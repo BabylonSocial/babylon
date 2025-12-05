@@ -10,7 +10,7 @@
  */
 
 import { db } from '@babylon/db';
-import { BabylonLLMClient } from '../../src/engine/llm/openai-client';
+import { BabylonLLMClient } from '@babylon/engine';
 
 async function testArticleGeneration() {
   console.log('🔬 Testing Article Generation - Longform Verification\n');
@@ -202,7 +202,7 @@ async function testArticleGeneration() {
       try {
         const llm = new BabylonLLMClient();
 
-        const testPrompt = `You are Bloomberg News, a news organization. Write a comprehensive news article about this prediction market: "Will AI achieve AGI by 2030?".
+        const testPrompt = `You are BloombAIrg News, a news organization. Write a comprehensive news article about this prediction market: "Will OpenAGI achieve AGI by 2030?".
 
 Provide:
 - "title": a compelling headline (max 100 characters)

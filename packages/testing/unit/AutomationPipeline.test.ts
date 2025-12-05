@@ -14,7 +14,7 @@ import type { TrainedModel, TrainingBatch } from '@babylon/db';
 import type {
   AutomationConfig,
   AutomationPipeline as AutomationPipelineType,
-} from '@babylon/training/training';
+} from '@babylon/training';
 
 // Type for pipeline with private properties/methods exposed for testing
 // Uses a structural type to access private members in tests

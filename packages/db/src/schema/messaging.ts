@@ -195,6 +195,7 @@ export const notifications = pgTable(
     actorId: text('actorId'),
     postId: text('postId'),
     commentId: text('commentId'),
+    chatId: text('chatId'),
     message: text('message').notNull(),
     read: boolean('read').notNull().default(false),
     createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
@@ -203,6 +204,7 @@ export const notifications = pgTable(
     inviteId: text('inviteId'),
   },
   (table) => [
+    index('Notification_chatId_idx').on(table.chatId),
     index('Notification_groupId_idx').on(table.groupId),
     index('Notification_inviteId_idx').on(table.inviteId),
     index('Notification_read_idx').on(table.read),

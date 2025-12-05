@@ -260,7 +260,7 @@ import {
   getBlockedUserIds,
   getMutedUserIds,
 } from '@babylon/db';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import {
   checkRateLimitAndDuplicates,
   DUPLICATE_DETECTION_CONFIGS,

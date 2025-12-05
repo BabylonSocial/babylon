@@ -116,7 +116,7 @@ RULES:
 GOOD TAGS (specific, searchable, will cluster):
 - Person names: "AIlon Musk", "Sam AIltman", "Mark Zuckerborg"
 - Company names: "OpenAGI", "TeslAI", "MetAI", "NvidAI"
-- Products: "GPT-6", "Cybertruck", "Vision Pro"
+- Products: "SMH-6", "Cybertruck", "Vision Pro"
 - Events: "DevDay", "SEC Hearing", "Earnings Call"
 - Specific topics: "AGI Timeline", "Crypto Regulation", "AI Safety"
 
@@ -128,7 +128,7 @@ BAD TAGS (too generic, won't cluster):
 - "Market" (use specific market like "Bitcoin" or "NVDA")
 
 CLUSTERING EXAMPLES:
-- Post about Sam AIltman announcing GPT-6 → tags: "Sam AIltman", "GPT-6", "OpenAGI" (all will cluster)
+- Post about Sam AIltman announcing SMH-6 → tags: "Sam AIltman", "SMH-6", "OpenAGI" (all will cluster)
 - Post about TeslAI stock after Musk tweet → tags: "TeslAI", "AIlon Musk" (will cluster)
 - Post comparing NvidAI to AMD → tags: "NvidAI", "AMD" (separate companies, separate clusters)
 

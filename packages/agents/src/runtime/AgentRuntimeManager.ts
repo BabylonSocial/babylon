@@ -38,6 +38,8 @@ import {
   wrapPluginProviders,
 } from '../plugins/plugin-trajectory-logger/src/action-interceptor';
 import { TrajectoryLoggerService } from '../plugins/plugin-trajectory-logger/src/TrajectoryLoggerService';
+import { openaiPlugin } from '@elizaos/plugin-openai';
+import { anthropicPlugin } from '@elizaos/plugin-anthropic';
 
 /**
  * Extended AgentRuntime with Babylon-specific properties
@@ -47,7 +49,6 @@ interface ExtendedAgentRuntime extends AgentRuntime {
   currentModelVersion?: string;
   currentModel?: string;
   trajectoryLogger?: TrajectoryLoggerService;
-  modelDelegates?: Record<string, unknown>;
 }
 
 /** Global runtime cache for warm container reuse */
@@ -261,9 +262,12 @@ export class AgentRuntimeManager {
     // Create runtime with groq, experience, and trajectory logger plugins
     // Type cast plugins to ensure compatibility across different @elizaos/core versions
     const plugins: Plugin[] = [
-      groqPlugin as Plugin,
       experiencePlugin as Plugin,
       trajectoryLoggerPlugin as Plugin,
+      // Conditionally add LLM plugins based on available API keys
+      ...(process.env.GROQ_API_KEY ? [groqPlugin as Plugin] : []),
+      ...(process.env.ANTHROPIC_API_KEY ? [anthropicPlugin as Plugin] : []),
+      ...(process.env.OPENAI_API_KEY ? [openaiPlugin as Plugin] : []),
     ];
 
     const runtimeConfig = {
@@ -279,6 +283,19 @@ export class AgentRuntimeManager {
     const runtime = new AgentRuntime(runtimeConfig) as ExtendedAgentRuntime;
 
     runtime.currentModel = 'groq';
+
+    // Override adapter.log to prevent undefined logger errors
+    runtime.adapter = {
+      ...runtime.adapter,
+      log: async (_params: {
+        body: { [key: string]: unknown };
+        entityId: string;
+        roomId: string;
+        type: string;
+      }): Promise<void> => {
+        // No-op to prevent errors
+      },
+    } as typeof runtime.adapter;
 
     // Configure logger
     if (!runtime.logger || !runtime.logger.log) {
@@ -309,24 +326,6 @@ export class AgentRuntimeManager {
       };
       // customLogger matches the structure of runtime.logger
       runtime.logger = customLogger as typeof runtime.logger;
-    }
-
-    // Cannot call initialize() without SQL plugin - manually register models instead
-    // CRITICAL: Must set modelDelegates, not models Map
-    // This is what runtime.initialize() does internally
-    if (groqPlugin.models) {
-      const modelDelegates = runtime.modelDelegates || {};
-      for (const [type, handler] of Object.entries(groqPlugin.models)) {
-        modelDelegates[type] = handler;
-      }
-      runtime.modelDelegates = modelDelegates;
-      logger.info(
-        `Registered ${Object.keys(modelDelegates).length} Groq model handlers`,
-        {
-          agentUserId,
-          types: Object.keys(modelDelegates),
-        }
-      );
     }
 
     // Wrap Babylon plugin BEFORE registering (so wrapped version is used)
@@ -360,6 +359,17 @@ export class AgentRuntimeManager {
       undefined,
       'AgentRuntimeManager'
     );
+    
+    // Register plugins
+    const pluginRegistrationPromises: Promise<void>[] = [];
+    const pluginsToLoad = plugins;
+
+    for (const plugin of pluginsToLoad) {
+      if (plugin) {
+        pluginRegistrationPromises.push(runtime.registerPlugin(plugin));
+      }
+    }
+    await Promise.all(pluginRegistrationPromises);
 
     return runtime;
   }
@@ -530,9 +540,12 @@ export class AgentRuntimeManager {
 
     // Create runtime with standard plugins
     const plugins: Plugin[] = [
-      groqPlugin as Plugin,
       experiencePlugin as Plugin,
       trajectoryLoggerPlugin as Plugin,
+      // Conditionally add LLM plugins based on available API keys
+      ...(process.env.GROQ_API_KEY ? [groqPlugin as Plugin] : []),
+      ...(process.env.ANTHROPIC_API_KEY ? [anthropicPlugin as Plugin] : []),
+      ...(process.env.OPENAI_API_KEY ? [openaiPlugin as Plugin] : []),
     ];
 
     const runtimeConfig = {
@@ -553,11 +566,32 @@ export class AgentRuntimeManager {
     }
     runtime.currentModel = 'groq';
 
+    // Override adapter.log to prevent undefined logger errors
+    runtime.adapter = {
+      ...runtime.adapter,
+      log: async (_params: {
+        body: { [key: string]: unknown };
+        entityId: string;
+        roomId: string;
+        type: string;
+      }): Promise<void> => {
+        // No-op to prevent errors
+      },
+    } as typeof runtime.adapter;
+
     // Configure logger
     this.configureLogger(runtime, character.name);
 
-    // Register Groq model handlers
-    this.registerModelHandlers(runtime, agentId);
+    // Register plugins
+    const pluginRegistrationPromises: Promise<void>[] = [];
+    const pluginsToLoad = plugins;
+
+    for (const plugin of pluginsToLoad) {
+      if (plugin) {
+        pluginRegistrationPromises.push(runtime.registerPlugin(plugin));
+      }
+    }
+    await Promise.all(pluginRegistrationPromises);
 
     // Wrap and enhance with Babylon plugin
     await this.enhanceWithBabylon(runtime, agentId, trajectoryLogger);
@@ -613,28 +647,6 @@ export class AgentRuntimeManager {
         child: () => customLogger,
       } as typeof runtime.logger;
       runtime.logger = customLogger;
-    }
-  }
-
-  /**
-   * Register Groq model handlers on runtime
-   */
-  private registerModelHandlers(runtime: AgentRuntime, agentId: string): void {
-    const extendedRuntime = runtime as ExtendedAgentRuntime;
-    if (groqPlugin.models) {
-      const modelDelegates = extendedRuntime.modelDelegates || {};
-      for (const [type, handler] of Object.entries(groqPlugin.models)) {
-        modelDelegates[type] = handler;
-      }
-      extendedRuntime.modelDelegates = modelDelegates;
-      logger.info(
-        `Registered ${Object.keys(modelDelegates).length} Groq model handlers`,
-        {
-          agentId,
-          types: Object.keys(modelDelegates),
-        },
-        'AgentRuntimeManager'
-      );
     }
   }
 

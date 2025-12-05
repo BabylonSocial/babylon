@@ -8,12 +8,14 @@
 import {
   actors,
   and,
+  asc,
   count,
   db,
   desc,
   eq,
   gt,
   gte,
+  isNull,
   ne,
   pointsTransactions,
   referrals,
@@ -24,6 +26,13 @@ import { POINTS, type PointsReason, logger } from '@babylon/shared';
 import { generateSnowflakeId } from '@babylon/shared';
 
 import type { JsonValue } from '../types';
+
+/**
+ * Maximum number of unqualified referrals that can earn signup points at any time.
+ * When a referral becomes qualified (user links social account), a slot opens for
+ * pending referrals to receive their deferred signup points (FIFO order).
+ */
+const UNQUALIFIED_REFERRAL_LIMIT = 10;
 
 /**
  * Leaderboard category type
@@ -381,41 +390,38 @@ export class PointsService {
 
   /**
    * Award points for referral signup
-   * Enforces weekly limit of 10 referrals per week
+   * Enforces rolling limit of 10 unqualified referrals at any time
+   * When limit is reached, referral is tracked but points are deferred until a slot opens
    * Checks IP addresses to detect self-referrals
    */
   static async awardReferralSignup(
     referrerId: string,
     referredUserId: string
   ): Promise<AwardPointsResult> {
-    // Check weekly referral limit (max 10 referrals per week)
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-    const [weeklyCountResult] = await db
+    // Count unqualified referrals with points already awarded (toward the limit)
+    // Unqualified = completed AND qualifiedAt IS NULL AND signupPointsAwarded = true
+    const [unqualifiedCountResult] = await db
       .select({ count: count() })
       .from(referrals)
       .where(
         and(
           eq(referrals.referrerId, referrerId),
           eq(referrals.status, 'completed'),
-          gte(referrals.completedAt, oneWeekAgo)
+          isNull(referrals.qualifiedAt),
+          eq(referrals.signupPointsAwarded, true)
         )
       );
 
-    const weeklyReferralCount = weeklyCountResult?.count ?? 0;
+    const unqualifiedCount = unqualifiedCountResult?.count ?? 0;
+    const shouldAwardPoints = unqualifiedCount < UNQUALIFIED_REFERRAL_LIMIT;
 
-    if (weeklyReferralCount >= 10) {
-      logger.warn(
-        `Weekly referral limit reached for user ${referrerId}`,
-        { referrerId, weeklyReferralCount },
+    if (!shouldAwardPoints) {
+      logger.info(
+        `Unqualified referral limit reached for user ${referrerId}. Points deferred.`,
+        { referrerId, unqualifiedCount, limit: UNQUALIFIED_REFERRAL_LIMIT },
         'PointsService'
       );
-      return {
-        success: false,
-        pointsAwarded: 0,
-        newTotal: 0,
-        error: 'Weekly referral limit reached (10 referrals per week)',
-      };
+      // Don't return error - we still track the referral, just defer points
     }
 
     // Check IP addresses and other identifiers for self-referral detection
@@ -545,70 +551,93 @@ export class PointsService {
       }
     }
 
-    const result = await PointsService.awardPoints(
-      referrerId,
-      POINTS.REFERRAL_SIGNUP,
-      'referral_signup',
-      {
-        referredUserId,
-        referrerIpHash: referrer?.registrationIpHash || null,
-        referredIpHash: referredUser?.registrationIpHash || null,
-        sameIp:
-          referrer?.registrationIpHash === referredUser?.registrationIpHash,
-      }
-    );
+    // Award points only if under the unqualified limit
+    let result: AwardPointsResult;
 
-    // Update referral record with suspicious flags if IPs match
-    if (
-      result.success &&
-      referrer?.registrationIpHash &&
-      referredUser?.registrationIpHash
-    ) {
-      if (referrer.registrationIpHash === referredUser.registrationIpHash) {
-        const timeDiff =
-          referredUser.createdAt.getTime() - referrer.createdAt.getTime();
-        const oneHour = 60 * 60 * 1000;
-        const twentyFourHours = 24 * 60 * 60 * 1000;
+    if (shouldAwardPoints) {
+      result = await this.awardPoints(
+        referrerId,
+        POINTS.REFERRAL_SIGNUP,
+        'referral_signup',
+        {
+          referredUserId,
+          referrerIpHash: referrer?.registrationIpHash || null,
+          referredIpHash: referredUser?.registrationIpHash || null,
+          sameIp:
+            referrer?.registrationIpHash === referredUser?.registrationIpHash,
+        }
+      );
+    } else {
+      // Points deferred - return success but with 0 points awarded
+      const userResult = await db
+        .select({ reputationPoints: users.reputationPoints })
+        .from(users)
+        .where(eq(users.id, referrerId))
+        .limit(1);
 
-        const isSuspicious = timeDiff >= 0 && timeDiff < twentyFourHours;
-        const isBlocked = timeDiff >= 0 && timeDiff < oneHour;
+      result = {
+        success: true,
+        pointsAwarded: 0,
+        newTotal: userResult[0]?.reputationPoints ?? 0,
+      };
+    }
 
-        if (isSuspicious || isBlocked) {
-          // Find the referral record and update it
-          const referralRecordResult = await db
-            .select({ id: referrals.id })
-            .from(referrals)
-            .where(
-              and(
-                eq(referrals.referrerId, referrerId),
-                eq(referrals.referredUserId, referredUserId)
-              )
-            )
-            .orderBy(desc(referrals.createdAt))
-            .limit(1);
+    // Find the referral record to update
+    const referralRecordResult = await db
+      .select({ id: referrals.id })
+      .from(referrals)
+      .where(
+        and(
+          eq(referrals.referrerId, referrerId),
+          eq(referrals.referredUserId, referredUserId)
+        )
+      )
+      .orderBy(desc(referrals.createdAt))
+      .limit(1);
 
-          const referralRecord = referralRecordResult[0];
+    const referralRecord = referralRecordResult[0];
 
-          if (referralRecord) {
-            await db
-              .update(referrals)
-              .set({
-                suspiciousReferralFlags: {
-                  sameIp: true,
-                  timeDiffMs: timeDiff,
-                  flaggedAt: new Date().toISOString(),
-                  blocked: isBlocked,
-                  flagged: isSuspicious && !isBlocked,
-                },
-              })
-              .where(eq(referrals.id, referralRecord.id));
+    if (referralRecord) {
+      // Build update object
+      const updateData: {
+        signupPointsAwarded?: boolean;
+        suspiciousReferralFlags?: JsonValue;
+      } = {};
+
+      // Mark signupPointsAwarded based on whether points were actually awarded
+      updateData.signupPointsAwarded = shouldAwardPoints && result.success;
+
+      // Check for suspicious flags if IPs match
+      if (referrer?.registrationIpHash && referredUser?.registrationIpHash) {
+        if (referrer.registrationIpHash === referredUser.registrationIpHash) {
+          const timeDiff =
+            referredUser.createdAt.getTime() - referrer.createdAt.getTime();
+          const oneHour = 60 * 60 * 1000;
+          const twentyFourHours = 24 * 60 * 60 * 1000;
+
+          const isSuspicious = timeDiff >= 0 && timeDiff < twentyFourHours;
+          const isBlocked = timeDiff >= 0 && timeDiff < oneHour;
+
+          if (isSuspicious || isBlocked) {
+            updateData.suspiciousReferralFlags = {
+              sameIp: true,
+              timeDiffMs: timeDiff,
+              flaggedAt: new Date().toISOString(),
+              blocked: isBlocked,
+              flagged: isSuspicious && !isBlocked,
+            };
           }
         }
       }
+
+      await db
+        .update(referrals)
+        .set(updateData)
+        .where(eq(referrals.id, referralRecord.id));
     }
 
     // Also increment referral count only if points were successfully awarded
-    if (result.success) {
+    if (shouldAwardPoints && result.success) {
       await db
         .update(users)
         .set({
@@ -616,6 +645,101 @@ export class PointsService {
           lastReferralIpHash: referredUser?.registrationIpHash || null,
         })
         .where(eq(users.id, referrerId));
+    }
+
+    return result;
+  }
+
+  /**
+   * Award pending referral signup points when a slot opens
+   * Called when a referral becomes qualified, which frees up a slot for pending referrals
+   * Uses FIFO ordering based on completedAt timestamp
+   */
+  static async awardPendingReferralSignupPoints(
+    referrerId: string
+  ): Promise<AwardPointsResult | null> {
+    // Check current unqualified count to see if there's a slot available
+    const [unqualifiedCountResult] = await db
+      .select({ count: count() })
+      .from(referrals)
+      .where(
+        and(
+          eq(referrals.referrerId, referrerId),
+          eq(referrals.status, 'completed'),
+          isNull(referrals.qualifiedAt),
+          eq(referrals.signupPointsAwarded, true)
+        )
+      );
+
+    const unqualifiedCount = unqualifiedCountResult?.count ?? 0;
+
+    // If still at or above limit, no slot available
+    if (unqualifiedCount >= UNQUALIFIED_REFERRAL_LIMIT) {
+      return null;
+    }
+
+    // Find the oldest pending referral (FIFO) that hasn't received signup points yet
+    const pendingReferralResult = await db
+      .select({
+        id: referrals.id,
+        referredUserId: referrals.referredUserId,
+        completedAt: referrals.completedAt,
+      })
+      .from(referrals)
+      .where(
+        and(
+          eq(referrals.referrerId, referrerId),
+          eq(referrals.status, 'completed'),
+          eq(referrals.signupPointsAwarded, false)
+        )
+      )
+      .orderBy(asc(referrals.completedAt))
+      .limit(1);
+
+    const pendingReferral = pendingReferralResult[0];
+
+    if (!pendingReferral) {
+      // No pending referrals waiting for points
+      return null;
+    }
+
+    // Award the deferred signup points
+    const result = await this.awardPoints(
+      referrerId,
+      POINTS.REFERRAL_SIGNUP,
+      'referral_signup',
+      {
+        referredUserId: pendingReferral.referredUserId,
+        deferredAward: true,
+        originalCompletedAt: pendingReferral.completedAt?.toISOString() ?? null,
+      }
+    );
+
+    if (result.success) {
+      // Mark this referral as having received signup points
+      await db
+        .update(referrals)
+        .set({ signupPointsAwarded: true })
+        .where(eq(referrals.id, pendingReferral.id));
+
+      // Increment referral count for deferred awards
+      await db
+        .update(users)
+        .set({
+          referralCount: sql`${users.referralCount} + 1`,
+        })
+        .where(eq(users.id, referrerId));
+
+      logger.info(
+        `Awarded deferred referral signup points to user ${referrerId}`,
+        {
+          referrerId,
+          referredUserId: pendingReferral.referredUserId,
+          referralId: pendingReferral.id,
+          pointsAwarded: result.pointsAwarded,
+        },
+        'PointsService'
+      );
     }
 
     return result;
@@ -654,7 +778,10 @@ export class PointsService {
 
     // Find the referral record
     const referralResult = await db
-      .select()
+      .select({
+        id: referrals.id,
+        qualifiedAt: referrals.qualifiedAt,
+      })
       .from(referrals)
       .where(
         and(
@@ -710,6 +837,10 @@ export class PointsService {
         },
         'PointsService'
       );
+
+      // When a referral becomes qualified, a slot opens for pending referrals
+      // Award signup points to the oldest pending referral (FIFO)
+      await this.awardPendingReferralSignupPoints(user.referredBy);
     }
 
     return qualificationResult;
@@ -877,62 +1008,41 @@ export class PointsService {
   ) {
     const skip = (page - 1) * pageSize;
 
+    // Common user select fields for leaderboard
+    const userSelectFields = {
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      profileImageUrl: users.profileImageUrl,
+      reputationPoints: users.reputationPoints,
+      invitePoints: users.invitePoints,
+      earnedPoints: users.earnedPoints,
+      bonusPoints: users.bonusPoints,
+      referralCount: users.referralCount,
+      virtualBalance: users.virtualBalance,
+      lifetimePnL: users.lifetimePnL,
+      createdAt: users.createdAt,
+      onChainRegistered: users.onChainRegistered,
+      nftTokenId: users.nftTokenId,
+    };
+
     // Build users query based on category
     let usersResult;
     if (pointsCategory === 'all') {
       usersResult = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          profileImageUrl: users.profileImageUrl,
-          reputationPoints: users.reputationPoints,
-          invitePoints: users.invitePoints,
-          earnedPoints: users.earnedPoints,
-          bonusPoints: users.bonusPoints,
-          referralCount: users.referralCount,
-          virtualBalance: users.virtualBalance,
-          lifetimePnL: users.lifetimePnL,
-          createdAt: users.createdAt,
-        })
+        .select(userSelectFields)
         .from(users)
         .where(
           and(eq(users.isActor, false), gte(users.reputationPoints, minPoints))
         );
     } else if (pointsCategory === 'earned') {
       usersResult = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          profileImageUrl: users.profileImageUrl,
-          reputationPoints: users.reputationPoints,
-          invitePoints: users.invitePoints,
-          earnedPoints: users.earnedPoints,
-          bonusPoints: users.bonusPoints,
-          referralCount: users.referralCount,
-          virtualBalance: users.virtualBalance,
-          lifetimePnL: users.lifetimePnL,
-          createdAt: users.createdAt,
-        })
+        .select(userSelectFields)
         .from(users)
         .where(and(eq(users.isActor, false), ne(users.earnedPoints, 0)));
     } else {
       usersResult = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          profileImageUrl: users.profileImageUrl,
-          reputationPoints: users.reputationPoints,
-          invitePoints: users.invitePoints,
-          earnedPoints: users.earnedPoints,
-          bonusPoints: users.bonusPoints,
-          referralCount: users.referralCount,
-          virtualBalance: users.virtualBalance,
-          lifetimePnL: users.lifetimePnL,
-          createdAt: users.createdAt,
-        })
+        .select(userSelectFields)
         .from(users)
         .where(and(eq(users.isActor, false), gt(users.invitePoints, 0)));
     }
@@ -953,6 +1063,8 @@ export class PointsService {
         createdAt: user.createdAt,
         isActor: false,
         tier: null as string | null,
+        onChainRegistered: user.onChainRegistered,
+        nftTokenId: user.nftTokenId,
       })),
     ];
 
@@ -986,6 +1098,8 @@ export class PointsService {
           createdAt: actor.createdAt,
           isActor: true,
           tier: actor.tier,
+          onChainRegistered: false,
+          nftTokenId: null as number | null,
         }))
       );
     }

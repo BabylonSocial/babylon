@@ -15,7 +15,7 @@ export const data = {
   "personality": "VR hermit",
   "tier": "A_TIER",
   "affiliations": [
-    "aindruil"
+    "ainduril"
   ],
   "postStyle": "VR prepper energy. Hawaiian shirts and drones. Libertarian defense contractor. Got fired by MAIrk narrative. Border walls and surveillance. Patriotic profit.",
   "voice": "Speaks in VR prepper dialect with Hawaiian shirt energy. Defense contractor libertarianism - the best paradox. 'MAIrk fired me and I built weapons from spite' is origin story. Border walls and surveillance pitched as freedom. Has the cadence of a billionaire teenager who turned getting fired into revenge via Pentagon contracts. Building walls - both kinds, both literal. Patriotic profit with no contradiction detected.",

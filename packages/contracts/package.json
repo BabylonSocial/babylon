@@ -2,7 +2,6 @@
   "name": "@babylon/contracts",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Smart contract types and deployment information for Babylon",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -14,33 +13,38 @@
     },
     "./deployments/local": {
       "types": "./deployments/local/index.ts",
-      "import": "./deployments/local/index.ts"
+      "import": "./deployments/local/index.ts",
+      "require": "./deployments/local/index.ts"
     },
     "./deployments/base-sepolia": {
       "types": "./deployments/base-sepolia/index.ts",
-      "import": "./deployments/base-sepolia/index.ts"
+      "import": "./deployments/base-sepolia/index.ts",
+      "require": "./deployments/base-sepolia/index.ts"
     },
     "./deployments/base": {
       "types": "./deployments/base/index.ts",
-      "import": "./deployments/base/index.ts"
+      "import": "./deployments/base/index.ts",
+      "require": "./deployments/base/index.ts"
     }
   },
   "files": [
     "src",
-    "deployments",
-    "deployments.d.ts"
+    "deployments"
   ],
   "scripts": {
     "lint": "biome lint src/",
     "typecheck": "tsc -b ."
   },
-  "dependencies": {},
+  "dependencies": {
+    "@babylon/shared": "workspace:*"
+  },
   "peerDependencies": {
-    "ethers": "^6.15.0",
-    "viem": "^2.30.0"
+    "ethers": "^6.16.0",
+    "viem": "^2.41.2"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
+    "hardhat-preprocessor": "^0.1.5",
     "typescript": "^5.9.3"
   }
 }

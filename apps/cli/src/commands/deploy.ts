@@ -16,6 +16,9 @@ import { join } from 'path';
 import { parseArgs, wantsHelp, getFlag } from '../lib/args.js';
 import { logger } from '../lib/logger.js';
 
+// Path to contracts package (foundry.toml location)
+const CONTRACTS_DIR = join(process.cwd(), 'packages', 'contracts');
+
 // Network configurations
 const NETWORKS = {
   local: {
@@ -74,20 +77,30 @@ EXAMPLES:
 function parseDeploymentOutput(output: string): Record<string, string> {
   const addresses: Record<string, string> = {};
   
-  // Parse Diamond address
-  const diamondMatch = output.match(/Diamond deployed at:\s*(0x[a-fA-F0-9]{40})/);
+  // Parse Diamond address - matches both "Diamond: 0x..." and "Diamond (Proxy): 0x..."
+  const diamondMatch = output.match(/Diamond(?: \(Proxy\))?:\s*(0x[a-fA-F0-9]{40})/);
   if (diamondMatch) addresses.diamond = diamondMatch[1]!;
 
-  // Parse other addresses
+  // Parse other addresses - all use "Name: 0x..." format from forge script
   const patterns = [
     ['diamondCutFacet', /DiamondCutFacet:\s*(0x[a-fA-F0-9]{40})/],
     ['diamondLoupeFacet', /DiamondLoupeFacet:\s*(0x[a-fA-F0-9]{40})/],
-    ['ownershipFacet', /OwnershipFacet:\s*(0x[a-fA-F0-9]{40})/],
-    ['gameFacet', /GameFacet:\s*(0x[a-fA-F0-9]{40})/],
-    ['marketFacet', /MarketFacet:\s*(0x[a-fA-F0-9]{40})/],
-    ['reputationFacet', /ReputationFacet:\s*(0x[a-fA-F0-9]{40})/],
-    ['perpFacet', /PerpFacet:\s*(0x[a-fA-F0-9]{40})/],
+    ['predictionMarketFacet', /PredictionMarketFacet:\s*(0x[a-fA-F0-9]{40})/],
     ['oracleFacet', /OracleFacet:\s*(0x[a-fA-F0-9]{40})/],
+    ['liquidityPoolFacet', /LiquidityPoolFacet:\s*(0x[a-fA-F0-9]{40})/],
+    ['perpetualMarketFacet', /PerpetualMarketFacet:\s*(0x[a-fA-F0-9]{40})/],
+    ['referralSystemFacet', /ReferralSystemFacet:\s*(0x[a-fA-F0-9]{40})/],
+    ['priceStorageFacet', /PriceStorageFacet:\s*(0x[a-fA-F0-9]{40})/],
+    ['identityRegistry', /IdentityRegistry:\s*(0x[a-fA-F0-9]{40})/],
+    ['reputationSystem', /ReputationSystem:\s*(0x[a-fA-F0-9]{40})/],
+    ['babylonGameOracle', /BabylonGameOracle:\s*(0x[a-fA-F0-9]{40})/],
+    ['predimarket', /Predimarket:\s*(0x[a-fA-F0-9]{40})/],
+    ['marketFactory', /MarketFactory:\s*(0x[a-fA-F0-9]{40})/],
+    ['contestOracle', /ContestOracle:\s*(0x[a-fA-F0-9]{40})/],
+    ['banManager', /BanManager:\s*(0x[a-fA-F0-9]{40})/],
+    ['labelManager', /ReputationLabelManager:\s*(0x[a-fA-F0-9]{40})/],
+    ['reportingSystem', /ReportingSystem:\s*(0x[a-fA-F0-9]{40})/],
+    ['testToken', /TestToken:\s*(0x[a-fA-F0-9]{40})/],
   ] as const;
 
   for (const [name, pattern] of patterns) {
@@ -139,31 +152,31 @@ async function deployToNetwork(network: NetworkName, skipVerify: boolean, _force
     }
   }
 
-  // Compile contracts
+  // Compile contracts (run from contracts directory where foundry.toml is)
   logger.step('Compiling contracts...');
-  await $`forge build`.quiet();
+  await $`cd ${CONTRACTS_DIR} && bunx hardhat compile`.quiet();
   logger.success('Contracts compiled');
 
   // Clean previous artifacts for local
   if (network === 'local') {
     logger.step('Cleaning previous artifacts...');
-    await $`rm -rf broadcast cache`.quiet();
+    await $`rm -rf ${CONTRACTS_DIR}/broadcast ${CONTRACTS_DIR}/cache`.quiet();
     
     // Configure mining
     await $`cast rpc evm_setAutomine false --rpc-url ${config.rpcUrl}`.quiet();
     await $`cast rpc evm_setIntervalMining 1000 --rpc-url ${config.rpcUrl}`.quiet();
   }
 
-  // Deploy
+  // Deploy (run from contracts directory where foundry.toml is)
   logger.step('Deploying contracts...');
   
-  const scriptPath = 'packages/contracts/script/DeployBabylon.s.sol:DeployBabylon';
+  const scriptPath = 'script/DeployBabylon.s.sol:DeployBabylon';
   process.env.DEPLOYER_PRIVATE_KEY = config.privateKey;
   
   const verifyFlag = !skipVerify && network !== 'local' ? '--verify' : '';
   
   try {
-    const result = await $`forge script ${scriptPath} \
+    const result = await $`cd ${CONTRACTS_DIR} && forge script ${scriptPath} \
       --rpc-url ${config.rpcUrl} \
       --private-key ${config.privateKey} \
       --broadcast ${verifyFlag}`;

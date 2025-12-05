@@ -42,7 +42,6 @@ export {
 } from './event-arc-validator';
 export * from './liquidity-health-service';
 export * from './onchain-market-service';
-export * from './perp-settlement-service';
 export * from './perp-trade-service';
 export * from './price-update-service';
 export * from './signal-extraction-service';

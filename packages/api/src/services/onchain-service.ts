@@ -5,6 +5,7 @@ import {
   createWalletClient,
   decodeEventLog,
   http,
+  type Log,
   type WalletClient,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -100,8 +101,17 @@ function getOnboardingServices(): OnboardingServices {
 const contracts = getContractAddresses();
 export const IDENTITY_REGISTRY = contracts.identityRegistry;
 export const REPUTATION_SYSTEM = contracts.reputationSystem as Address;
-export const DEPLOYER_PRIVATE_KEY = process.env
-  .DEPLOYER_PRIVATE_KEY as `0x${string}`;
+
+// Hardhat default account #0 private key (has 10000 ETH on local node)
+const HARDHAT_DEFAULT_PRIVATE_KEY =
+  '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' as const;
+
+// Use Hardhat's pre-funded account for local development, otherwise use env var
+const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
+export const DEPLOYER_PRIVATE_KEY: `0x${string}` =
+  chainId === 31337
+    ? HARDHAT_DEFAULT_PRIVATE_KEY
+    : (process.env.DEPLOYER_PRIVATE_KEY as `0x${string}`);
 
 export interface OnchainRegistrationInput {
   user: AuthenticatedUser;
@@ -355,6 +365,8 @@ export async function processOnchainRegistration({
   }
 
   const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
+
+  // Create publicClient at function scope for use throughout registration flow
   const publicClient = createPublicClient({
     chain: chainId === 31337 ? foundry : baseSepolia,
     transport: http(getRpcUrl()),
@@ -364,27 +376,43 @@ export async function processOnchainRegistration({
   let tokenId: number | null = dbUser.nftTokenId;
 
   if (user.isAgent) {
+    // Agents use database state
     isRegistered = dbUser.onChainRegistered && dbUser.nftTokenId !== null;
   } else {
     const address = walletAddress! as Address;
 
-    // Try to check onchain status, but gracefully handle contract unavailability
-    isRegistered = await publicClient.readContract({
-      address: IDENTITY_REGISTRY,
-      abi: identityRegistryAbi,
-      functionName: 'isRegistered',
-      args: [address],
-    });
+    // In local dev, contracts may not be deployed yet during startup
+    // Check if contract exists before calling it
+    const contractCode = await publicClient.getCode({ address: IDENTITY_REGISTRY });
+    const contractExists = contractCode && contractCode !== '0x' && contractCode.length > 2;
 
-    if (isRegistered && !tokenId) {
-      tokenId = Number(
-        await publicClient.readContract({
-          address: IDENTITY_REGISTRY,
-          abi: identityRegistryAbi,
-          functionName: 'getTokenId',
-          args: [address],
-        })
+    if (!contractExists) {
+      // Contract not deployed yet - use database state
+      logger.warn(
+        'Identity registry contract not deployed yet, using database state',
+        { contractAddress: IDENTITY_REGISTRY, chainId },
+        'processOnchainRegistration'
       );
+      isRegistered = dbUser.onChainRegistered && dbUser.nftTokenId !== null;
+    } else {
+      // Contract exists - check blockchain for registration status
+      isRegistered = await publicClient.readContract({
+        address: IDENTITY_REGISTRY,
+        abi: identityRegistryAbi,
+        functionName: 'isRegistered',
+        args: [address],
+      });
+
+      if (isRegistered && !tokenId) {
+        tokenId = Number(
+          await publicClient.readContract({
+            address: IDENTITY_REGISTRY,
+            abi: identityRegistryAbi,
+            functionName: 'getTokenId',
+            args: [address],
+          })
+        );
+      }
     }
   }
 
@@ -648,22 +676,58 @@ export async function processOnchainRegistration({
     );
   }
 
-  // Filter logs by contract address first to avoid decoding errors on Transfer events
-  const contractLogs = finalizedReceipt.logs.filter(
-    (log) => log.address.toLowerCase() === IDENTITY_REGISTRY.toLowerCase()
+  // Debug: log all events in receipt
+  logger.info(
+    'Transaction receipt logs',
+    {
+      txHash: registrationTxHash ?? submittedTxHash,
+      totalLogs: finalizedReceipt.logs.length,
+      logAddresses: finalizedReceipt.logs.map((l: Log) => l.address),
+      identityRegistryAddress: IDENTITY_REGISTRY,
+    },
+    'processOnchainRegistration'
   );
 
-  const agentRegisteredLog = contractLogs.find((log) => {
+  // Filter logs by contract address first to avoid decoding errors on Transfer events
+  const contractLogs = finalizedReceipt.logs.filter(
+    (log: Log) => log.address.toLowerCase() === IDENTITY_REGISTRY.toLowerCase()
+  );
+
+  logger.info(
+    'Filtered contract logs',
+    {
+      contractLogsCount: contractLogs.length,
+      topics: contractLogs.map((l: Log) => l.topics),
+    },
+    'processOnchainRegistration'
+  );
+
+  const agentRegisteredLog = contractLogs.find((log: Log) => {
     if (log.topics.length === 0) {
       return false;
     }
-    const decodedLog = decodeEventLog({
-      abi: identityRegistryAbi,
-      data: log.data,
-      topics: log.topics,
-      strict: false,
-    });
-    return decodedLog.eventName === 'AgentRegistered';
+    try {
+      const decodedLog = decodeEventLog({
+        abi: identityRegistryAbi,
+        data: log.data,
+        topics: log.topics,
+        strict: false,
+      });
+      logger.info(
+        'Decoded log event',
+        { eventName: decodedLog.eventName },
+        'processOnchainRegistration'
+      );
+      return decodedLog.eventName === 'AgentRegistered';
+    } catch (decodeError) {
+      // Log signature not in ABI (e.g., ERC-721 Transfer event) - skip this log
+      logger.warn(
+        'Failed to decode log',
+        { topics: log.topics, error: String(decodeError) },
+        'processOnchainRegistration'
+      );
+      return false;
+    }
   });
 
   if (!agentRegisteredLog) {
@@ -671,6 +735,10 @@ export async function processOnchainRegistration({
       'AgentRegistered event not found in receipt',
       {
         txHash: registrationTxHash ?? submittedTxHash,
+        totalLogs: finalizedReceipt.logs.length,
+        contractLogs: contractLogs.length,
+        allLogAddresses: finalizedReceipt.logs.map((l: Log) => l.address.toLowerCase()),
+        expectedAddress: IDENTITY_REGISTRY.toLowerCase(),
       }
     );
   }
@@ -1197,10 +1265,13 @@ export async function getOnchainRegistrationStatus(
   let tokenId = userRecord.nftTokenId;
   let isRegistered = Boolean(userRecord.onChainRegistered && tokenId !== null);
 
-  if (!user.isAgent && userRecord.walletAddress) {
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
+  const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337);
+
+  // Local development - skip blockchain calls, use database state
+  // On testnets/mainnet, verify against the chain
+  if (!user.isAgent && userRecord.walletAddress && chainId !== 31337) {
     const publicClient = createPublicClient({
-      chain: chainId === 31337 ? foundry : baseSepolia,
+      chain: baseSepolia,
       transport: http(getRpcUrl()),
     });
 

@@ -192,7 +192,7 @@ export async function POST(_req: NextRequest) {
   // NEW: Query via AgentRegistry to include both USER agents and NPCs
   const registeredAgents = await agentRegistry.discoverAgents({
     types: [AgentType.USER_CONTROLLED, AgentType.NPC],
-    statuses: [AgentStatus.ACTIVE, AgentStatus.INITIALIZED],
+    statuses: [AgentStatus.ACTIVE, AgentStatus.INITIALIZED, AgentStatus.REGISTERED],
     limit: 500, // Increase limit to ensure we process all agents in test environments
   });
 

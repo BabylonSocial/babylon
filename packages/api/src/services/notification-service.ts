@@ -4,7 +4,7 @@
  * Helper functions for creating notifications when users interact
  */
 
-import { db, eq, hasBlocked, notifications, users } from '@babylon/db';
+import { and, db, desc, eq, gt, hasBlocked, notifications, users } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { generateSnowflakeId } from '@babylon/shared';
 
@@ -27,8 +27,65 @@ interface CreateNotificationParams {
   actorId?: string; // Who performed the action
   postId?: string;
   commentId?: string;
+  chatId?: string; // For DM/chat message notifications
   title: string;
   message: string;
+}
+
+/**
+ * Deduplication window in milliseconds for notifications
+ * This prevents duplicate notifications from being created within this time window
+ */
+const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Check if a similar notification already exists within the deduplication window
+ * Returns true if a duplicate exists and we should skip creation
+ */
+async function isDuplicateNotification(
+  params: CreateNotificationParams
+): Promise<boolean> {
+  // Only deduplicate for notification types that could have duplicates from the same actor
+  // System notifications and some others don't have actorId and are handled differently
+  const typesToDeduplicate: NotificationType[] = [
+    'follow',
+    'reaction',
+    'comment',
+    'reply',
+    'share',
+    'mention',
+  ];
+
+  if (!typesToDeduplicate.includes(params.type) || !params.actorId) {
+    return false;
+  }
+
+  const cutoffTime = new Date(Date.now() - DEDUP_WINDOW_MS);
+
+  // Build conditions for duplicate check
+  const conditions = [
+    eq(notifications.userId, params.userId),
+    eq(notifications.type, params.type),
+    eq(notifications.actorId, params.actorId),
+    gt(notifications.createdAt, cutoffTime),
+  ];
+
+  // For post/comment-related notifications, also check the specific content
+  if (params.postId) {
+    conditions.push(eq(notifications.postId, params.postId));
+  }
+  if (params.commentId) {
+    conditions.push(eq(notifications.commentId, params.commentId));
+  }
+
+  const [existingNotification] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(...conditions))
+    .orderBy(desc(notifications.createdAt))
+    .limit(1);
+
+  return !!existingNotification;
 }
 
 /**
@@ -71,6 +128,17 @@ export async function createNotification(
     }
   }
 
+  // Check for duplicate notifications within the deduplication window
+  const isDuplicate = await isDuplicateNotification(params);
+  if (isDuplicate) {
+    logger.debug(
+      'Skipping duplicate notification',
+      { userId: params.userId, type: params.type, actorId: params.actorId },
+      'NotificationService'
+    );
+    return;
+  }
+
   await db.insert(notifications).values({
     id: await generateSnowflakeId(),
     userId: params.userId,
@@ -78,6 +146,7 @@ export async function createNotification(
     actorId: params.actorId,
     postId: params.postId,
     commentId: params.commentId,
+    chatId: params.chatId,
     title: params.title,
     message: params.message,
   });
@@ -477,7 +546,7 @@ export async function notifyUserGroupInvite(
 export async function notifyDMMessage(
   recipientUserId: string,
   senderUserId: string,
-  _chatId: string,
+  chatId: string,
   messagePreview: string
 ): Promise<void> {
   // Don't notify if user sent message to themselves
@@ -509,6 +578,7 @@ export async function notifyDMMessage(
     userId: recipientUserId,
     type: 'system',
     actorId: senderUserId,
+    chatId,
     title: 'New Message',
     message,
   });
@@ -520,7 +590,7 @@ export async function notifyDMMessage(
 export async function notifyGroupChatMessage(
   recipientUserIds: string[],
   senderUserId: string,
-  _chatId: string,
+  chatId: string,
   chatName: string,
   messagePreview: string
 ): Promise<void> {
@@ -552,6 +622,7 @@ export async function notifyGroupChatMessage(
         userId,
         type: 'system',
         actorId: senderUserId,
+        chatId,
         title: 'New Group Message',
         message,
       })

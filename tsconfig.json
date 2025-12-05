@@ -46,7 +46,6 @@
       "@babylon/a2a": ["./packages/a2a/src/index.ts"],
       "@babylon/a2a/*": ["./packages/a2a/src/*"],
       "@babylon/mcp": ["./packages/mcp/src/index.ts"],
-      "@babylon/mcp/*": ["./packages/mcp/src/*"],
       "@babylon/agents": ["./packages/agents/src/index.ts"],
       "@babylon/agents/*": ["./packages/agents/src/*"],
       "@babylon/api": ["./packages/api/src/index.ts"],

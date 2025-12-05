@@ -7,15 +7,22 @@ import {
   verifyRealtimeToken,
 } from '@babylon/api';
 import { connections } from '@babylon/api';
-import { redis, streamRead } from '@babylon/api';
+import { getRedisClient, streamRead } from '@babylon/api';
 
 // Vercel function configuration
-export const maxDuration = 300; // 5 minutes max for SSE connections
+// Max duration for SSE connections - 300s on Enterprise, 60s on Pro, 10s on Hobby
+export const maxDuration = 300;
 
+// Force dynamic to prevent caching, use nodejs runtime for streaming support
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const MAX_CHANNELS = 50;
+
+// SSE optimization constants
+const BLOCK_TIMEOUT_MS = 5000; // Block for 5 seconds waiting for new messages
+const HEARTBEAT_INTERVAL_MS = 15000; // Send heartbeat every 15 seconds
+const MAX_MESSAGES_PER_READ = 100; // Max messages to read per iteration
 
 interface CursorMap {
   [channel: string]: string;
@@ -31,19 +38,6 @@ const parseCursor = (raw: string | null): CursorMap => {
     return {};
   }
 };
-
-const sleep = (ms: number, signal: AbortSignal) =>
-  new Promise<void>((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true }
-    );
-  });
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -64,6 +58,7 @@ export async function GET(request: NextRequest) {
 
   const userId = realtimePayload.userId;
 
+  const redis = getRedisClient();
   if (!redis) {
     logger.error(
       'Redis/Upstash not configured - realtime disabled',
@@ -110,13 +105,29 @@ export async function GET(request: NextRequest) {
         connectedAt: Date.now(),
       });
 
-      const send = (payload: string) => {
+      let lastHeartbeat = Date.now();
+      let isControllerClosed = false;
+
+      const send = (payload: string): boolean => {
+        if (isControllerClosed) return false;
         try {
           controller.enqueue(encoder.encode(payload));
           return true;
         } catch {
+          isControllerClosed = true;
           return false;
         }
+      };
+
+      // Send heartbeat to keep connection alive and detect disconnects
+      const sendHeartbeat = (): boolean => {
+        const now = Date.now();
+        if (now - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
+          lastHeartbeat = now;
+          // SSE comment line (starts with :) is used as heartbeat
+          return send(`: heartbeat ${now}\n\n`);
+        }
+        return true;
       };
 
       // Initial connected event
@@ -130,26 +141,61 @@ export async function GET(request: NextRequest) {
       );
 
       const abortListener = () => {
-        controller.close();
+        isControllerClosed = true;
+        try {
+          controller.close();
+        } catch {
+          // Already closed
+        }
       };
       request.signal.addEventListener('abort', abortListener, { once: true });
 
-      while (!request.signal.aborted) {
+      // Main event loop with blocking reads
+      while (!request.signal.aborted && !isControllerClosed) {
+        // Send heartbeat if needed
+        if (!sendHeartbeat()) {
+          logger.debug(
+            'Heartbeat failed, client disconnected',
+            { connectionId },
+            'SSE'
+          );
+          break;
+        }
+
         const ids = streamKeys.map((k) => {
           const channelName = keyToChannel.get(k);
           const cursorId = channelName ? cursors[channelName] : undefined;
-          // Default to beginning if no cursor/lastId to avoid missing first event after connect.
-          return lastIds.get(k) || cursorId || '0-0';
+          // Priority: lastId (from previous reads) > cursor (from client) > '$' (new messages only)
+          // For first read, use '$' to only get new messages (prevents replaying entire stream)
+          // Client should pass cursor for reconnection scenarios
+          return lastIds.get(k) || cursorId || '$';
         });
 
-        const messages = await streamRead(streamKeys, ids, { count: 100 });
-
-        if (messages.length === 0) {
-          await sleep(1000, request.signal);
+        // Use blocking read - waits up to BLOCK_TIMEOUT_MS for new messages
+        // This is more efficient than polling as it doesn't waste CPU cycles
+        let messages;
+        try {
+          messages = await streamRead(streamKeys, ids, {
+            count: MAX_MESSAGES_PER_READ,
+            block: BLOCK_TIMEOUT_MS,
+          });
+        } catch (error) {
+          logger.warn(
+            'Redis stream read error',
+            { connectionId, error },
+            'SSE'
+          );
+          // On Redis error, wait briefly before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           continue;
         }
 
-        logger.info(
+        // No messages received (timeout), loop continues for heartbeat
+        if (!messages || messages.length === 0) {
+          continue;
+        }
+
+        logger.debug(
           'Realtime stream read',
           { connectionId, count: messages.length },
           'SSE'
@@ -211,7 +257,6 @@ export async function GET(request: NextRequest) {
               { connectionId },
               'SSE'
             );
-            controller.close();
             break;
           }
 
@@ -234,9 +279,11 @@ export async function GET(request: NextRequest) {
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
+      // Standard SSE headers per spec
+      'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      // Prevent buffering by nginx/proxies
       'X-Accel-Buffering': 'no',
     },
   });

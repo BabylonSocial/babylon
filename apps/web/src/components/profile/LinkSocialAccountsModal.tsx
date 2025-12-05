@@ -103,6 +103,9 @@ export function LinkSocialAccountsModal({
           reputationPoints: data.newTotal || user.reputationPoints,
         });
 
+        // Dispatch event to notify other components (like UserMenu) to refresh
+        window.dispatchEvent(new CustomEvent('rewards-updated'));
+
         if (data.pointsAwarded > 0) {
           toast.success(
             `Farcaster linked! +${data.pointsAwarded} points awarded`

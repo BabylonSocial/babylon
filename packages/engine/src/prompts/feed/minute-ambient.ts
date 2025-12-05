@@ -1,5 +1,9 @@
 import { definePrompt } from '../define-prompt';
-import { STANDARD_FEED_RULES, WORLD_CONTEXT_HEADER } from '../shared-sections';
+import {
+  FINAL_REMINDERS,
+  STANDARD_FEED_RULES,
+  WORLD_CONTEXT_HEADER,
+} from '../shared-sections';
 
 /**
  * Prompt for generating real-time ambient posts for continuous minute-level generation.
@@ -51,6 +55,8 @@ Respond with ONLY this XML:
   <sentiment>0.3</sentiment>
   <energy>0.5</energy>
 </response>
+
+${FINAL_REMINDERS}
 
 No other text.
 `.trim(),

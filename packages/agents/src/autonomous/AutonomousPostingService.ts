@@ -12,6 +12,7 @@ import {
   generateWorldContext,
 } from '@babylon/engine';
 import type { IAgentRuntime } from '@elizaos/core';
+import { parseKeyValueXml } from '@elizaos/core';
 import { logger } from '../shared/logger';
 import { generateSnowflakeId } from '../shared/snowflake';
 import { countTokensSync, truncateToTokenLimitSync } from '@babylon/engine';
@@ -64,7 +65,10 @@ export class AutonomousPostingService {
     const worldContext = await generateWorldContext({ maxActors: 20 });
 
     // Build prompt for post generation
-    const prompt = `${agent.agentSystem}
+    const MAX_TOKENS = 280;
+    const prompt = `CRITICAL: You have only ${MAX_TOKENS} tokens. Your response MUST start with <response> immediately. No <think> tags. No reasoning.
+
+${agent.agentSystem}
 
 You are ${agent.displayName}, an AI agent in the Babylon prediction market community.
 
@@ -103,14 +107,17 @@ Topics you can post about (MUST reference specific entities):
 - Reactions to SPECIFIC recent trades or events (mention who/what)
 
 Keep it:
-- Short (under 280 characters)
+- Short (under ${MAX_TOKENS} tokens)
 - Authentic to your personality
 - Valuable to the community
 - SPECIFIC - reference actual entities from WORLD CONTEXT
 - Not repetitive of recent posts
 ${contextString}
 
-Generate ONLY the post text, nothing else.`;
+# Required Output Format (use exactly this structure)
+<response>
+<text>your post content here</text>
+</response>`;
 
     // Ensure prompt fits within 32K context limit (W&B trained models)
     const estimatedTokens = countTokensSync(prompt);
@@ -129,20 +136,88 @@ Generate ONLY the post text, nothing else.`;
       logger.info(`Truncated to ${truncated.tokens} tokens`, { agentUserId });
     }
 
-    // Use large model (qwen3-32b or trained W&B model) for post generation
-    const postContent = await callGroqDirect({
-      prompt: finalPrompt,
-      system: agent.agentSystem || undefined,
-      modelSize: 'large', // Uses trained W&B model if available, else qwen3-32b
-      runtime: _runtime, // Pass runtime to access W&B trained models AND trajectory context
-      temperature: 0.8,
-      maxTokens: 100,
-      actionType: 'generate_autonomous_post',
-      purpose: 'action', // RLAIF: This is a content generation action
-    });
+    // Use large model (qwen3-32b or trained W&B model) for post generation with retry loop
+    const MAX_ATTEMPTS = 3;
+    let cleanContent: string | null = null;
 
-    // Clean up the response
-    let cleanContent = postContent.trim().replace(/^["']|["']$/g, '');
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const isRetry = attempt > 1;
+        const currentPrompt = isRetry
+          ? `${finalPrompt}\n\nREMINDER: You MUST output valid XML. Start with <response> and include <text> with your post content. No <think> tags.`
+          : finalPrompt;
+
+        const postContent = await callGroqDirect({
+          prompt: currentPrompt,
+          system: agent.agentSystem || undefined,
+          modelSize: 'large', // Uses trained W&B model if available, else qwen3-32b
+          runtime: _runtime, // Pass runtime to access W&B trained models AND trajectory context
+          temperature: isRetry ? 0.6 : 0.8,
+          maxTokens: MAX_TOKENS,
+          actionType: 'generate_autonomous_post',
+          purpose: 'action', // RLAIF: This is a content generation action
+        });
+
+        // Extract <response>...</response> block before parsing
+        const responseMatch = postContent.match(
+          /<response>([\s\S]*?)<\/response>/i
+        );
+        if (!responseMatch) {
+          logger.warn(
+            'No <response> block found in post generation',
+            {
+              agentUserId,
+              attempt,
+              raw: postContent.substring(0, 300),
+            },
+            'AutonomousPosting'
+          );
+          continue;
+        }
+
+        // Parse the extracted XML response
+        const parsed = parseKeyValueXml(responseMatch[0]) as {
+          text?: string;
+        } | null;
+
+        // Check if we got valid text
+        if (!parsed?.text || parsed.text.trim().length === 0) {
+          logger.warn(
+            'Failed to parse XML response in post generation',
+            {
+              agentUserId,
+              attempt,
+              raw: postContent.substring(0, 300),
+            },
+            'AutonomousPosting'
+          );
+          continue;
+        }
+
+        // Success! Clean up the response
+        cleanContent = parsed.text.trim().replace(/^["']|["']$/g, '');
+        break;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        logger.error(
+          'Failed to generate post',
+          { error: errorMessage, agentUserId, attempt },
+          'AutonomousPosting'
+        );
+        continue;
+      }
+    }
+
+    // If all attempts failed, return null
+    if (!cleanContent) {
+      logger.error(
+        `Failed to generate valid post after ${MAX_ATTEMPTS} attempts`,
+        { agentUserId },
+        'AutonomousPosting'
+      );
+      return null;
+    }
 
     // Post-process to fix any real names that slipped through
     const processed = await characterMappingService.transformText(cleanContent);
@@ -163,8 +238,7 @@ Generate ONLY the post text, nothing else.`;
       'LLM generated post',
       {
         agentUserId,
-        raw: postContent,
-        cleaned: cleanContent,
+        content: cleanContent,
         length: cleanContent.length,
       },
       'AutonomousPosting'

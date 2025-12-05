@@ -397,6 +397,7 @@ export const referrals = pgTable(
     createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
     completedAt: timestamp('completedAt', { mode: 'date' }),
     qualifiedAt: timestamp('qualifiedAt', { mode: 'date' }),
+    signupPointsAwarded: boolean('signupPointsAwarded').notNull().default(false),
     suspiciousReferralFlags: json('suspiciousReferralFlags').$type<JsonValue>(),
   },
   (table) => [
@@ -409,6 +410,19 @@ export const referrals = pgTable(
     index('Referral_referredUserId_idx').on(table.referredUserId),
     index('Referral_status_createdAt_idx').on(table.status, table.createdAt),
     index('Referral_qualifiedAt_idx').on(table.qualifiedAt),
+    // Index for unqualified referral limit queries
+    index('Referral_referrerId_status_qualifiedAt_signupPointsAwarded_idx').on(
+      table.referrerId,
+      table.status,
+      table.qualifiedAt,
+      table.signupPointsAwarded
+    ),
+    // Index for pending referrals FIFO queue
+    index('Referral_referrerId_signupPointsAwarded_completedAt_idx').on(
+      table.referrerId,
+      table.signupPointsAwarded,
+      table.completedAt
+    ),
   ]
 );
 

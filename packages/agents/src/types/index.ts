@@ -30,7 +30,7 @@ export {
   PaymentRequestSchema,
   GameNetworkInfoSchema,
   AgentCapabilitiesSchema,
-} from '@babylon/a2a/types/a2a';
+} from '@babylon/a2a';
 export * from './a2a-responses';
 export * from './agent-registry';
 export * from './entities';

@@ -97,7 +97,7 @@ import { AuthorizationError, BusinessLogicError } from '@babylon/api';
 import { withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import { confirmOnchainProfileUpdate } from '@babylon/api';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import {
   checkProfileUpdateRateLimit,
   isBackendSigningEnabled,

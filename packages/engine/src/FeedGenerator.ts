@@ -83,12 +83,14 @@ import { ContentValidator } from '@babylon/shared';
 import {
   ambientPosts,
   analystReaction,
+  CHARACTER_LIMITS,
   commentary,
   companyPost,
   conspiracy,
   dayTransition,
   generateWorldContext,
   getPromptParams,
+  getTimeOfDayEnergy,
   governmentPost,
   minuteAmbient,
   newsPosts,
@@ -99,6 +101,7 @@ import {
   replies,
   reply,
   stockTicker,
+  validateFeedPost,
   type WorldContext,
 } from './prompts';
 import type {
@@ -236,16 +239,54 @@ export class FeedGenerator extends EventEmitter {
   private trendContext = '';
 
   /**
-   * Apply character mapping to generated content.
+   * Emoji regex pattern for stripping emojis from content.
+   * Covers most common emoji Unicode ranges.
+   */
+  private static readonly EMOJI_REGEX =
+    /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/gu;
+
+  /**
+   * Apply post-processing to generated content.
    *
-   * Replaces any real names that may appear in LLM-generated content
-   * with their fictional equivalents to maintain world consistency.
+   * Performs multiple cleanup operations:
+   * 1. Strips hashtags (LLMs tend to add them despite instructions)
+   * 2. Strips emojis (same issue)
+   * 3. Normalizes whitespace (multiple spaces → single space)
+   * 4. Replaces real names with parody names via character mapping
    *
    * @param content - Generated content to process
-   * @returns Content with real names replaced by fictional equivalents
+   * @returns Cleaned content with hashtags/emojis removed and names fixed
    */
   private async postProcessContent(content: string): Promise<string> {
-    const transformed = await characterMappingService.transformText(content);
+    let processed = content;
+
+    // 1. Strip hashtags (LLMs love to add them despite instructions)
+    const hashtagMatches = processed.match(/#\w+/g);
+    if (hashtagMatches && hashtagMatches.length > 0) {
+      logger.debug(
+        `Stripping ${hashtagMatches.length} hashtag(s) from content`,
+        { hashtags: hashtagMatches.join(', ') },
+        'FeedGenerator'
+      );
+      processed = processed.replace(/#\w+/g, '');
+    }
+
+    // 2. Strip emojis
+    const emojiMatches = processed.match(FeedGenerator.EMOJI_REGEX);
+    if (emojiMatches && emojiMatches.length > 0) {
+      logger.debug(
+        `Stripping ${emojiMatches.length} emoji(s) from content`,
+        { emojis: emojiMatches.join('') },
+        'FeedGenerator'
+      );
+      processed = processed.replace(FeedGenerator.EMOJI_REGEX, '');
+    }
+
+    // 3. Normalize whitespace (multiple spaces → single space)
+    processed = processed.replace(/\s+/g, ' ').trim();
+
+    // 4. Replace real names with parody names (existing functionality)
+    const transformed = await characterMappingService.transformText(processed);
     if (transformed.replacementCount > 0) {
       logger.warn(
         `Fixed ${transformed.replacementCount} real name(s) in generated content`,
@@ -256,7 +297,42 @@ export class FeedGenerator extends EventEmitter {
         'FeedGenerator'
       );
     }
+
     return transformed.transformedText;
+  }
+
+  /**
+   * Validate post content and return validation result.
+   *
+   * Used to check if generated content passes all validation rules
+   * before accepting it. Logs violations for monitoring.
+   *
+   * @param content - Post content to validate
+   * @param postType - Type of post (determines character limit)
+   * @returns Validation result with isValid flag and cleanContent
+   */
+  private validatePostContent(
+    content: string,
+    postType: keyof typeof CHARACTER_LIMITS
+  ): { isValid: boolean; cleanContent: string; violations: string[] } {
+    const result = validateFeedPost(content, {
+      maxLength: CHARACTER_LIMITS[postType],
+      postType,
+    });
+
+    if (!result.isValid) {
+      logger.warn('Post validation failed', {
+        violations: result.violations,
+        postType,
+        contentPreview: content.substring(0, 100),
+      });
+    }
+
+    return {
+      isValid: result.isValid,
+      cleanContent: content,
+      violations: result.violations,
+    };
   }
 
   /**
@@ -1111,45 +1187,70 @@ export class FeedGenerator extends EventEmitter {
           pointsToward: p.pointsToward ?? null,
         }));
 
-      // Apply character mapping to replace any real names with fictional equivalents
+      // Apply post-processing (hashtag/emoji stripping, name mapping) and validation
       const processedPosts = await Promise.all(
         validPosts.map(async (p) => {
-          const originalContent = p.post;
-          const transformed =
-            await characterMappingService.transformText(originalContent);
-          if (transformed.replacementCount > 0) {
-            logger.warn(
-              `Fixed ${transformed.replacementCount} real name(s) in generated post`,
-              {
-                original: originalContent.substring(0, 100),
-                fixed: transformed.transformedText.substring(0, 100),
-              },
-              'FeedGenerator'
-            );
-          }
+          const processedPost = await this.postProcessContent(p.post);
+          const validation = this.validatePostContent(processedPost, 'JOURNALIST');
           return {
-            post: transformed.transformedText,
+            post: validation.cleanContent,
             sentiment: p.sentiment,
             clueStrength: p.clueStrength,
             pointsToward: p.pointsToward,
+            isValid: validation.isValid,
+            violations: validation.violations,
           };
         })
       );
 
+      // Check if any posts failed validation
+      const invalidPosts = processedPosts.filter((p) => !p.isValid);
+      if (invalidPosts.length > 0) {
+        const violationCount = invalidPosts.reduce(
+          (sum, p) => sum + p.violations.length,
+          0
+        );
+        logger.warn(
+          `Validation failed for ${invalidPosts.length} media post(s) (attempt ${attempt + 1}/${maxRetries})`,
+          {
+            violations: invalidPosts.flatMap((p) => p.violations),
+            violationCount,
+            attempt: attempt + 1,
+          },
+          'FeedGenerator'
+        );
+
+        // Retry if we haven't exhausted attempts
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
+
+      // Filter to only valid posts
+      const validProcessedPosts = processedPosts
+        .filter((p) => p.isValid)
+        .map((p) => ({
+          post: p.post,
+          sentiment: p.sentiment,
+          clueStrength: p.clueStrength,
+          pointsToward: p.pointsToward,
+        }));
+
       const minRequired = Math.ceil(mediaEntities.length * 0.5);
 
-      if (processedPosts.length >= minRequired) {
+      if (validProcessedPosts.length >= minRequired) {
         // Limit to requested count to match with entities
-        return processedPosts.slice(0, mediaEntities.length);
+        return validProcessedPosts.slice(0, mediaEntities.length);
       }
 
       logger.warn(
-        `Invalid media batch (attempt ${attempt + 1}/${maxRetries}). Expected ${mediaEntities.length}, got ${processedPosts.length} valid (need ${minRequired}+). Posts array length: ${posts.length}`,
+        `Invalid media batch (attempt ${attempt + 1}/${maxRetries}). Expected ${mediaEntities.length}, got ${validProcessedPosts.length} valid (need ${minRequired}+). Posts array length: ${posts.length}`,
         {
           attempt: attempt + 1,
           maxRetries,
           expected: mediaEntities.length,
-          got: processedPosts.length,
+          got: validProcessedPosts.length,
           minRequired,
           postsReceived: posts.length,
         },
@@ -1340,15 +1441,56 @@ export class FeedGenerator extends EventEmitter {
           pointsToward: r.pointsToward ?? null,
         }));
 
-      // Apply character mapping to replace any real names with fictional equivalents
-      const validReactions = await Promise.all(
-        filteredReactions.map(async (r) => ({
-          post: await this.postProcessContent(r.post),
+      // Apply post-processing (hashtag/emoji stripping, name mapping) and validation
+      const processedReactions = await Promise.all(
+        filteredReactions.map(async (r) => {
+          const processedPost = await this.postProcessContent(r.post);
+          const validation = this.validatePostContent(processedPost, 'REACTION');
+          return {
+            post: validation.cleanContent,
+            sentiment: r.sentiment,
+            clueStrength: r.clueStrength,
+            pointsToward: r.pointsToward,
+            isValid: validation.isValid,
+            violations: validation.violations,
+          };
+        })
+      );
+
+      // Check if any posts failed validation
+      const invalidReactions = processedReactions.filter((r) => !r.isValid);
+      if (invalidReactions.length > 0) {
+        const violationCount = invalidReactions.reduce(
+          (sum, r) => sum + r.violations.length,
+          0
+        );
+        logger.warn(
+          `Validation failed for ${invalidReactions.length} reaction(s) (attempt ${attempt + 1}/${maxRetries})`,
+          {
+            violations: invalidReactions.flatMap((r) => r.violations),
+            violationCount,
+            attempt: attempt + 1,
+          },
+          'FeedGenerator'
+        );
+
+        // Retry if we haven't exhausted attempts
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
+
+      // Filter to only valid reactions
+      const validReactions = processedReactions
+        .filter((r) => r.isValid)
+        .map((r) => ({
+          post: r.post,
           sentiment: r.sentiment,
           clueStrength: r.clueStrength,
           pointsToward: r.pointsToward,
-        }))
-      );
+        }));
+
       const minRequired = Math.ceil(actors.length * 0.5);
 
       if (validReactions.length >= minRequired) {
@@ -1522,15 +1664,56 @@ export class FeedGenerator extends EventEmitter {
           pointsToward: c.pointsToward ?? null,
         }));
 
-      // Apply character mapping to replace any real names with fictional equivalents
-      const validCommentary = await Promise.all(
-        filteredCommentary.map(async (c) => ({
-          post: await this.postProcessContent(c.post),
+      // Apply post-processing (hashtag/emoji stripping, name mapping) and validation
+      const processedCommentary = await Promise.all(
+        filteredCommentary.map(async (c) => {
+          const processedPost = await this.postProcessContent(c.post);
+          const validation = this.validatePostContent(processedPost, 'COMMENTARY');
+          return {
+            post: validation.cleanContent,
+            sentiment: c.sentiment,
+            clueStrength: c.clueStrength,
+            pointsToward: c.pointsToward,
+            isValid: validation.isValid,
+            violations: validation.violations,
+          };
+        })
+      );
+
+      // Check if any posts failed validation
+      const invalidCommentary = processedCommentary.filter((c) => !c.isValid);
+      if (invalidCommentary.length > 0) {
+        const violationCount = invalidCommentary.reduce(
+          (sum, c) => sum + c.violations.length,
+          0
+        );
+        logger.warn(
+          `Validation failed for ${invalidCommentary.length} commentary post(s) (attempt ${attempt + 1}/${maxRetries})`,
+          {
+            violations: invalidCommentary.flatMap((c) => c.violations),
+            violationCount,
+            attempt: attempt + 1,
+          },
+          'FeedGenerator'
+        );
+
+        // Retry if we haven't exhausted attempts
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
+
+      // Filter to only valid commentary
+      const validCommentary = processedCommentary
+        .filter((c) => c.isValid)
+        .map((c) => ({
+          post: c.post,
           sentiment: c.sentiment,
           clueStrength: c.clueStrength,
           pointsToward: c.pointsToward,
-        }))
-      );
+        }));
+
       const minRequired = Math.ceil(commentators.length * 0.5);
 
       if (validCommentary.length >= minRequired) {
@@ -1755,15 +1938,56 @@ export class FeedGenerator extends EventEmitter {
           pointsToward: c.pointsToward ?? null,
         }));
 
-      // Apply character mapping to replace any real names with fictional equivalents
-      const validConspiracy = await Promise.all(
-        filteredConspiracy.map(async (c) => ({
-          post: await this.postProcessContent(c.post),
+      // Apply post-processing (hashtag/emoji stripping, name mapping) and validation
+      const processedConspiracy = await Promise.all(
+        filteredConspiracy.map(async (c) => {
+          const processedPost = await this.postProcessContent(c.post);
+          const validation = this.validatePostContent(processedPost, 'CONSPIRACY');
+          return {
+            post: validation.cleanContent,
+            sentiment: c.sentiment,
+            clueStrength: c.clueStrength,
+            pointsToward: c.pointsToward,
+            isValid: validation.isValid,
+            violations: validation.violations,
+          };
+        })
+      );
+
+      // Check if any posts failed validation
+      const invalidConspiracy = processedConspiracy.filter((c) => !c.isValid);
+      if (invalidConspiracy.length > 0) {
+        const violationCount = invalidConspiracy.reduce(
+          (sum, c) => sum + c.violations.length,
+          0
+        );
+        logger.warn(
+          `Validation failed for ${invalidConspiracy.length} conspiracy post(s) (attempt ${attempt + 1}/${maxRetries})`,
+          {
+            violations: invalidConspiracy.flatMap((c) => c.violations),
+            violationCount,
+            attempt: attempt + 1,
+          },
+          'FeedGenerator'
+        );
+
+        // Retry if we haven't exhausted attempts
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
+
+      // Filter to only valid conspiracy posts
+      const validConspiracy = processedConspiracy
+        .filter((c) => c.isValid)
+        .map((c) => ({
+          post: c.post,
           sentiment: c.sentiment,
           clueStrength: c.clueStrength,
           pointsToward: c.pointsToward,
-        }))
-      );
+        }));
+
       const minRequired = Math.ceil(conspiracists.length * 0.5);
 
       if (validConspiracy.length >= minRequired) {
@@ -2393,11 +2617,15 @@ export class FeedGenerator extends EventEmitter {
       })
       .join('\n');
 
+    // Random hour for time-of-day energy variety in posts
+    const hour = Math.floor(Math.random() * 24);
+
     const prompt = renderPrompt(ambientPosts, {
       day: day.toString(),
       progressContext,
       atmosphereContext,
       trendContext: this.trendContext || '',
+      timeEnergy: getTimeOfDayEnergy(hour),
       actorCount: actors.length.toString(),
       actorsList,
       ...(this.worldContext || {}),
@@ -2530,15 +2758,56 @@ export class FeedGenerator extends EventEmitter {
           };
         });
 
-      // Apply character mapping to replace any real names with fictional equivalents
-      const validPosts = await Promise.all(
-        filteredPosts.map(async (p) => ({
-          post: await this.postProcessContent(p.post),
+      // Apply post-processing (hashtag/emoji stripping, name mapping) and validation
+      const processedPosts = await Promise.all(
+        filteredPosts.map(async (p) => {
+          const processedPost = await this.postProcessContent(p.post);
+          const validation = this.validatePostContent(processedPost, 'AMBIENT');
+          return {
+            post: validation.cleanContent,
+            sentiment: p.sentiment,
+            clueStrength: p.clueStrength,
+            pointsToward: p.pointsToward,
+            isValid: validation.isValid,
+            violations: validation.violations,
+          };
+        })
+      );
+
+      // Check if any posts failed validation
+      const invalidPosts = processedPosts.filter((p) => !p.isValid);
+      if (invalidPosts.length > 0) {
+        const violationCount = invalidPosts.reduce(
+          (sum, p) => sum + p.violations.length,
+          0
+        );
+        logger.warn(
+          `Validation failed for ${invalidPosts.length} ambient post(s) (attempt ${attempt + 1}/${maxRetries})`,
+          {
+            violations: invalidPosts.flatMap((p) => p.violations),
+            violationCount,
+            attempt: attempt + 1,
+          },
+          'FeedGenerator'
+        );
+
+        // Retry if we haven't exhausted attempts
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
+
+      // Filter to only valid posts
+      const validPosts = processedPosts
+        .filter((p) => p.isValid)
+        .map((p) => ({
+          post: p.post,
           sentiment: p.sentiment,
           clueStrength: p.clueStrength,
           pointsToward: p.pointsToward,
-        }))
-      );
+        }));
+
       const minRequired = Math.ceil(actors.length * 0.5);
 
       if (validPosts.length >= minRequired) {
@@ -2584,10 +2853,10 @@ export class FeedGenerator extends EventEmitter {
 
     if (existingPosts.length === 0) return thread;
 
-    // Pick a post to reply to (prefer controversial or from main actors)
+    // Pick a random post to reply to
     const originalPost =
       existingPosts[Math.floor(Math.random() * existingPosts.length)];
-    if (!originalPost) return thread; // Skip if no post exists
+    if (!originalPost) return thread;
 
     // 1-3 people reply
     const postingActors = allActors.filter((a) => a.id !== originalPost.author);
@@ -2831,15 +3100,56 @@ export class FeedGenerator extends EventEmitter {
           };
         });
 
-      // Apply character mapping to replace any real names with fictional equivalents
-      const validReplies = await Promise.all(
-        filteredReplies.map(async (r) => ({
-          post: await this.postProcessContent(r.post),
+      // Apply post-processing (hashtag/emoji stripping, name mapping) and validation
+      const processedReplies = await Promise.all(
+        filteredReplies.map(async (r) => {
+          const processedPost = await this.postProcessContent(r.post);
+          const validation = this.validatePostContent(processedPost, 'REPLY');
+          return {
+            post: validation.cleanContent,
+            sentiment: r.sentiment,
+            clueStrength: r.clueStrength,
+            pointsToward: r.pointsToward,
+            isValid: validation.isValid,
+            violations: validation.violations,
+          };
+        })
+      );
+
+      // Check if any replies failed validation
+      const invalidReplies = processedReplies.filter((r) => !r.isValid);
+      if (invalidReplies.length > 0) {
+        const violationCount = invalidReplies.reduce(
+          (sum, r) => sum + r.violations.length,
+          0
+        );
+        logger.warn(
+          `Validation failed for ${invalidReplies.length} reply/replies (attempt ${attempt + 1}/${maxRetries})`,
+          {
+            violations: invalidReplies.flatMap((r) => r.violations),
+            violationCount,
+            attempt: attempt + 1,
+          },
+          'FeedGenerator'
+        );
+
+        // Retry if we haven't exhausted attempts
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
+
+      // Filter to only valid replies
+      const validReplies = processedReplies
+        .filter((r) => r.isValid)
+        .map((r) => ({
+          post: r.post,
           sentiment: r.sentiment,
           clueStrength: r.clueStrength,
           pointsToward: r.pointsToward,
-        }))
-      );
+        }));
+
       const minRequired = Math.ceil(actors.length * 0.5);
 
       if (validReplies.length >= minRequired) {

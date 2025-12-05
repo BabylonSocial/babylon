@@ -4,41 +4,12 @@
  * Provides current date, prices, politics, culture, and tech landscape
  * to ground LLM outputs in current reality and prevent outdated predictions.
  *
- * Facts are loaded directly from src/data/reality-grounding.md
+ * Facts are loaded directly from TypeScript modules for serverless compatibility.
  */
 
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-
-/**
- * Find the data directory by checking multiple possible locations
- * Checks: packages/engine/src/data, src/data
- */
-function findDataDir(): string {
-  // Check if we're in a Node.js environment with file system access
-  if (typeof process === 'undefined' || typeof process.cwd !== 'function') {
-    throw new Error(
-      'findDataDir requires Node.js environment with file system access.'
-    );
-  }
-
-  const cwd = process.cwd();
-  const possiblePaths = [
-    join(cwd, 'packages', 'engine', 'src', 'data'),
-    join(cwd, 'src', 'data'),
-  ];
-
-  for (const dataDir of possiblePaths) {
-    const realityGroundingPath = join(dataDir, 'reality-grounding.md');
-    if (existsSync(realityGroundingPath)) {
-      return dataDir;
-    }
-  }
-
-  throw new Error(
-    `reality-grounding.md not found. Checked: ${possiblePaths.join(', ')}`
-  );
-}
+import { realityGroundingContent } from '../data/reality-grounding';
+import { worldEventExamplesContent } from '../data/world-event-examples';
+import { worldFactsContent } from '../data/world-facts';
 
 /**
  * Get current date and time context for prompts.
@@ -86,51 +57,37 @@ export function getCurrentDateContext(): {
 /**
  * Get world event examples for style and tone context.
  *
- * Reads from src/data/world-event-examples.md to provide the LLM with
+ * Returns the world event examples content to provide the LLM with
  * examples of the desired satirical/news style.
  */
-export async function getWorldEventExamples(): Promise<string> {
-  try {
-    const dataDir = findDataDir();
-    const filePath = join(dataDir, 'world-event-examples.md');
-    const content = readFileSync(filePath, 'utf-8');
-    return `=== WORLD EVENT EXAMPLES (FOR STYLE AND TONE) ===\n\n${content}`;
-  } catch (error) {
-    console.error('Failed to read world-event-examples.md', error);
-    return '';
-  }
+export function getWorldEventExamples(): string {
+  return `=== WORLD EVENT EXAMPLES (FOR STYLE AND TONE) ===\n\n${worldEventExamplesContent}`;
 }
 
 /**
- * Helper to read reality grounding content from file
- */
-function getRealityGroundingContent(): string {
-  try {
-    const dataDir = findDataDir();
-    const filePath = join(dataDir, 'reality-grounding.md');
-    return readFileSync(filePath, 'utf-8');
-  } catch (error) {
-    console.error('Failed to read reality-grounding.md', error);
-    return '';
-  }
-}
-
-/**
- * Get full reality grounding string from file.
+ * Get world facts content.
  *
- * Loads all reality grounding facts from the file and formats them
- * with the current date dynamically inserted.
+ * Returns general facts about the game world.
+ */
+export function getWorldFacts(): string {
+  return worldFactsContent;
+}
+
+/**
+ * Get full reality grounding string.
+ *
+ * Returns all reality grounding facts formatted with the current date
+ * dynamically inserted.
  *
  * @returns Full reality grounding string with current date and all facts
  */
-export async function getFullRealityGrounding(): Promise<string> {
+export function getFullRealityGrounding(): string {
   const dateCtx = getCurrentDateContext();
-  const content = getRealityGroundingContent();
 
   return `
 === CURRENT DATE: ${dateCtx.dateFull} ===
 
-${content}
+${realityGroundingContent}
 `.trim();
 }
 
@@ -171,14 +128,13 @@ export function checkRealityGrounding(text: string): string[] {
  *
  * @returns Concise reality grounding string with current date and key facts
  */
-export async function getRealityGrounding(): Promise<string> {
+export function getRealityGrounding(): string {
   const dateCtx = getCurrentDateContext();
-  const content = getRealityGroundingContent();
 
   return `
 === REALITY GROUNDING (${dateCtx.dateFull}) ===
 
-${content}
+${realityGroundingContent}
 
 CRITICAL: Ground all predictions in this reality. Use current dates, prices, and leadership.
 `.trim();
@@ -192,13 +148,9 @@ CRITICAL: Ground all predictions in this reality. Use current dates, prices, and
  *
  * @returns Minimal reality grounding string
  */
-export async function getMinimalRealityGrounding(): Promise<string> {
+export function getMinimalRealityGrounding(): string {
   const dateCtx = getCurrentDateContext();
-  // For minimal, we might just want the date and maybe the first section of the file?
-  // Or just the date if the file is too long.
-  // Let's try to extract the first few lines.
-  const content = getRealityGroundingContent();
-  const lines = content
+  const lines = realityGroundingContent
     .split('\n')
     .filter((l) => l.trim().length > 0 && !l.startsWith('#'))
     .slice(0, 5);

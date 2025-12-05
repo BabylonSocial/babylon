@@ -5,7 +5,7 @@
  * to stress test rate limiting and performance under load.
  */
 
-import type { JsonRpcParams } from '@babylon/a2a/types/a2a';
+import type { JsonRpcParams } from '@babylon/a2a';
 import type { LoadTestConfig } from './load-test-simulator';
 
 /**

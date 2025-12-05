@@ -25,6 +25,20 @@ export async function register() {
     // Import from main package entry point
     const { setPointsService, setNotificationService, PointsService, createNotification } = await import('@babylon/api');
 
+    // Initialize agent service container with required services
+    // Uses globalThis to persist across module instances
+    try {
+      const { setServiceContainer, agentRegistry } = await import('@babylon/agents');
+      setServiceContainer({
+        agentRegistry,
+      });
+    } catch (error) {
+      console.warn(
+        '[Agents] Service container initialization failed:',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+    
     // Initialize shared moderation services with web app implementations
     setPointsService({
       awardPoints: async (userId, amount, reason, metadata) => {

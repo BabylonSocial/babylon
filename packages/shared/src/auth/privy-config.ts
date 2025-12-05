@@ -1,107 +1,83 @@
-/**
- * Privy Configuration
- *
- * @description Configuration for Privy authentication and wallet management.
- * Includes theme settings, login methods, embedded wallet configuration, and
- * supported blockchain networks. Optimized for Farcaster Mini Apps compatibility
- * with manual embedded wallet creation and Farcaster-first login.
- */
-
 import type { PrivyClientConfig } from '@privy-io/react-auth';
 
-import { base, baseSepolia, CHAIN, mainnet, sepolia } from '../constants/chains';
+import { CHAIN } from '../constants/chains';
 
-/**
- * Extended Privy appearance config with system theme support
- *
- * @description Privy supports "system" theme at runtime, but the types don't
- * reflect this yet. This type extends the appearance config to include system theme
- * for automatic light/dark mode switching.
- */
-type ExtendedAppearance = Omit<
-  NonNullable<PrivyClientConfig['appearance']>,
-  'theme'
-> & {
+type SolanaConnectors = ReturnType<
+  typeof import('@privy-io/react-auth/solana')['toSolanaWalletConnectors']
+>;
+
+type Appearance = Omit<NonNullable<PrivyClientConfig['appearance']>, 'theme'> & {
   theme?: 'light' | 'dark' | `#${string}` | 'system';
 };
 
-/**
- * Extended Privy Client Configuration
- *
- * @description Extended Privy configuration with system theme support and
- * custom embedded wallet settings for Farcaster Mini Apps compatibility. Allows
- * manual embedded wallet creation and Farcaster-first login flow.
- */
-export interface ExtendedPrivyClientConfig
-  extends Omit<
-    PrivyClientConfig,
-    'appearance' | 'embeddedWallets' | 'externalWallets'
-  > {
-  appearance?: ExtendedAppearance;
+type BabylonPrivyConfig = Omit<
+  PrivyClientConfig,
+  'appearance' | 'embeddedWallets' | 'externalWallets'
+> & {
+  appearance?: Appearance;
   embeddedWallets?: {
-    ethereum?: {
-      createOnLogin?: 'all-users' | 'users-without-wallets' | 'off';
-    };
-    disableAutomaticMigration?: boolean;
-    showWalletUIs?: boolean;
+    ethereum?: { createOnLogin?: 'all-users' | 'users-without-wallets' | 'off' };
   };
   externalWallets?: {
-    solana?: {
-      connectors?: Array<never>; // Explicitly disable Solana external wallets
-    };
+    solana?: { connectors?: SolanaConnectors };
   };
-}
-
-/**
- * Privy configuration object
- *
- * @description Complete Privy configuration with app ID and client settings.
- * Configured for Farcaster-first login, Base Sepolia default chain, and manual
- * embedded wallet creation for Mini Apps compatibility. Uses system theme for
- * automatic light/dark mode.
- */
-export const privyConfig: {
-  appId: string;
-  config: ExtendedPrivyClientConfig;
-} = {
-  appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID || '',
-  config: {
-    appearance: {
-      theme: 'system',
-      accentColor: '#0066FF',
-      logo: '/assets/logos/logo.svg',
-      showWalletLoginFirst: false, // Changed to false to prioritize Farcaster
-      walletList: [
-        'metamask',
-        'rabby_wallet',
-        'detected_wallets',
-        'rainbow',
-        'coinbase_wallet',
-      ],
-      walletChainType: 'ethereum-only' as const,
-    } satisfies ExtendedAppearance,
-    // Prioritize Farcaster login for Mini Apps
-    // Reference: https://docs.privy.io/recipes/farcaster/mini-apps
-    loginMethods: ['farcaster', 'wallet', 'email', 'twitter'],
-    embeddedWallets: {
-      // Embedded wallets are created manually post-auth (see FarcasterFrameProvider)
-      // Automatic creation is disabled to stay compatible with Farcaster Mini Apps
-      ethereum: {
-        createOnLogin: 'off' as const,
-      },
-      // Solana is not configured - we only support Ethereum wallets
-    },
-    // Solana external wallets are disabled by omitting the configuration
-    // Including an empty connectors array causes runtime errors
-    // externalWallets is omitted entirely to disable Solana support
-    defaultChain: CHAIN,
-    // Wallet configuration - supports all chains including Base L2 and Localnet
-    supportedChains: [CHAIN, base, baseSepolia, mainnet, sepolia],
-    // WalletConnect configuration removed - configure NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in .env if needed
-    ...(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID && {
-      walletConnectCloudProjectId:
-        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-    }),
-  },
 };
 
+function getSolanaConnectors(): SolanaConnectors | undefined {
+  // Solana connector bundle relies on React context; skip on the server.
+  if (typeof window === 'undefined') return undefined;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { toSolanaWalletConnectors } = require('@privy-io/react-auth/solana') as {
+      toSolanaWalletConnectors: () => SolanaConnectors;
+    };
+    return toSolanaWalletConnectors();
+  } catch (error) {
+    console.warn('Failed to load Solana connectors', error);
+    return undefined;
+  }
+}
+
+const appearance: Appearance = {
+  theme: 'system',
+  accentColor: '#0066FF',
+  logo: '/assets/logos/logo.svg',
+};
+
+const loginMethodsAndOrder: NonNullable<BabylonPrivyConfig['loginMethodsAndOrder']> =
+  {
+    primary: ['farcaster', 'email'],
+    overflow: [
+      'metamask',
+      'twitter',
+      'discord',
+      'telegram',
+      'phantom',
+      'rabby_wallet',
+      'coinbase_wallet',
+      'rainbow',
+      'backpack',
+    ],
+  };
+
+const embeddedWallets: NonNullable<BabylonPrivyConfig['embeddedWallets']> = {
+  ethereum: { createOnLogin: 'off' },
+};
+
+const externalWallets: BabylonPrivyConfig['externalWallets'] = (() => {
+  const solanaConnectors = getSolanaConnectors();
+  return solanaConnectors ? { solana: { connectors: solanaConnectors } } : undefined;
+})();
+
+// @NOTE: Do not update this config without making sure it won't break anything
+export const privyConfig: { appId: string; config: BabylonPrivyConfig } = {
+  appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID || '',
+  config: {
+    appearance,
+    loginMethodsAndOrder,
+    embeddedWallets,
+    defaultChain: CHAIN,
+    externalWallets,
+  },
+};

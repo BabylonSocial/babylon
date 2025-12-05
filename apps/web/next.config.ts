@@ -344,10 +344,9 @@ const nextConfig: NextConfig = {
       ];
 
       // Use function-based externals to catch all imports of server-only packages
-      // Webpack externals function signature: (context, request, callback)
+      // Webpack externals function signature: ({context, request}, callback)
       const externalizeServerOnly = (
-        _context: string,
-        request: string,
+        { request }: { context?: string; request?: string },
         callback: (
           error?: Error | null,
           result?: string
@@ -403,8 +402,15 @@ const sentryWebpackPluginOptions = {
 
   project: 'babylon',
 
+  // Auth token for uploading source maps and creating releases
+  // Set SENTRY_AUTH_TOKEN in environment to enable source map uploads
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
+
+  // Suppress warnings when auth token is not provided (e.g., local development)
+  hideSourceMaps: !process.env.SENTRY_AUTH_TOKEN,
 
   // Disable telemetry to suppress warnings during build
   telemetry: false,

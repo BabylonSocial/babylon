@@ -15,7 +15,7 @@
  *   SCENARIOS,
  *   generateReport,
  *   formatReportForConsole
- * } from '@babylon/testing/simulation';
+ * } from '@babylon/testing';
  *
  * const simulator = new LiquiditySimulator(SCENARIOS.normal);
  * const result = await simulator.run();

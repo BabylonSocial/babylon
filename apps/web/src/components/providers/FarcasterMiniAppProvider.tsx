@@ -101,6 +101,7 @@ export function FarcasterMiniAppProvider({
     null
   );
   const hasCalledReady = useRef(false);
+  const hasAttemptedLogin = useRef(false);
 
   const { ready, authenticated, user, createWallet } = usePrivy();
   const { initLoginToMiniApp, loginToMiniApp } = useLoginToMiniApp();
@@ -203,6 +204,12 @@ export function FarcasterMiniAppProvider({
       return;
     }
 
+    // Prevent multiple login attempts - only attempt once
+    if (hasAttemptedLogin.current) {
+      return;
+    }
+    hasAttemptedLogin.current = true;
+
     const attemptMiniAppLogin = async () => {
       logger.info(
         'Attempting Farcaster Mini App auto-login',
@@ -256,6 +263,8 @@ export function FarcasterMiniAppProvider({
     };
 
     attemptMiniAppLogin().catch((error: Error) => {
+      // Allow retry on error
+      hasAttemptedLogin.current = false;
       logger.error(
         'Farcaster Mini App auto-login failed',
         {

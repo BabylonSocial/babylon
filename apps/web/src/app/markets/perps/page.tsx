@@ -13,27 +13,8 @@ import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortfolioPnL } from '@/hooks/usePortfolioPnL';
 import { useUserPositions } from '@/hooks/useUserPositions';
+import { usePerpMarkets, type PerpMarket } from '@/stores/perpMarketsStore';
 import { cn } from '@babylon/shared';
-
-interface PerpMarket {
-  ticker: string;
-  organizationId: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-  high24h: number;
-  low24h: number;
-  volume24h: number;
-  openInterest: number;
-  fundingRate: {
-    rate: number;
-    nextFundingTime: string;
-    predictedRate: number;
-  };
-  maxLeverage: number;
-  minOrderSize: number;
-}
 
 export default function PerpsPage() {
   const router = useRouter();
@@ -42,9 +23,8 @@ export default function PerpsPage() {
   const [showCategoryPnLShareModal, setShowCategoryPnLShareModal] =
     useState(false);
 
-  // Data
-  const [perpMarkets, setPerpMarkets] = useState<PerpMarket[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use shared perp markets store
+  const { markets: perpMarkets, loading, refetch: refetchPerps } = usePerpMarkets();
 
   const {
     loading: portfolioLoading,
@@ -59,7 +39,6 @@ export default function PerpsPage() {
   );
 
   // Use refs to store latest values to break dependency chains
-  const fetchDataRef = useRef<(() => Promise<void>) | null>(null);
   const refreshPositionsRef = useRef<(() => Promise<void>) | null>(
     refreshUserPositions
   );
@@ -80,49 +59,8 @@ export default function PerpsPage() {
     if (refreshPositionsRef.current) {
       await refreshPositionsRef.current();
     }
-    if (fetchDataRef.current) {
-      await fetchDataRef.current();
-    }
-  }, []);
-
-  // Fetch data
-  const fetchData = useCallback(async () => {
-    const isAuth = authenticatedRef.current;
-    const userId = userIdRef.current;
-
-    try {
-      const perpsRes = await fetch('/api/markets/perps');
-
-      if (!perpsRes.ok) {
-        throw new Error('Failed to fetch perp markets');
-      }
-
-      const perpsData = await perpsRes.json();
-
-      setPerpMarkets(perpsData.markets || []);
-
-      if (isAuth && userId) {
-        if (refreshPositionsRef.current) {
-          await refreshPositionsRef.current();
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch perp markets:', err);
-      // Keep existing markets on error
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Store fetchData in ref
-  useEffect(() => {
-    fetchDataRef.current = fetchData;
-  }, [fetchData]);
-
-  // Initial fetch on mount
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    await refetchPerps();
+  }, [refetchPerps]);
 
   const filteredPerpMarkets = perpMarkets.filter(
     (m) =>

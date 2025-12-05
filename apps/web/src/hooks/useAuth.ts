@@ -283,7 +283,10 @@ export function useAuth(): UseAuthReturn {
             currentUser.showTwitterPublic !== hydratedUser.showTwitterPublic ||
             currentUser.showFarcasterPublic !==
               hydratedUser.showFarcasterPublic ||
-            currentUser.showWalletPublic !== hydratedUser.showWalletPublic;
+            currentUser.showWalletPublic !== hydratedUser.showWalletPublic ||
+            currentUser.reputationPoints !== hydratedUser.reputationPoints ||
+            currentUser.hasFarcaster !== hydratedUser.hasFarcaster ||
+            currentUser.hasTwitter !== hydratedUser.hasTwitter;
 
           if (hasChanged) {
             setUser(hydratedUser);

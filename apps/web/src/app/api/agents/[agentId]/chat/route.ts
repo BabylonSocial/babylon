@@ -120,7 +120,7 @@
  * ```
  */
 
-import { ModelType } from '@elizaos/core';
+import { ModelType, parseKeyValueXml } from '@elizaos/core';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
@@ -163,22 +163,10 @@ export const POST = withErrorHandling(
         'AgentChat'
       );
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid request body',
-        },
+        { success: false, error: 'Invalid request body' },
         { status: 400 }
       );
     }
-    logger.info(
-      'Body parsed successfully',
-      {
-        agentId,
-        hasMessage: !!body.message,
-        messageLength: body.message.length,
-      },
-      'AgentChat'
-    );
 
     const message = body.message;
     const usePro = body.usePro;
@@ -188,18 +176,11 @@ export const POST = withErrorHandling(
     if (!inputCheck.safe) {
       logger.warn(
         'Unsafe user input blocked',
-        {
-          agentId,
-          reason: inputCheck.reason,
-          category: inputCheck.category,
-        },
+        { agentId, reason: inputCheck.reason, category: inputCheck.category },
         'AgentChat'
       );
       return NextResponse.json(
-        {
-          success: false,
-          error: inputCheck.reason || 'Invalid input',
-        },
+        { success: false, error: inputCheck.reason || 'Invalid input' },
         { status: 400 }
       );
     }
@@ -210,10 +191,7 @@ export const POST = withErrorHandling(
     const agent = await agentService.getAgent(agentId, user.id);
     if (!agent) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Agent not found',
-        },
+        { success: false, error: 'Agent not found' },
         { status: 404 }
       );
     }
@@ -228,21 +206,7 @@ export const POST = withErrorHandling(
       undefined
     );
 
-    const userMessageId = uuidv4();
-    await db.agentMessage.create({
-      data: {
-        id: userMessageId,
-        agentUserId: agentId,
-        role: 'user',
-        content: message,
-        pointsCost: 0,
-        metadata: {},
-      },
-    });
-
-    // Prepare runtime and prompt outside try-catch so they're available for regeneration
-    const runtime = await agentRuntimeManager.getRuntime(agentId);
-
+    // Fetch conversation history BEFORE saving the new message (to avoid duplicates)
     const recentMessages = await db.agentMessage.findMany({
       where: { agentUserId: agentId },
       orderBy: { createdAt: 'desc' },
@@ -254,198 +218,143 @@ export const POST = withErrorHandling(
       },
     });
 
-    const conversationHistory = recentMessages
+    // Build conversation history and append the current user message
+    const historyPart = recentMessages
       .reverse()
       .map((m) => {
-        const speaker = m.role === 'user' ? 'User' : agent!.displayName;
+        const speaker = m.role === 'user' ? 'User' : agent.displayName;
         return `${speaker}: ${m.content}`;
       })
       .join('\n');
 
+    const conversationHistory = historyPart
+      ? `${historyPart}\nUser: ${message}`
+      : `User: ${message}`;
+
+    // Prepare runtime
+    const runtime = await agentRuntimeManager.getRuntime(agentId);
+
     // Always use qwen 32b (TEXT_LARGE) - free chat, 1pt per tick
     const modelType = ModelType.TEXT_LARGE;
+    const MAX_TOKENS = 200;
 
-    const prompt = `${agent!.agentSystem}
+    const prompt = `CRITICAL: You have only ${MAX_TOKENS} tokens. Your response MUST start with <response> immediately. No <think> tags. No reasoning.
 
-You are ${agent!.displayName}. Respond naturally and stay in character.
+# System
+${agent.agentSystem}
 
-${conversationHistory ? `Recent conversation:\n${conversationHistory}\n\n` : ''}User: ${message}
+# Conversation
+${conversationHistory}
 
-${agent!.displayName} (respond in 1-3 sentences, conversational):`;
+# Task
+Generate ${agent.displayName}'s response. Stay in character.
 
-    // Wrap response generation in try-catch to refund points on failure
-    let response: string;
-    try {
-      response = await runtime.useModel(modelType, {
-        prompt,
-        temperature: 0.8,
-        maxTokens: 200,
-      });
-    } catch (error) {
-      // Refund points if response generation fails
-      logger.error(
-        'Failed to generate agent response',
-        { error, agentId },
-        'AgentChat'
-      );
-      await agentService.depositPoints(agentId, user.id, pointsCost);
+# Required Output Format (use exactly this structure)
+<response>
+<text>your message to user</text>
+</response>`;
 
-      // Delete user message since we failed
-      await db.agentMessage.delete({ where: { id: userMessageId } });
+    // Generate response with retry loop (max 3 attempts)
+    const MAX_ATTEMPTS = 3;
+    let response: string | null = null;
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to generate response. Points have been refunded.',
-        },
-        { status: 500 }
-      );
-    }
-
-    // Verify response is not empty
-    if (
-      !response ||
-      typeof response !== 'string' ||
-      response.trim().length === 0
-    ) {
-      logger.error('Agent generated empty response', { agentId }, 'AgentChat');
-      await agentService.depositPoints(agentId, user.id, pointsCost);
-      await db.agentMessage.delete({ where: { id: userMessageId } });
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Agent generated empty response. Points have been refunded.',
-        },
-        { status: 500 }
-      );
-    }
-
-    // Check output safety - only regenerate if unsafe
-    const outputCheck = checkAgentOutput(response);
-    if (!outputCheck.safe) {
-      logger.warn(
-        'Agent generated unsafe content, regenerating',
-        {
-          agentId,
-          reason: outputCheck.reason,
-          preview: response.substring(0, 100),
-        },
-        'AgentChat'
-      );
-
-      logger.info(
-        'Attempting regeneration with safety prompt',
-        { agentId },
-        'AgentChat'
-      );
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        response = await runtime.useModel(modelType, {
-          prompt: `${prompt}\n\nIMPORTANT: Keep your response professional, helpful, and appropriate. No profanity or inappropriate content.`,
-          temperature: 0.6,
-          maxTokens: 200,
+        const isRetry = attempt > 1;
+        const currentPrompt = isRetry
+          ? `${prompt}\n\nIMPORTANT: Keep your response professional, helpful, and appropriate. No profanity or inappropriate content.\n\nREMINDER: You MUST output valid XML. Start with <response> and include <text> with your message.`
+          : prompt;
+
+        const generated = await runtime.useModel(modelType, {
+          prompt: currentPrompt,
+          temperature: isRetry ? 0.6 : 0.8,
+          maxTokens: MAX_TOKENS,
         });
+
+        // Extract <response>...</response> block before parsing
+        const responseMatch = generated.match(/<response>([\s\S]*?)<\/response>/i);
+        if (!responseMatch) {
+          logger.warn('No <response> block found', { agentId, attempt, raw: generated.substring(0, 300) }, 'AgentChat');
+          continue;
+        }
+
+        // Parse the extracted XML response
+        const parsed = parseKeyValueXml(responseMatch[0]) as { text?: string } | null;
+
+        // Check if we got valid text
+        if (!parsed?.text || parsed.text.trim().length === 0) {
+          logger.warn('Failed to parse XML response', { agentId, attempt, raw: generated.substring(0, 300) }, 'AgentChat');
+          continue;
+        }
+
+        const extractedText = parsed.text.trim();
+
+        // Check safety
+        const safetyCheck = checkAgentOutput(extractedText);
+        if (!safetyCheck.safe) {
+          logger.warn(
+            'Unsafe response generated',
+            { agentId, attempt, reason: safetyCheck.reason, preview: extractedText.substring(0, 100) },
+            'AgentChat'
+          );
+          continue;
+        }
+
+        // Success!
+        response = extractedText;
+        break;
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error(
-          'Failed to regenerate response',
-          { error, agentId },
+          'Failed to generate response',
+          { error: errorMessage, agentId, attempt },
           'AgentChat'
         );
-        await agentService.depositPoints(agentId, user.id, pointsCost);
-        await db.agentMessage.delete({ where: { id: userMessageId } });
-
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Failed to regenerate response. Points have been refunded.',
-          },
-          { status: 500 }
-        );
-      }
-
-      // Verify regenerated response is not empty
-      if (
-        !response ||
-        typeof response !== 'string' ||
-        response.trim().length === 0
-      ) {
-        logger.error(
-          'Agent generated empty response after regeneration',
-          { agentId },
-          'AgentChat'
-        );
-        await agentService.depositPoints(agentId, user.id, pointsCost);
-        await db.agentMessage.delete({ where: { id: userMessageId } });
-
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Agent generated empty response after regeneration. Points have been refunded.',
-          },
-          { status: 500 }
-        );
-      }
-
-      // Check again after regeneration
-      const secondCheck = checkAgentOutput(response);
-      if (!secondCheck.safe) {
-        logger.error(
-          'Agent generated unsafe content after regeneration',
-          {
-            agentId,
-            reason: secondCheck.reason,
-          },
-          'AgentChat'
-        );
-        // Refund points and return error
-        await agentService.depositPoints(agentId, user.id, pointsCost);
-        await db.agentMessage.delete({ where: { id: userMessageId } });
-
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              'Unable to generate safe response. Points have been refunded.',
-          },
-          { status: 500 }
-        );
+        continue;
       }
     }
 
-    response = response.trim().replace(/^["']|["']$/g, '');
-
-    // Final check after trimming
-    if (response.length === 0) {
-      logger.error(
-        'Response became empty after trimming',
-        { agentId },
-        'AgentChat'
-      );
+    // If all attempts failed, refund points and return error
+    if (!response) {
       await agentService.depositPoints(agentId, user.id, pointsCost);
-      await db.agentMessage.delete({ where: { id: userMessageId } });
-
       return NextResponse.json(
         {
           success: false,
-          error:
-            'Response became empty after processing. Points have been refunded.',
+          error: 'Failed to generate a valid response after multiple attempts. Points have been refunded.',
         },
         { status: 500 }
       );
     }
 
+    // Success: save both messages now
+    // Use explicit timestamps to ensure correct ordering (user message before assistant)
+    const userMessageId = uuidv4();
     const assistantMessageId = uuidv4();
-    await db.agentMessage.create({
-      data: {
-        id: assistantMessageId,
-        agentUserId: agentId,
-        role: 'assistant',
-        content: response,
-        modelUsed: usePro ? 'groq-70b' : 'groq-8b',
-        pointsCost,
-        metadata: {},
-      },
+    const userMessageTime = new Date();
+    const assistantMessageTime = new Date(userMessageTime.getTime() + 1); // 1ms later
+
+    await db.agentMessage.createMany({
+      data: [
+        {
+          id: userMessageId,
+          agentUserId: agentId,
+          role: 'user',
+          content: message,
+          pointsCost: 0,
+          metadata: {},
+          createdAt: userMessageTime,
+        },
+        {
+          id: assistantMessageId,
+          agentUserId: agentId,
+          role: 'assistant',
+          content: response,
+          modelUsed: usePro ? 'groq-70b' : 'groq-8b',
+          pointsCost,
+          createdAt: assistantMessageTime,
+          metadata: {},
+        },
+      ],
     });
 
     await db.user.update({
@@ -503,7 +412,13 @@ export const GET = withErrorHandling(
     const user = await authenticateUser(req);
     const { agentId } = await params;
 
-    await agentService.getAgent(agentId, user.id);
+    const agent = await agentService.getAgent(agentId, user.id);
+    if (!agent) {
+      return NextResponse.json(
+        { success: false, error: 'Agent not found' },
+        { status: 404 }
+      );
+    }
 
     const { searchParams } = new URL(req.url);
     const limit = Number.parseInt(searchParams.get('limit')!);

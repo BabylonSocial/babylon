@@ -26,7 +26,7 @@
  */
 import React, { Component, type ReactNode } from 'react';
 import { logger } from '@babylon/shared';
-import { posthog } from '@babylon/shared';
+import { posthog } from '@/lib/posthog';
 
 interface Props {
   children: ReactNode;

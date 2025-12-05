@@ -289,7 +289,7 @@ async function runMigrations(): Promise<void> {
   }
 
   logger.step('Pushing schema changes...');
-  await $`bunx drizzle-kit push`;
+  await $`bunx drizzle-kit push --config=packages/db/drizzle.config.ts`;
   logger.success('Migrations complete');
 }
 
@@ -312,7 +312,8 @@ async function seedDatabase(): Promise<void> {
   }
 
   logger.step('Running seed script...');
-  await $`bun run db:seed`;
+  const rootDir = import.meta.dirname.replace('/apps/cli/src/commands', '');
+  await $`bun run ${rootDir}/scripts/seed-database.ts`;
   logger.success('Database seeded');
 }
 
@@ -337,7 +338,7 @@ async function resetDatabase(): Promise<void> {
   }
 
   logger.step('Resetting schema...');
-  await $`bunx drizzle-kit push --force`;
+  await $`bunx drizzle-kit push --force --config=packages/db/drizzle.config.ts`;
   logger.success('Database reset complete');
 }
 

@@ -39,6 +39,19 @@ export const FEE_CONFIG = {
 } as const;
 
 /**
+ * Market configuration for perpetual futures
+ */
+export const MARKET_CONFIG = {
+  // Position size limits
+  MIN_MAX_POSITION_SIZE: 10000, // $10k minimum max position size (floor for low liquidity markets)
+  OPEN_INTEREST_LIMIT_RATIO: 0.1, // Max position = 10% of market open interest
+
+  // Leverage limits
+  DEFAULT_MAX_LEVERAGE: 100,
+  DEFAULT_MIN_ORDER_SIZE: 10, // $10 minimum order
+} as const;
+
+/**
  * Fee type identifier
  *
  * @description Type representing valid fee types for trading operations.

@@ -8,7 +8,7 @@
  *
  * @usage
  * ```typescript
- * import { cachedDb } from '@babylon/api/cache'
+ * import { cachedDb } from '@babylon/api'
  * const posts = await cachedDb.getRecentPosts(100)
  * ```
  */

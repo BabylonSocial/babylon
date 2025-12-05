@@ -9,8 +9,9 @@ import { cn } from '@babylon/shared';
  * Feed authentication banner content component.
  *
  * Displays a fixed bottom banner prompting unauthenticated users to log in.
- * Automatically hides on production home page unless dev mode is enabled.
- * Only shows when auth state is ready and user is not authenticated.
+ * Automatically hides when WAITLIST_MODE is enabled on home page unless
+ * dev mode is enabled via URL parameter (?dev=true). Only shows when auth
+ * state is ready and user is not authenticated.
  *
  * @returns Feed auth banner element or null if hidden/not needed
  */
@@ -18,16 +19,14 @@ function FeedAuthBannerContent() {
   const { login, authenticated, ready } = useAuth();
   const searchParams = useSearchParams();
 
-  // Check if dev mode is enabled via URL parameter
+  // Check if dev mode is enabled via URL parameter (for staging testing)
   const isDevMode = searchParams.get('dev') === 'true';
 
-  // Hide on production (babylon.market) on home page unless ?dev=true
-  const isProduction =
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'babylon.market';
+  // Hide when WAITLIST_MODE is enabled on home page (unless ?dev=true)
+  const isWaitlistMode = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true';
   const isHomePage =
     typeof window !== 'undefined' && window.location.pathname === '/';
-  const shouldHide = isProduction && isHomePage && !isDevMode;
+  const shouldHide = isWaitlistMode && isHomePage && !isDevMode;
 
   // If should be hidden, don't render anything
   if (shouldHide) {

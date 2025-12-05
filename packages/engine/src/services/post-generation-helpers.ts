@@ -197,7 +197,14 @@ ${worldFactsContext}
 Provide:
 - "title": a compelling headline (max 100 characters)
 - "summary": a succinct 2-3 sentence summary for social feeds (max 400 characters)
-- "article": a full-length article body (at least 4 paragraphs) with concrete details, analysis, and optional quotes. The article should read like a professional newsroom piece, not bullet points. Separate paragraphs with \\n\\n (two newlines).
+- "article": a FULL-LENGTH article body (800-1200 words, at least 4 paragraphs). Include:
+  * An engaging lead paragraph that hooks readers
+  * Background context and relevant details
+  * Analysis of implications and what this means
+  * Expert perspectives or insider viewpoints (you can fabricate realistic quotes)
+  * A conclusion with forward-looking analysis
+  
+  The article must read like a professional newsroom piece from a major publication - NOT bullet points, NOT a summary. Separate paragraphs with \\n\\n (two newlines).
 
 Return your response as XML in this exact format:
 <response>
@@ -249,10 +256,12 @@ Return your response as XML in this exact format:
   const articleTitle = articleData.title.trim();
   const articleBody = articleData.article.trim();
 
-  if (articleBody.length < 400) {
+  // Content should be a full article (800-1200 words = ~4000-6000 chars)
+  // Minimum 500 chars to ensure it's not just a summary
+  if (articleBody.length < 500) {
     logger.warn(
-      'Article body too short',
-      { orgName: org.name, length: articleBody.length },
+      'Article body too short - rejecting',
+      { orgName: org.name, length: articleBody.length, minRequired: 500 },
       'PostGeneration'
     );
     return false;

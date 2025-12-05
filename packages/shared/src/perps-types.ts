@@ -47,6 +47,7 @@ export interface PerpMarket {
   fundingRate: FundingRate;
   maxLeverage: number;
   minOrderSize: number;
+  maxPositionSize: number; // Maximum single position size (based on liquidity)
   markPrice: number; // Fair price for liquidations
   indexPrice: number; // Spot price reference
 }

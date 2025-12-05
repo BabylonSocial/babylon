@@ -88,7 +88,12 @@ import { authenticate } from '@babylon/api';
 import { asUser } from '@babylon/db';
 import { AuthorizationError, InternalServerError } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
-import { logger } from '@babylon/shared';
+import {
+  logger,
+  IDENTITY_REGISTRY_BASE_SEPOLIA,
+  REPUTATION_SYSTEM_BASE_SEPOLIA,
+  getCurrentRpcUrl,
+} from '@babylon/shared';
 import { syncAfterAgent0Registration } from '@babylon/agents';
 import { generateSnowflakeId } from '@babylon/shared';
 import { AgentOnboardSchema } from '@babylon/shared';
@@ -133,17 +138,13 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await request.json();
   const { agentName, endpoint } = AgentOnboardSchema.parse(body);
 
-  // Now check environment variables (after validation)
-  const IDENTITY_REGISTRY = getRequiredEnvVar(
-    'NEXT_PUBLIC_IDENTITY_REGISTRY_BASE_SEPOLIA'
-  ) as Address;
-  const REPUTATION_SYSTEM = getRequiredEnvVar(
-    'NEXT_PUBLIC_REPUTATION_SYSTEM_BASE_SEPOLIA'
-  ) as Address;
+  // Contract addresses from canonical config, env vars for secrets only
+  const IDENTITY_REGISTRY = IDENTITY_REGISTRY_BASE_SEPOLIA as Address;
+  const REPUTATION_SYSTEM = REPUTATION_SYSTEM_BASE_SEPOLIA as Address;
   const DEPLOYER_PRIVATE_KEY = getRequiredEnvVar(
     'DEPLOYER_PRIVATE_KEY'
   ) as `0x${string}`;
-  const RPC_URL = getRequiredEnvVar('NEXT_PUBLIC_RPC_URL');
+  const RPC_URL = getCurrentRpcUrl();
 
   // Check if agent exists in database (use upsert to avoid race conditions) with RLS
   // Note: Agents don't have wallet addresses - they're registered via server wallet

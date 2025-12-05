@@ -25,27 +25,8 @@ import { Skeleton, WidgetPanelSkeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortfolioPnL } from '@/hooks/usePortfolioPnL';
 import { useUserPositions } from '@/hooks/useUserPositions';
+import { usePerpMarkets, type PerpMarket } from '@/stores/perpMarketsStore';
 import { cn } from '@babylon/shared';
-
-interface PerpMarket {
-  ticker: string;
-  organizationId: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-  high24h: number;
-  low24h: number;
-  volume24h: number;
-  openInterest: number;
-  fundingRate: {
-    rate: number;
-    nextFundingTime: string;
-    predictedRate: number;
-  };
-  maxLeverage: number;
-  minOrderSize: number;
-}
 
 interface PredictionUserPosition {
   id: string;
@@ -96,11 +77,16 @@ export default function MarketsPage() {
     'perps' | 'predictions' | null
   >(null);
 
+  // Use shared perp markets store
+  const { markets: perpMarkets, loading: perpLoading, refetch: refetchPerps } = usePerpMarkets();
+
   // Data
-  const [perpMarkets, setPerpMarkets] = useState<PerpMarket[]>([]);
   const [predictions, setPredictions] = useState<PredictionMarket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [predictionsLoading, setPredictionsLoading] = useState(true);
   const [balanceRefreshTrigger, setBalanceRefreshTrigger] = useState(0);
+
+  // Combined loading state
+  const loading = perpLoading && predictionsLoading;
 
   const {
     data: portfolioPnL,
@@ -143,32 +129,27 @@ export default function MarketsPage() {
     if (refreshPositionsRef.current) {
       await refreshPositionsRef.current();
     }
+    await refetchPerps();
     if (fetchDataRef.current) {
       await fetchDataRef.current();
     }
-  }, []);
+  }, [refetchPerps]);
 
-  // Fetch data - use refs inside to avoid dependencies on authenticated/user
+  // Fetch predictions data - perps come from shared store
   const fetchData = useCallback(async () => {
     const isAuth = authenticatedRef.current;
     const userId = userIdRef.current;
 
     try {
-      const [perpsRes, predictionsRes] = await Promise.all([
-        fetch('/api/markets/perps'),
-        fetch(
-          `/api/markets/predictions${isAuth && userId ? `?userId=${userId}` : ''}`
-        ),
-      ]);
+      const predictionsRes = await fetch(
+        `/api/markets/predictions${isAuth && userId ? `?userId=${userId}` : ''}`
+      );
 
-      if (!perpsRes.ok || !predictionsRes.ok) {
-        throw new Error('Failed to fetch market data');
+      if (!predictionsRes.ok) {
+        throw new Error('Failed to fetch predictions');
       }
 
-      const perpsData = await perpsRes.json();
       const predictionsData = await predictionsRes.json();
-
-      setPerpMarkets(perpsData.markets || []);
       setPredictions(predictionsData.questions || []);
 
       if (isAuth && userId) {
@@ -180,10 +161,10 @@ export default function MarketsPage() {
       // Trigger balance refresh after data fetch (after trades)
       setBalanceRefreshTrigger(Date.now());
     } catch (err) {
-      console.error('Failed to fetch market data:', err);
+      console.error('Failed to fetch predictions:', err);
       // Keep existing data on error, just stop loading
     } finally {
-      setLoading(false);
+      setPredictionsLoading(false);
     }
   }, []); // Empty dependency array - fetchData never changes
 

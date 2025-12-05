@@ -8,7 +8,7 @@
  */
 
 import { count, db, desc, eq, messages, posts, reports, users } from '@babylon/db';
-import { callClaudeDirect } from '@babylon/shared';
+import { callClaudeDirect } from '../claude-service';
 import { logger } from '@babylon/shared';
 
 /**

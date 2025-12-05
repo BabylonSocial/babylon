@@ -107,6 +107,10 @@ export default function AgentDetailPage() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleBalanceUpdate = useCallback((newBalance: number) => {
+    setAgent((prev) => prev ? { ...prev, pointsBalance: newBalance } : prev);
+  }, []);
+
   const fetchAgent = useCallback(async () => {
     setLoading(true);
     const token = await getAccessToken();
@@ -325,7 +329,7 @@ export default function AgentDetailPage() {
 
           <div className="mt-6">
             <TabsContent value="chat">
-              <AgentChat agent={agent} onUpdate={fetchAgent} />
+              <AgentChat agent={agent} onBalanceUpdate={handleBalanceUpdate} />
             </TabsContent>
 
             <TabsContent value="performance">

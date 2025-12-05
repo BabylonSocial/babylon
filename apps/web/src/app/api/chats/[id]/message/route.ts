@@ -96,7 +96,7 @@ import { AuthorizationError, BusinessLogicError } from '@babylon/api';
 import { successResponse, withErrorHandling } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import { hasBlocked } from '@babylon/db';
-import { trackServerEvent } from '@babylon/shared';
+import { trackServerEvent } from '@/lib/posthog/server';
 import {
   checkRateLimitAndDuplicates,
   DUPLICATE_DETECTION_CONFIGS,

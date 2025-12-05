@@ -29,28 +29,9 @@ import { usePerpTrade } from '@/hooks/usePerpTrade';
 import { useMarketTracking } from '@/hooks/usePostHog';
 import { useUserPositions } from '@/hooks/useUserPositions';
 import { useWalletBalance } from '@/hooks/useWalletBalance';
-import { FEE_CONFIG } from '@babylon/engine';
+import { usePerpMarket } from '@/stores/perpMarketsStore';
+import { FEE_CONFIG } from '@babylon/engine/client';
 import { cn } from '@babylon/shared';
-
-interface PerpMarket {
-  ticker: string;
-  organizationId: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-  high24h: number;
-  low24h: number;
-  volume24h: number;
-  openInterest: number;
-  fundingRate: {
-    rate: number;
-    nextFundingTime: string;
-    predictedRate: number;
-  };
-  maxLeverage: number;
-  minOrderSize: number;
-}
 
 interface PricePoint {
   time: number;
@@ -66,9 +47,10 @@ export default function PerpDetailPage() {
   const { trackMarketView } = useMarketTracking();
   const from = searchParams.get('from');
 
-  const [market, setMarket] = useState<PerpMarket | null>(null);
+  // Use shared perp markets store
+  const { market, loading, refetch } = usePerpMarket(ticker);
+
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
-  const [loading, setLoading] = useState(true);
   const [side, setSide] = useState<'long' | 'short'>('long');
   const [size, setSize] = useState('100');
   const [leverage, setLeverage] = useState(10);
@@ -106,63 +88,40 @@ export default function PerpDetailPage() {
     }
   }, [ticker, market, trackMarketView]);
 
-  const fetchMarketData = useCallback(async () => {
-    try {
-      const response = await fetch('/api/markets/perps');
-      if (!response.ok) {
-        throw new Error('Failed to fetch market data');
-      }
-
-      const data = await response.json();
-      const foundMarket = data.markets?.find(
-        (m: PerpMarket) => m.ticker === ticker
-      );
-
-      if (!foundMarket) {
-        toast.error('Market not found');
-        router.push(from === 'dashboard' ? '/markets' : '/markets/perps');
-        return;
-      }
-
-      setMarket(foundMarket);
-
-      // Generate mock price history (you'll want to replace this with real data)
-      const now = Date.now();
-      const history: PricePoint[] = [];
-      const basePrice = foundMarket.currentPrice;
-      const volatility = basePrice * 0.02; // 2% volatility
-
-      for (let i = 100; i >= 0; i--) {
-        const time = now - i * 15 * 60 * 1000; // 15 min intervals for last ~25 hours
-        const randomChange = (Math.random() - 0.5) * volatility;
-        const price =
-          basePrice +
-          randomChange +
-          ((foundMarket.change24h / 100) * (100 - i)) / 100;
-        history.push({ time, price });
-      }
-
-      setPriceHistory(history);
-    } catch (err) {
-      console.error('Failed to fetch market data:', err);
-      toast.error('Failed to load market data');
-      router.push(from === 'dashboard' ? '/markets' : '/markets/perps');
-    } finally {
-      setLoading(false);
-    }
-  }, [ticker, router, from]);
-
+  // Redirect if market not found after loading
   useEffect(() => {
-    fetchMarketData();
-  }, [fetchMarketData]);
+    if (!loading && !market) {
+      toast.error('Market not found');
+      router.push(from === 'dashboard' ? '/markets' : '/markets/perps');
+    }
+  }, [loading, market, router, from]);
+
+  // Generate price history when market loads
+  useEffect(() => {
+    if (!market) return;
+
+    // Generate mock price history (you'll want to replace this with real data)
+    const now = Date.now();
+    const history: PricePoint[] = [];
+    const basePrice = market.currentPrice;
+    const volatility = basePrice * 0.02; // 2% volatility
+
+    for (let i = 100; i >= 0; i--) {
+      const time = now - i * 15 * 60 * 1000; // 15 min intervals for last ~25 hours
+      const randomChange = (Math.random() - 0.5) * volatility;
+      const price =
+        basePrice +
+        randomChange +
+        ((market.change24h / 100) * (100 - i)) / 100;
+      history.push({ time, price });
+    }
+
+    setPriceHistory(history);
+  }, [market]);
 
   const handlePositionClosed = useCallback(async () => {
-    await Promise.all([
-      refreshUserPositions(),
-      refreshWalletBalance(),
-      fetchMarketData(),
-    ]);
-  }, [refreshUserPositions, refreshWalletBalance, fetchMarketData]);
+    await Promise.all([refreshUserPositions(), refreshWalletBalance(), refetch()]);
+  }, [refreshUserPositions, refreshWalletBalance, refetch]);
 
   const handleSubmit = () => {
     if (!authenticated) {
@@ -206,7 +165,7 @@ export default function PerpDetailPage() {
         });
 
         await Promise.all([
-          fetchMarketData(),
+          refetch(),
           refreshUserPositions(),
           refreshWalletBalance(),
         ]);
@@ -241,11 +200,9 @@ export default function PerpDetailPage() {
   const hasSufficientBalance = !authenticated || balance >= totalRequired;
   const showBalanceWarning =
     authenticated && sizeNum > 0 && !hasSufficientBalance;
+  // Update price history when live price changes
   useEffect(() => {
     if (!livePrice) return;
-    setMarket((prev) =>
-      prev ? { ...prev, currentPrice: livePrice.price } : prev
-    );
     setPriceHistory((prev) => {
       const last = prev[prev.length - 1];
       if (last && Math.abs(last.price - livePrice.price) < 1e-6) {

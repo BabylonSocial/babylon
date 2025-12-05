@@ -2,7 +2,7 @@
  * Trending Grouping Service
  *
  * @description Uses LLM to intelligently group related trending tags together.
- * For example, "OpenAGI", "Sam AIltman", and "Cognition-9000" become a single grouped trend.
+ * For example, "OpenAGI", "Sam AIltman", and "SMH-9000" become a single grouped trend.
  * Generates summaries for grouped trends and handles fallback logic when LLM
  * is unavailable.
  */
@@ -244,9 +244,9 @@ YOUR TASK:
 GROUPING RULES:
 ✅ Group tags about the SAME topic:
    - Person + their company: "AIlon Musk" + "TeslAI" + "SpAIceX"
-   - Event + participants: "OpenAGI DevDay" + "Sam AIltman" + "Cognition-9000"
+   - Event + participants: "OpenAGI DevDay" + "Sam AIltman" + "SMH-9000"
    - Breaking story + related: "SEC Investigation" + "CoinbAIse" + "Brian AIrmstrong"
-   - Product + company: "GPT-6" + "OpenAGI" + "Sam AIltman"
+   - Product + company: "SMH-6" + "OpenAGI" + "Sam AIltman"
 
 ❌ DON'T group just because same category:
    - "Bitcoin" and "Ethereum" are SEPARATE (different ecosystems)
@@ -269,9 +269,9 @@ Example 1 - CEO + Company story:
       <tags>
         <tag>Sam AIltman</tag>
         <tag>OpenAGI</tag>
-        <tag>GPT-6</tag>
+        <tag>SMH-6</tag>
       </tags>
-      <summary>OpenAGI unveils GPT-6 at DevDay, AIltman promises AGI by 2026</summary>
+      <summary>OpenAGI unveils SMH-6 at DevDay, AIltman promises AGI by 2026</summary>
     </group>
   </groups>
 </response>
