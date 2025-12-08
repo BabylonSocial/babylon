@@ -7,7 +7,7 @@
  * NPC perp trades now use PerpMarketService for consistency with user trades,
  * ensuring funding and liquidation logic applies uniformly.
  */
-import { PerpDbAdapter, PerpMarketService } from '@babylon/core/markets/perps';
+import { PerpDbAdapter, PerpMarketService } from "@babylon/core/markets/perps";
 import {
   PredictionDbAdapter as CorePredictionDbAdapter,
   PredictionMarketService as CorePredictionMarketService,
@@ -31,8 +31,8 @@ import type {
   ExecutedTrade,
   TradingDecision,
   TradingExecutionResult,
-} from '../types/market-decisions';
-import { FeeService } from './fee-service';
+} from "../types/market-decisions";
+import { FeeService } from "./fee-service";
 import {
   type AggregatedImpact,
   aggregateTradeImpacts,
@@ -100,22 +100,22 @@ export class TradeExecutionService {
     // Simulation Mode Bypass
     if (isSimulationMode()) {
       const executedTrades = decisions
-        .filter((d) => d.action !== 'hold')
+        .filter((d) => d.action !== "hold")
         .map((d) => ({
           npcId: d.npcId,
           npcName: d.npcName,
-          poolId: 'sim-pool',
-          marketType: d.marketType || 'perp',
+          poolId: "sim-pool",
+          marketType: d.marketType || "perp",
           ticker: d.ticker,
           marketId: d.marketId,
           action: d.action,
-          side: 'LONG',
+          side: "LONG",
           amount: d.amount,
           size: d.amount,
           executionPrice: 100, // dummy price
           confidence: d.confidence,
           reasoning: d.reasoning,
-          positionId: 'sim-pos-' + Date.now(),
+          positionId: "sim-pos-" + Date.now(),
           timestamp: new Date().toISOString(),
         }));
 
@@ -143,7 +143,7 @@ export class TradeExecutionService {
     };
 
     for (const decision of decisions) {
-      if (decision.action === 'hold') {
+      if (decision.action === "hold") {
         result.holdDecisions++;
         continue;
       }
@@ -153,7 +153,7 @@ export class TradeExecutionService {
         result.executedTrades.push(executedTrade);
         result.successfulTrades++;
 
-        if (executedTrade.marketType === 'perp') {
+        if (executedTrade.marketType === "perp") {
           result.totalVolumePerp += executedTrade.size;
         } else {
           result.totalVolumePrediction += executedTrade.size;
@@ -171,12 +171,12 @@ export class TradeExecutionService {
         // Use warn level for expected failures (non-existent organizations, insufficient balance)
         // Use error level for unexpected system failures
         const isExpectedFailure =
-          errorMessage.includes('Organization not found') ||
-          errorMessage.includes('Insufficient trading balance') ||
-          errorMessage.includes('Market not found') ||
-          errorMessage.includes('Market already resolved') ||
-          errorMessage.includes('Market expired');
-        const logLevel = isExpectedFailure ? 'warn' : 'error';
+          errorMessage.includes("Organization not found") ||
+          errorMessage.includes("Insufficient trading balance") ||
+          errorMessage.includes("Market not found") ||
+          errorMessage.includes("Market already resolved") ||
+          errorMessage.includes("Market expired");
+        const logLevel = isExpectedFailure ? "warn" : "error";
 
         logger[logLevel](
           `Failed to execute trade for ${decision.npcName}`,
@@ -184,11 +184,11 @@ export class TradeExecutionService {
             error,
             decision,
           },
-          'TradeExecutionService'
+          "TradeExecutionService"
         );
 
         // FAIL FAST in development: throw on any trade execution error
-        if (process.env.NODE_ENV !== 'production' && !isExpectedFailure) {
+        if (process.env.NODE_ENV !== "production" && !isExpectedFailure) {
           throw new Error(
             `[DEV] NPC trade execution failed for ${decision.npcName}: ${errorMessage}`,
             { cause: error }
@@ -205,7 +205,7 @@ export class TradeExecutionService {
         ...result,
         durationMs: duration,
       },
-      'TradeExecutionService'
+      "TradeExecutionService"
     );
 
     return result;
@@ -221,14 +221,14 @@ export class TradeExecutionService {
     const normalizedNpcId = decision.npcId.toLowerCase();
 
     // Normalize amount - handle string amounts with commas (e.g., "12,000" -> 12000)
-    if (typeof decision.amount === 'string') {
-      const cleanedAmount = String(decision.amount).replace(/,/g, '');
+    if (typeof decision.amount === "string") {
+      const cleanedAmount = String(decision.amount).replace(/,/g, "");
       decision.amount = Number.parseFloat(cleanedAmount);
     }
 
     // For close_position, amount=0 is valid (we close the full position)
     // For other actions, amount must be > 0
-    const isClosePosition = decision.action === 'close_position';
+    const isClosePosition = decision.action === "close_position";
     if (isNaN(decision.amount)) {
       throw new Error(`Invalid amount (NaN): ${decision.amount}`);
     }
@@ -254,16 +254,16 @@ export class TradeExecutionService {
     // and prevent race conditions when multiple trades are queued for the same NPC
 
     // Handle close position
-    if (decision.action === 'close_position') {
+    if (decision.action === "close_position") {
       return await this.closePosition(decision, actor.id);
     }
 
     // Handle open position
-    if (decision.action === 'open_long' || decision.action === 'open_short') {
+    if (decision.action === "open_long" || decision.action === "open_short") {
       return await this.openPerpPosition(decision, actor.id);
     }
 
-    if (decision.action === 'buy_yes' || decision.action === 'buy_no') {
+    if (decision.action === "buy_yes" || decision.action === "buy_no") {
       return await this.openPredictionPosition(decision, actor.id);
     }
 
@@ -293,7 +293,7 @@ export class TradeExecutionService {
     actorId: string
   ): Promise<ExecutedTrade> {
     if (!decision.ticker) {
-      throw new Error('Ticker required for perp position');
+      throw new Error("Ticker required for perp position");
     }
 
     // Try multiple lookup strategies to handle LLM-generated ticker variations
@@ -327,19 +327,19 @@ export class TradeExecutionService {
 
     // Strategy 4: Name match (normalized - remove spaces, dashes, AI suffixes)
     if (!org) {
-      const normalizedTicker = tickerLower.replace(/[^a-z0-9]/g, '');
+      const normalizedTicker = tickerLower.replace(/[^a-z0-9]/g, "");
       const orgs = await db
         .select()
         .from(organizations)
-        .where(eq(organizations.type, 'company'));
+        .where(eq(organizations.type, "company"));
 
       const matchedOrg = orgs.find((o) => {
         if (!o.currentPrice) return false;
-        const normalizedName = o.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const normalizedOrgTicker = (o.ticker || '')
+        const normalizedName = o.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const normalizedOrgTicker = (o.ticker || "")
           .toLowerCase()
-          .replace(/[^a-z0-9]/g, '');
-        const normalizedOrgId = o.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+          .replace(/[^a-z0-9]/g, "");
+        const normalizedOrgId = o.id.toLowerCase().replace(/[^a-z0-9]/g, "");
 
         return (
           normalizedName === normalizedTicker ||
@@ -357,20 +357,20 @@ export class TradeExecutionService {
 
     if (!org?.currentPrice) {
       logger.warn(
-        'NPC tried to trade non-existent organization',
+        "NPC tried to trade non-existent organization",
         {
           npcId: decision.npcId,
           npcName: decision.npcName,
           ticker: decision.ticker,
           action: decision.action,
         },
-        'TradeExecutionService'
+        "TradeExecutionService"
       );
       throw new Error(`Organization not found: ${decision.ticker}`);
     }
 
     const leverage = 5; // Standard leverage for NPCs
-    const side = decision.action === 'open_long' ? 'long' : 'short';
+    const side = decision.action === "open_long" ? "long" : "short";
     const positionSize = decision.amount * leverage;
 
     // Use PerpMarketService for consistency with user trades
@@ -400,13 +400,13 @@ export class TradeExecutionService {
       id: await generateSnowflakeId(),
       npcActorId: decision.npcId,
       poolId: null,
-      marketType: 'perp',
+      marketType: "perp",
       ticker: org.id,
       action: decision.action,
       side,
       amount: decision.amount,
       price: result.entryPrice,
-      sentiment: decision.confidence * (side === 'long' ? 1 : -1),
+      sentiment: decision.confidence * (side === "long" ? 1 : -1),
       reason: decision.reasoning,
     });
 
@@ -414,7 +414,7 @@ export class TradeExecutionService {
       npcId: decision.npcId,
       npcName: decision.npcName,
       poolId: actorId, // Using actorId for backward compatibility
-      marketType: 'perp',
+      marketType: "perp",
       ticker: decision.ticker,
       action: decision.action,
       side,
@@ -436,7 +436,7 @@ export class TradeExecutionService {
     actorId: string
   ): Promise<ExecutedTrade> {
     if (!decision.marketId) {
-      throw new Error('MarketId required for prediction position');
+      throw new Error("MarketId required for prediction position");
     }
 
     const sideLabel: 'yes' | 'no' =
@@ -504,9 +504,9 @@ export class TradeExecutionService {
 
     await invalidateAfterPredictionTrade(decision.marketId).catch((error) => {
       logger.warn(
-        'Failed to invalidate cache after NPC prediction buy',
+        "Failed to invalidate cache after NPC prediction buy",
         { error, marketId: decision.marketId },
-        'TradeExecutionService'
+        "TradeExecutionService"
       );
     });
 
@@ -514,7 +514,7 @@ export class TradeExecutionService {
       npcId: decision.npcId,
       npcName: decision.npcName,
       poolId: actorId, // Using actorId for backward compatibility
-      marketType: 'prediction',
+      marketType: "prediction",
       marketId: decision.marketId,
       action: decision.action,
       side: sideLabel === 'yes' ? 'YES' : 'NO',
@@ -540,7 +540,7 @@ export class TradeExecutionService {
     actorId: string
   ): Promise<ExecutedTrade> {
     if (!decision.positionId) {
-      throw new Error('PositionId required to close position');
+      throw new Error("PositionId required to close position");
     }
 
     // Try perpPositions first (new system for perp trades)
@@ -572,7 +572,7 @@ export class TradeExecutionService {
 
     const now = new Date();
 
-    if (position.marketType === 'prediction') {
+    if (position.marketType === "prediction") {
       if (!position.marketId) {
         throw new Error(`Prediction position missing marketId: ${position.id}`);
       }
@@ -585,7 +585,7 @@ export class TradeExecutionService {
       }
 
       const side =
-        position.side === 'YES' || position.side === 'NO'
+        position.side === "YES" || position.side === "NO"
           ? position.side
           : null;
       if (!side) {
@@ -638,7 +638,7 @@ export class TradeExecutionService {
           poolId: null,
           marketType: 'prediction',
           marketId: position.marketId,
-          action: 'close',
+          action: "close",
           side,
           amount: sellResult.netProceeds ?? 0,
           price: (sellResult.avgPrice ?? 0) * 100,
@@ -649,9 +649,9 @@ export class TradeExecutionService {
 
       await invalidateAfterPredictionTrade(position.marketId).catch((error) => {
         logger.warn(
-          'Failed to invalidate cache after NPC prediction close',
+          "Failed to invalidate cache after NPC prediction close",
           { error, marketId: position.marketId },
-          'TradeExecutionService'
+          "TradeExecutionService"
         );
       });
 
@@ -661,7 +661,7 @@ export class TradeExecutionService {
         poolId: actorId,
         marketType: 'prediction',
         marketId: position.marketId ?? undefined,
-        action: 'close_position',
+        action: "close_position",
         side,
         amount: sellResult.netProceeds ?? 0,
         size: position.size,
@@ -677,7 +677,7 @@ export class TradeExecutionService {
     // Get current price
     let currentPrice = position.currentPrice;
 
-    if (position.marketType === 'perp' && position.ticker) {
+    if (position.marketType === "perp" && position.ticker) {
       // Fetch current market price from organizations table
       const [org] = await db
         .select()
@@ -692,11 +692,11 @@ export class TradeExecutionService {
 
     // Calculate P&L
     const priceChange = currentPrice - position.entryPrice;
-    const isLong = position.side === 'long' || position.side === 'YES';
+    const isLong = position.side === "long" || position.side === "YES";
     const pnlMultiplier = isLong ? 1 : -1;
 
     let realizedPnL: number;
-    if (position.marketType === 'perp') {
+    if (position.marketType === "perp") {
       const percentChange = priceChange / position.entryPrice;
       realizedPnL = percentChange * position.size * pnlMultiplier;
     } else {
@@ -751,7 +751,7 @@ export class TradeExecutionService {
         marketType: position.marketType,
         ticker: position.ticker,
         marketId: position.marketId,
-        action: 'close',
+        action: "close",
         side: position.side,
         amount: position.size,
         price: currentPrice,
@@ -764,10 +764,10 @@ export class TradeExecutionService {
       npcId: decision.npcId,
       npcName: decision.npcName,
       poolId: actorId, // Using actorId for backward compatibility
-      marketType: position.marketType as 'perp' | 'prediction',
+      marketType: position.marketType as "perp" | "prediction",
       ticker: position.ticker || undefined,
       marketId: position.marketId ?? undefined,
-      action: 'close_position',
+      action: "close_position",
       side: position.side,
       amount: position.size,
       size: position.size,
@@ -816,9 +816,9 @@ export class TradeExecutionService {
       id: await generateSnowflakeId(),
       npcActorId: decision.npcId,
       poolId: null,
-      marketType: 'perp',
+      marketType: "perp",
       ticker: position.ticker,
-      action: 'close',
+      action: "close",
       side: position.side,
       amount: result.size,
       price: result.exitPrice ?? result.entryPrice,
@@ -830,9 +830,9 @@ export class TradeExecutionService {
       npcId: decision.npcId,
       npcName: decision.npcName,
       poolId: actorId,
-      marketType: 'perp',
+      marketType: "perp",
       ticker: position.ticker,
-      action: 'close_position',
+      action: "close_position",
       side: position.side,
       amount: result.size,
       size: result.size,
