@@ -142,7 +142,6 @@ export function createChatService(deps: ChatServiceDeps) {
                 )
             : [];
 
-        // Get all participants for DM chats
         const allParticipants =
           dmChatIds.length > 0
             ? await db
@@ -159,7 +158,6 @@ export function createChatService(deps: ChatServiceDeps) {
           participantsByChatId.get(p.chatId)!.push(p);
         }
 
-        // Get last messages for DM chats
         const dmMessages = await Promise.all(
           dmChatIds.map(async (chatId) => {
             const msgs = await db
@@ -176,7 +174,6 @@ export function createChatService(deps: ChatServiceDeps) {
           dmMessages.map(({ chatId, messages: msgs }) => [chatId, msgs])
         );
 
-        // Format group chats
         const groupChats: ChatListItem[] = memberships
           .map((membership): ChatListItem | null => {
             const chat = chatDetailsMap.get(membership.chatId);
@@ -202,7 +199,6 @@ export function createChatService(deps: ChatServiceDeps) {
           })
           .filter((c): c is ChatListItem => c !== null);
 
-        // Format DM chats (simplified - no user lookup in chat-api, that's caller's job)
         const directChats: ChatListItem[] = dmChatsDetails.map((chat) => {
           const chatParticipantsList = participantsByChatId.get(chat.id) || [];
           const otherParticipant = chatParticipantsList.find(
@@ -247,9 +243,6 @@ export function createChatService(deps: ChatServiceDeps) {
       }
     },
 
-    /**
-     * Get chat details by ID
-     */
     async getChatById(
       userId: UserId,
       chatId: ChatId
