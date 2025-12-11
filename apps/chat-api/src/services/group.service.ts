@@ -9,9 +9,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { err, ok, type Result } from 'neverthrow';
 import type { Database } from '../db/db';
 import {
-  type ChatInvite,
   chatInvitesTable,
-  chatParticipantsTable,
   chatsTable,
   groupChatMembershipsTable,
 } from '../db/schema/chat.db';

@@ -12,6 +12,8 @@ export type ChatServiceError =
   | { type: 'LIST_CHATS_ERROR'; message: string; cause?: unknown }
   | { type: 'LEAVE_CHAT_ERROR'; message: string; cause?: unknown }
   | { type: 'GET_GROUP_ID_ERROR'; message: string; cause?: unknown }
+  | { type: 'GET_UNREAD_COUNT_ERROR'; message: string; cause?: unknown }
+  | { type: 'GET_PARTICIPANTS_ERROR'; message: string; cause?: unknown }
   | { type: 'NOT_GROUP_CHAT'; message: string }
   | { type: 'ACCESS_DENIED'; message: string };
 

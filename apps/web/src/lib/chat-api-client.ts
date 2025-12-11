@@ -16,11 +16,13 @@ export type {
   ChatDetails,
   ChatId,
   ChatListItem,
+  ChatParticipant,
   DmChatResult,
   Message,
   MessageId,
   MessageListResult,
   SendMessageResult,
+  UnreadCountResult,
   UserId,
 } from '@babylon/chat-api';
 

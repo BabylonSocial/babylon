@@ -5,7 +5,7 @@
  * Maintains an audit log of all moderation actions.
  */
 
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt } from 'drizzle-orm';
 import { err, ok, type Result } from 'neverthrow';
 import type { Database } from '../db/db';
 import {

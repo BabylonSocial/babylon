@@ -26,6 +26,10 @@ const GetGroupIdInputSchema = z.object({
   chatId: z.string().min(1),
 });
 
+const GetParticipantsInputSchema = z.object({
+  chatId: z.string().min(1),
+});
+
 export const chatRouter = {
   /**
    * List chats for authenticated user, or all game chats if all=true
@@ -195,6 +199,53 @@ export const chatRouter = {
           if (error.type === 'NOT_GROUP_CHAT') {
             throw new ORPCError('BAD_REQUEST', {
               message: 'Not a group chat',
+            });
+          }
+          if (error.type === 'ACCESS_DENIED') {
+            throw new ORPCError('FORBIDDEN', {
+              message: error.message,
+            });
+          }
+          throw new ORPCError('INTERNAL_SERVER_ERROR', {
+            message: error.message,
+          });
+        }
+      );
+    }),
+
+  /**
+   * Get unread message counts for authenticated user
+   */
+  getUnreadCount: protectedProcedure.handler(async ({ context }) => {
+    const result = await context.chatService.getUnreadCount(context.user.userId);
+
+    return result.match(
+      (data) => data,
+      (error) => {
+        throw new ORPCError('INTERNAL_SERVER_ERROR', {
+          message: error.message,
+        });
+      }
+    );
+  }),
+
+  /**
+   * Get participants of a chat
+   */
+  getParticipants: protectedProcedure
+    .input(GetParticipantsInputSchema)
+    .handler(async ({ input, context }) => {
+      const result = await context.chatService.getParticipants(
+        context.user.userId,
+        input.chatId as ChatId
+      );
+
+      return result.match(
+        (participants) => ({ participants }),
+        (error) => {
+          if (error.type === 'CHAT_NOT_FOUND') {
+            throw new ORPCError('NOT_FOUND', {
+              message: 'Chat not found',
             });
           }
           if (error.type === 'ACCESS_DENIED') {

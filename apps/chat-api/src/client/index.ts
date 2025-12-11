@@ -74,7 +74,12 @@ export type {
 // Re-export types from router
 export type { AppRouter, AppRouterClient } from '../routers';
 // Re-export service types (from source files, not re-exports)
-export type { ChatDetails, ChatListItem } from '../services/chat.service';
+export type {
+  ChatDetails,
+  ChatListItem,
+  ChatParticipant,
+  UnreadCountResult,
+} from '../services/chat.service';
 export type { DmChatResult } from '../services/dm.service';
 export type {
   Message,
