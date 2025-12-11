@@ -94,9 +94,7 @@ export function useChatSubscription(
       updateConnectionState(true);
       reconnectAttemptsRef.current = 0;
 
-      // Process events from the async iterator
       for await (const event of subscription) {
-        // Check if aborted
         if (abortController.signal.aborted) {
           break;
         }
@@ -107,19 +105,12 @@ export function useChatSubscription(
           'useChatSubscription'
         );
 
-        // Handle ping (keep-alive)
-        if (event.type === 'ping') {
-          continue;
-        }
-
-        // Invoke callback for other events
+        if (event.type === 'ping') continue;
         onMessageRef.current?.(event as ChatMessageEvent);
       }
 
-      // Stream ended normally
       logger.debug('SSE subscription ended', { chatId }, 'useChatSubscription');
     } catch (err) {
-      // Check if this was an intentional abort
       if (abortController.signal.aborted) {
         logger.debug(
           'SSE subscription aborted',
