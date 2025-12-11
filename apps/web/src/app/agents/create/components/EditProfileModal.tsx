@@ -1,23 +1,14 @@
 'use client';
 
-import { RefreshCw, Upload } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { cn } from '@babylon/shared';
+import { ChevronLeft, ChevronRight, Upload, X as XIcon } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Avatar } from '@/components/shared/Avatar';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import type { ProfileFormData } from '../hooks/useAgentForm';
 
 const TOTAL_PROFILE_PICTURES = 100;
+const TOTAL_BANNERS = 100;
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -37,50 +28,65 @@ export function EditProfileModal({
   const [uploadingImage, setUploadingImage] = useState<
     'profile' | 'cover' | null
   >(null);
+  const [profilePictureIndex, setProfilePictureIndex] = useState(() => {
+    // Extract index from URL if it's a local asset
+    const match = profileData.profileImageUrl?.match(/profile-(\d+)\.jpg/);
+    return match ? parseInt(match[1], 10) : 1;
+  });
+  const [bannerIndex, setBannerIndex] = useState(() => {
+    // Extract index from URL if it's a local asset
+    const match = profileData.coverImageUrl?.match(/banner-(\d+)\.jpg/);
+    return match ? parseInt(match[1], 10) : 1;
+  });
+  const [uploadedProfileImage, setUploadedProfileImage] = useState<
+    string | null
+  >(
+    profileData.profileImageUrl?.startsWith('/assets/')
+      ? null
+      : profileData.profileImageUrl || null
+  );
+  const [uploadedBanner, setUploadedBanner] = useState<string | null>(
+    profileData.coverImageUrl?.startsWith('/assets/')
+      ? null
+      : profileData.coverImageUrl || null
+  );
+
   const profileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync when modal opens
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      setLocalData(profileData);
-    } else {
-      onClose();
-    }
-  };
+  // Computed current images
+  const currentProfileImage = useMemo(() => {
+    return (
+      uploadedProfileImage ||
+      `/assets/user-profiles/profile-${profilePictureIndex}.jpg`
+    );
+  }, [uploadedProfileImage, profilePictureIndex]);
 
-  const cycleImage = useCallback(
-    (type: 'profile' | 'cover') => {
-      const current =
-        type === 'profile'
-          ? localData.profileImageUrl
-          : localData.coverImageUrl;
-      const basePath =
-        type === 'profile'
-          ? '/assets/user-profiles/profile-'
-          : '/assets/user-banners/banner-';
+  const currentBanner = useMemo(() => {
+    return uploadedBanner || `/assets/user-banners/banner-${bannerIndex}.jpg`;
+  }, [uploadedBanner, bannerIndex]);
 
-      let nextIndex = Math.floor(Math.random() * TOTAL_PROFILE_PICTURES) + 1;
-
-      // Avoid same image
-      if (current?.includes(basePath)) {
-        const match = current.match(/-(\d+)\.jpg/);
-        if (match) {
-          const currentIndex = parseInt(match[1]!, 10);
-          while (nextIndex === currentIndex) {
-            nextIndex = Math.floor(Math.random() * TOTAL_PROFILE_PICTURES) + 1;
-          }
-        }
+  // Cycle profile picture
+  const cycleProfilePicture = useCallback((direction: 'next' | 'prev') => {
+    setUploadedProfileImage(null);
+    setProfilePictureIndex((prev) => {
+      if (direction === 'next') {
+        return prev >= TOTAL_PROFILE_PICTURES ? 1 : prev + 1;
       }
+      return prev <= 1 ? TOTAL_PROFILE_PICTURES : prev - 1;
+    });
+  }, []);
 
-      const newUrl = `${basePath}${nextIndex}.jpg`;
-      setLocalData((prev) => ({
-        ...prev,
-        [type === 'profile' ? 'profileImageUrl' : 'coverImageUrl']: newUrl,
-      }));
-    },
-    [localData]
-  );
+  // Cycle banner
+  const cycleBanner = useCallback((direction: 'next' | 'prev') => {
+    setUploadedBanner(null);
+    setBannerIndex((prev) => {
+      if (direction === 'next') {
+        return prev >= TOTAL_BANNERS ? 1 : prev + 1;
+      }
+      return prev <= 1 ? TOTAL_BANNERS : prev - 1;
+    });
+  }, []);
 
   const handleImageUpload = useCallback(
     async (type: 'profile' | 'cover', file: File) => {
@@ -128,16 +134,35 @@ export function EditProfileModal({
       }
 
       const result = await response.json();
-      setLocalData((prev) => ({
-        ...prev,
-        [type === 'profile' ? 'profileImageUrl' : 'coverImageUrl']: result.url,
-      }));
+      if (type === 'profile') {
+        setUploadedProfileImage(result.url);
+      } else {
+        setUploadedBanner(result.url);
+      }
       toast.success(
         `${type === 'profile' ? 'Profile' : 'Cover'} image uploaded`
       );
       setUploadingImage(null);
     },
     [getAccessToken]
+  );
+
+  const handleProfileImageUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      handleImageUpload('profile', file);
+    },
+    [handleImageUpload]
+  );
+
+  const handleBannerUpload = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      handleImageUpload('cover', file);
+    },
+    [handleImageUpload]
   );
 
   const handleSave = () => {
@@ -149,178 +174,213 @@ export function EditProfileModal({
       toast.error('Display name is required');
       return;
     }
-    onSave(localData);
+    onSave({
+      ...localData,
+      profileImageUrl: currentProfileImage,
+      coverImageUrl: currentBanner,
+    });
     onClose();
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Edit Agent Profile</DialogTitle>
-        </DialogHeader>
+  if (!isOpen) return null;
 
-        <div className="space-y-6 py-4">
-          {/* Cover Image */}
-          <div className="space-y-2">
-            <Label>Cover Image</Label>
-            <div className="group relative aspect-[3/1] overflow-hidden rounded-lg border border-border/50 bg-muted">
-              {localData.coverImageUrl ? (
-                <img
-                  src={localData.coverImageUrl}
-                  alt="Cover preview"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-                  No cover image
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-0 backdrop-blur-sm md:p-4">
+      <div className="flex h-full w-full flex-col bg-background md:h-auto md:max-h-[90vh] md:max-w-2xl md:rounded-lg md:border md:border-border">
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-border border-b bg-background px-4 py-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <button
+              onClick={onClose}
+              className="shrink-0 rounded-full p-2 transition-colors hover:bg-muted"
+              aria-label="Close"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
+            <h2 className="truncate font-bold text-lg">Edit Agent Profile</h2>
+          </div>
+          <button
+            onClick={handleSave}
+            className="shrink-0 rounded-lg bg-[#0066FF] px-4 py-2 font-medium text-primary-foreground text-sm transition-colors hover:bg-[#2952d9]"
+          >
+            Save
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          {/* Cover Image Section */}
+          <div className="space-y-2 p-4">
+            <label className="block font-medium text-sm">Profile Banner</label>
+            <div className="group relative h-40 overflow-hidden rounded-lg bg-muted">
+              <img
+                src={currentBanner}
+                alt="Profile banner"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => cycleBanner('prev')}
+                  className="rounded-lg bg-background/80 p-2 hover:bg-background"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <label className="cursor-pointer rounded-lg bg-background/80 p-2 hover:bg-background">
+                  <Upload className="h-5 w-5" />
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBannerUpload}
+                    className="hidden"
+                    disabled={uploadingImage === 'cover'}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => cycleBanner('next')}
+                  className="rounded-lg bg-background/80 p-2 hover:bg-background"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+              {uploadingImage === 'cover' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <span className="text-sm text-white">Uploading...</span>
                 </div>
               )}
-              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => cycleImage('cover')}
-                >
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                  Cycle
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => coverInputRef.current?.click()}
-                  disabled={uploadingImage === 'cover'}
-                >
-                  <Upload className="mr-1 h-3 w-3" />
-                  {uploadingImage === 'cover' ? 'Uploading...' : 'Upload'}
-                </Button>
-              </div>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload('cover', file);
-                }}
-              />
             </div>
           </div>
 
-          {/* Profile Image */}
-          <div className="space-y-2">
-            <Label>Profile Image</Label>
-            <div className="flex items-center gap-4">
-              <div className="group relative">
-                <Avatar
-                  id={localData.username || 'placeholder'}
-                  src={localData.profileImageUrl || undefined}
-                  size="lg"
-                  className="ring-2 ring-border"
-                />
-                <div className="absolute inset-0 flex items-center justify-center gap-1 rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => cycleImage('profile')}
-                    className="rounded p-1 hover:bg-white/20"
-                    title="Cycle"
-                  >
-                    <RefreshCw className="h-4 w-4 text-white" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => profileInputRef.current?.click()}
-                    className="rounded p-1 hover:bg-white/20"
+          {/* Profile Image Section */}
+          <div className="flex items-start gap-4 px-4 pb-6">
+            <div className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-full bg-muted">
+              <img
+                src={currentProfileImage}
+                alt="Profile picture"
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => cycleProfilePicture('prev')}
+                  className="rounded-lg bg-background/80 p-1.5 hover:bg-background"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <label className="cursor-pointer rounded-lg bg-background/80 p-1.5 hover:bg-background">
+                  <Upload className="h-4 w-4" />
+                  <input
+                    ref={profileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageUpload}
+                    className="hidden"
                     disabled={uploadingImage === 'profile'}
-                    title="Upload"
-                  >
-                    <Upload className="h-4 w-4 text-white" />
-                  </button>
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => cycleProfilePicture('next')}
+                  className="rounded-lg bg-background/80 p-1.5 hover:bg-background"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              {uploadingImage === 'profile' && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
+                  <span className="text-white text-xs">...</span>
                 </div>
-              </div>
-              <input
-                ref={profileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload('profile', file);
-                }}
-              />
-              <div className="flex-1 text-muted-foreground text-xs">
-                <p>Click to cycle or upload a custom image</p>
-                <p>Max 5MB, JPG/PNG/GIF/WebP</p>
-              </div>
+              )}
+            </div>
+            <div className="flex-1 pt-2 text-muted-foreground text-xs">
+              <p>Use arrows to browse or click upload icon for custom image</p>
+              <p>Max 5MB, JPG/PNG/GIF/WebP</p>
             </div>
           </div>
 
-          {/* Username */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-username">Username *</Label>
-            <div className="flex items-center">
-              <span className="rounded-l-md border border-input border-r-0 bg-muted px-3 py-2 text-muted-foreground text-sm">
-                @
-              </span>
-              <Input
-                id="edit-username"
-                value={localData.username}
+          {/* Form Fields */}
+          <div className="space-y-5 px-4 pb-6">
+            {/* Username */}
+            <div>
+              <label
+                htmlFor="edit-username"
+                className="mb-2 block font-medium text-sm"
+              >
+                Username *
+              </label>
+              <div className="flex items-center rounded-lg border border-border bg-muted focus-within:ring-2 focus-within:ring-[#0066FF]">
+                <span className="px-4 text-muted-foreground">@</span>
+                <input
+                  id="edit-username"
+                  type="text"
+                  value={localData.username}
+                  onChange={(e) =>
+                    setLocalData((prev) => ({
+                      ...prev,
+                      username: e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9_-]/g, ''),
+                    }))
+                  }
+                  className="w-full bg-transparent py-3 pr-4 focus:outline-none"
+                  placeholder="agent_username"
+                />
+              </div>
+            </div>
+
+            {/* Display Name */}
+            <div>
+              <label
+                htmlFor="edit-displayName"
+                className="mb-2 block font-medium text-sm"
+              >
+                Display Name *
+              </label>
+              <input
+                id="edit-displayName"
+                type="text"
+                value={localData.displayName}
                 onChange={(e) =>
                   setLocalData((prev) => ({
                     ...prev,
-                    username: e.target.value
-                      .toLowerCase()
-                      .replace(/[^a-z0-9_]/g, ''),
+                    displayName: e.target.value,
                   }))
                 }
-                className="rounded-l-none"
-                placeholder="agent_username"
+                className={cn(
+                  'w-full rounded-lg border border-border bg-muted px-4 py-3',
+                  'focus:outline-none focus:ring-2 focus:ring-[#0066FF]'
+                )}
+                placeholder="My Awesome Agent"
+              />
+            </div>
+
+            {/* Bio */}
+            <div>
+              <label
+                htmlFor="edit-bio"
+                className="mb-2 block font-medium text-sm"
+              >
+                Bio
+              </label>
+              <textarea
+                id="edit-bio"
+                value={localData.bio}
+                onChange={(e) =>
+                  setLocalData((prev) => ({ ...prev, bio: e.target.value }))
+                }
+                placeholder="A brief description of your agent..."
+                rows={3}
+                className={cn(
+                  'w-full resize-none rounded-lg border border-border bg-muted px-4 py-3',
+                  'focus:outline-none focus:ring-2 focus:ring-[#0066FF]'
+                )}
               />
             </div>
           </div>
-
-          {/* Display Name */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-displayName">Display Name *</Label>
-            <Input
-              id="edit-displayName"
-              value={localData.displayName}
-              onChange={(e) =>
-                setLocalData((prev) => ({
-                  ...prev,
-                  displayName: e.target.value,
-                }))
-              }
-              placeholder="My Awesome Agent"
-            />
-          </div>
-
-          {/* Bio */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-bio">Bio</Label>
-            <Textarea
-              id="edit-bio"
-              value={localData.bio}
-              onChange={(e) =>
-                setLocalData((prev) => ({ ...prev, bio: e.target.value }))
-              }
-              placeholder="A brief description of your agent..."
-              rows={3}
-            />
-          </div>
         </div>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-2 border-t pt-4">
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Profile</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

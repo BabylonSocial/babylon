@@ -1,17 +1,16 @@
 'use client';
 
-import { cn } from '@babylon/shared';
-import { Edit, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import { memo } from 'react';
 import { Avatar } from '@/components/shared/Avatar';
-import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/shared/Skeleton';
 import type { ProfileFormData } from '../hooks/useAgentForm';
 
 interface ProfilePreviewCardProps {
   profileData: ProfileFormData;
   onEdit: () => void;
-  onCycleProfilePic: () => void;
-  onCycleBanner: () => void;
+  onCycleProfilePic: (direction: 'next' | 'prev') => void;
+  onCycleBanner: (direction: 'next' | 'prev') => void;
   isLoading?: boolean;
 }
 
@@ -24,16 +23,16 @@ export const ProfilePreviewCard = memo(function ProfilePreviewCard({
 }: ProfilePreviewCardProps) {
   if (isLoading) {
     return (
-      <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
-        <div className="aspect-[3/1] animate-pulse bg-muted" />
+      <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
+        <Skeleton className="aspect-[3/1] w-full" />
         <div className="relative p-4 pt-12">
           <div className="-translate-y-1/2 absolute top-0">
-            <div className="h-20 w-20 animate-pulse rounded-full bg-muted" />
+            <Skeleton className="h-20 w-20 rounded-full" />
           </div>
           <div className="mt-2 space-y-2">
-            <div className="h-5 w-24 animate-pulse rounded bg-muted" />
-            <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-            <div className="h-12 w-full animate-pulse rounded bg-muted" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-12 w-full" />
           </div>
         </div>
       </div>
@@ -41,28 +40,37 @@ export const ProfilePreviewCard = memo(function ProfilePreviewCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
+    <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
       {/* Cover Image */}
-      <div className="group relative aspect-[3/1] bg-gradient-to-r from-cyan-500/20 to-purple-500/20">
-        {profileData.coverImageUrl && (
+      <div className="group relative aspect-[3/1] bg-muted">
+        {profileData.coverImageUrl ? (
           <img
             src={profileData.coverImageUrl}
             alt="Cover"
             className="h-full w-full object-cover"
             loading="lazy"
           />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-[#0066FF]/20 to-[#0066FF]/5" />
         )}
-        <button
-          onClick={onCycleBanner}
-          className={cn(
-            'absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100',
-            'rounded-full bg-background/80 p-1.5 hover:bg-background'
-          )}
-          title="Cycle banner"
-          type="button"
-        >
-          <RefreshCw className="h-3 w-3" />
-        </button>
+        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => onCycleBanner('prev')}
+            className="rounded-lg bg-background/80 p-1.5 hover:bg-background"
+            title="Previous banner"
+            type="button"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onCycleBanner('next')}
+            className="rounded-lg bg-background/80 p-1.5 hover:bg-background"
+            title="Next banner"
+            type="button"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Profile Content */}
@@ -75,17 +83,24 @@ export const ProfilePreviewCard = memo(function ProfilePreviewCard({
             size="lg"
             className="ring-4 ring-background"
           />
-          <button
-            onClick={onCycleProfilePic}
-            className={cn(
-              'absolute right-0 bottom-0 opacity-0 transition-opacity group-hover:opacity-100',
-              'rounded-full bg-background/80 p-1 hover:bg-background'
-            )}
-            title="Cycle profile picture"
-            type="button"
-          >
-            <RefreshCw className="h-3 w-3" />
-          </button>
+          <div className="absolute inset-0 flex items-center justify-center gap-1 rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              onClick={() => onCycleProfilePic('prev')}
+              className="rounded-lg bg-background/80 p-1 hover:bg-background"
+              title="Previous picture"
+              type="button"
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => onCycleProfilePic('next')}
+              className="rounded-lg bg-background/80 p-1 hover:bg-background"
+              title="Next picture"
+              type="button"
+            >
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
         </div>
 
         {/* Info */}
@@ -99,15 +114,13 @@ export const ProfilePreviewCard = memo(function ProfilePreviewCard({
                 @{profileData.username || 'username'}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onEdit}
-              className="gap-1.5"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
             >
               <Edit className="h-3 w-3" />
               Edit
-            </Button>
+            </button>
           </div>
 
           {profileData.bio && (

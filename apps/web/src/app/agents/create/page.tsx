@@ -1,15 +1,14 @@
 'use client';
 
-import { ArrowLeft, Bot, Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import { cn } from '@babylon/shared';
+import { ArrowLeft, Bot, Loader2, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
+import { LoginButton } from '@/components/auth/LoginButton';
 import { PageContainer } from '@/components/shared/PageContainer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { useAuthStore } from '@/stores/authStore';
 import {
   AgentConfigForm,
@@ -19,25 +18,31 @@ import {
 import { useAgentForm } from './hooks';
 
 const TOTAL_PROFILE_PICTURES = 100;
+const TOTAL_BANNERS = 100;
 const DEFAULT_MAX_DEPOSIT = 10000;
 
 export default function CreateAgentPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { ready, authenticated, getAccessToken } = useAuth();
-  const { balance } = useWalletBalance(user?.id ?? null);
+
+  const balance = user?.reputationPoints ?? 0;
 
   // Show sign-in prompt for unauthenticated users
   if (!ready || !authenticated) {
     return (
-      <PageContainer>
-        <div className="p-4">
-          <div className="flex flex-col items-center justify-center rounded-lg border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/10 to-purple-500/10 px-4 py-16">
-            <Bot className="mb-4 h-16 w-16 text-[#0066FF]" />
-            <h3 className="mb-2 font-bold text-2xl">Create an Agent</h3>
-            <p className="mb-6 max-w-md text-center text-muted-foreground text-sm">
-              Please sign in to create an AI agent
+      <PageContainer noPadding className="flex flex-col">
+        <div className="flex flex-1 items-center justify-center p-8">
+          <div className="max-w-md text-center">
+            <Bot className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+            <h2 className="mb-2 font-bold text-foreground text-xl">
+              Create an Agent
+            </h2>
+            <p className="mb-6 text-muted-foreground">
+              Sign in to create and manage AI agents that can chat and trade
+              autonomously
             </p>
+            <LoginButton />
           </div>
         </div>
       </PageContainer>
@@ -65,29 +70,35 @@ export default function CreateAgentPage() {
     Math.min(balance ?? DEFAULT_MAX_DEPOSIT, DEFAULT_MAX_DEPOSIT)
   );
 
-  // Cycle through pre-made images
+  // Cycle through pre-made images with direction (next/prev)
   const cycleImage = useCallback(
-    (type: 'profile' | 'cover') => {
+    (type: 'profile' | 'cover', direction: 'next' | 'prev') => {
       const basePath =
         type === 'profile'
           ? '/assets/user-profiles/profile-'
           : '/assets/user-banners/banner-';
+      const totalImages =
+        type === 'profile' ? TOTAL_PROFILE_PICTURES : TOTAL_BANNERS;
       const current =
         type === 'profile'
           ? profileData.profileImageUrl
           : profileData.coverImageUrl;
 
-      let nextIndex = Math.floor(Math.random() * TOTAL_PROFILE_PICTURES) + 1;
-
-      // Avoid same image
+      // Get current index from URL
+      let currentIndex = 1;
       if (current?.includes(basePath)) {
         const match = current.match(/-(\d+)\.jpg/);
         if (match) {
-          const currentIndex = parseInt(match[1]!, 10);
-          while (nextIndex === currentIndex) {
-            nextIndex = Math.floor(Math.random() * TOTAL_PROFILE_PICTURES) + 1;
-          }
+          currentIndex = parseInt(match[1]!, 10);
         }
+      }
+
+      // Calculate next index based on direction
+      let nextIndex: number;
+      if (direction === 'next') {
+        nextIndex = currentIndex >= totalImages ? 1 : currentIndex + 1;
+      } else {
+        nextIndex = currentIndex <= 1 ? totalImages : currentIndex - 1;
       }
 
       const newUrl = `${basePath}${nextIndex}.jpg`;
@@ -165,106 +176,131 @@ export default function CreateAgentPage() {
   }, [profileData, agentData, getAccessToken, clearDraft, router]);
 
   return (
-    <PageContainer className="py-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <PageContainer>
+      <div className="mx-auto max-w-4xl pb-24">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link
-            href="/agents"
-            className="rounded-lg p-2 transition-colors hover:bg-muted"
+        <div className="mb-8">
+          <button
+            onClick={() => router.back()}
+            className="mb-4 flex items-center gap-3 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="flex items-center gap-2 font-bold text-2xl">
-              <Bot className="h-6 w-6 text-cyan-500" />
-              Create AI Agent
-            </h1>
-            <p className="text-muted-foreground">
-              Configure your autonomous trading agent
-            </p>
+            <span>Back</span>
+          </button>
+          <div className="flex items-center gap-3">
+            <Bot className="h-6 w-6 text-[#0066FF]" />
+            <div>
+              <h1 className="font-bold text-3xl">Create AI Agent</h1>
+              <p className="text-muted-foreground">
+                Configure your autonomous trading agent
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Content */}
+        <div className="grid gap-8 lg:grid-cols-3">
           {/* Profile Preview - Left Column */}
           <div className="space-y-4 lg:col-span-1">
             <ProfilePreviewCard
               profileData={profileData}
               onEdit={() => setShowEditModal(true)}
-              onCycleProfilePic={() => cycleImage('profile')}
-              onCycleBanner={() => cycleImage('cover')}
+              onCycleProfilePic={(direction) =>
+                cycleImage('profile', direction)
+              }
+              onCycleBanner={(direction) => cycleImage('cover', direction)}
               isLoading={!isInitialized}
             />
 
-            {/* Quick Stats */}
-            <Card className="border-border/50">
-              <CardContent className="space-y-3 p-4">
+            {/* Balance Info */}
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">Funding</span>
+              </div>
+              <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Initial Deposit</span>
-                  <span className="font-mono">
+                  <span className="font-medium font-mono">
                     {agentData.initialDeposit.toLocaleString()} pts
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Your Balance</span>
-                  <span className="font-mono">
+                  <span className="font-medium font-mono">
                     {(balance ?? 0).toLocaleString()} pts
                   </span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
           {/* Configuration - Right Column */}
           <div className="space-y-6 lg:col-span-2">
-            <Card className="border-border/50">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  Agent Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isInitialized ? (
-                  <AgentConfigForm
-                    agentData={agentData}
-                    generatingField={generatingField}
-                    maxDeposit={maxDeposit}
-                    onFieldChange={updateAgentField}
-                    onRegenerate={regenerateField}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {isInitialized ? (
+              <>
+                <AgentConfigForm
+                  agentData={agentData}
+                  generatingField={generatingField}
+                  maxDeposit={maxDeposit}
+                  onFieldChange={updateAgentField}
+                  onRegenerate={regenerateField}
+                />
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => router.push('/agents')}
-                disabled={isCreating}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={isCreating || !isInitialized}
-                className="min-w-[140px] bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Agent'
-                )}
-              </Button>
-            </div>
+                {/* Actions */}
+                <div className="flex justify-end gap-3 border-border border-t pt-6">
+                  <button
+                    onClick={() => router.push('/agents')}
+                    disabled={isCreating}
+                    className={cn(
+                      'rounded-lg border border-border px-6 py-3 font-medium transition-colors',
+                      'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      'disabled:cursor-not-allowed disabled:opacity-50'
+                    )}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    disabled={isCreating || !isInitialized}
+                    className={cn(
+                      'flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition-all',
+                      'bg-[#0066FF] text-primary-foreground hover:bg-[#2952d9]',
+                      'disabled:cursor-not-allowed disabled:opacity-50'
+                    )}
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Agent'
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-6">
+                {/* Loading skeleton for form */}
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-36" />
+                  <Skeleton className="h-28 w-full" />
+                </div>
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-28" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

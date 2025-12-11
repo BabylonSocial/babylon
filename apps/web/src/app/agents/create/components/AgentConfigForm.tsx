@@ -3,10 +3,6 @@
 import { cn } from '@babylon/shared';
 import { Loader2, Sparkles } from 'lucide-react';
 import { memo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import type { AgentFormData } from '../hooks/useAgentForm';
 
 interface AgentConfigFormProps {
@@ -43,14 +39,18 @@ const FieldWithAI = memo(function FieldWithAI({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label htmlFor={id}>{label}</Label>
-        <Button
+        <label htmlFor={id} className="font-medium text-sm">
+          {label}
+        </label>
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={onRegenerate}
           disabled={isGenerating}
-          className="gap-1 text-xs"
+          className={cn(
+            'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs transition-colors',
+            'text-muted-foreground hover:bg-muted hover:text-foreground',
+            'disabled:cursor-not-allowed disabled:opacity-50'
+          )}
         >
           {isGenerating ? (
             <>
@@ -63,16 +63,17 @@ const FieldWithAI = memo(function FieldWithAI({
               Regenerate
             </>
           )}
-        </Button>
+        </button>
       </div>
-      <Textarea
+      <textarea
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={rows}
         className={cn(
-          'font-mono text-sm',
+          'w-full resize-none rounded-lg border border-border bg-muted px-4 py-3 font-mono text-sm',
+          'focus:outline-none focus:ring-2 focus:ring-[#0066FF]',
           isGenerating && 'animate-pulse opacity-70'
         )}
       />
@@ -126,30 +127,43 @@ export const AgentConfigForm = memo(function AgentConfigForm({
         helpText="Market analysis approach and position sizing rules."
       />
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="initialDeposit">Initial Deposit</Label>
+          <label htmlFor="initialDeposit" className="font-medium text-sm">
+            Initial Deposit
+          </label>
           <span className="font-mono text-muted-foreground text-sm">
             {agentData.initialDeposit.toLocaleString()} points
           </span>
         </div>
-        <Input
+        <input
           id="initialDeposit"
-          type="number"
-          min={10}
-          max={maxDeposit}
-          step={10}
-          value={agentData.initialDeposit}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={agentData.initialDeposit === 0 ? '' : agentData.initialDeposit}
           onChange={(e) => {
-            const val = parseInt(e.target.value, 10);
-            if (!isNaN(val)) {
-              onFieldChange(
-                'initialDeposit',
-                Math.max(10, Math.min(val, maxDeposit))
-              );
+            // Allow free typing - accept empty or numeric values
+            const rawValue = e.target.value.replace(/[^0-9]/g, '');
+            if (rawValue === '') {
+              onFieldChange('initialDeposit', 0);
+            } else {
+              onFieldChange('initialDeposit', parseInt(rawValue, 10));
             }
           }}
-          className="font-mono"
+          onBlur={() => {
+            // On blur, clamp to valid range
+            const val = agentData.initialDeposit;
+            if (val < 10) {
+              onFieldChange('initialDeposit', 10);
+            } else if (val > maxDeposit) {
+              onFieldChange('initialDeposit', maxDeposit);
+            }
+          }}
+          className={cn(
+            'w-full rounded-lg border border-border bg-muted px-4 py-3 font-mono text-sm',
+            'focus:outline-none focus:ring-2 focus:ring-[#0066FF]'
+          )}
         />
         <p className="text-muted-foreground text-xs">
           Points to fund your agent&apos;s trading account (10 -{' '}
