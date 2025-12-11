@@ -1,6 +1,9 @@
 /**
  * Chat Group ID API
  *
+ * @deprecated Use Chat API service instead (apps/chat-api)
+ * Frontend should migrate to using the oRPC client from @/lib/chat-api-client.ts
+ *
  * @route GET /api/chats/[id]/group - Get group ID for chat
  * @access Authenticated (participants only)
  *

@@ -1,6 +1,9 @@
 /**
  * Chat Leave API
  *
+ * @deprecated Use Chat API service instead (apps/chat-api)
+ * Frontend should migrate to using the oRPC client from @/lib/chat-api-client.ts
+ *
  * @route DELETE /api/chats/[id]/participants/me - Leave chat
  * @access Authenticated
  *

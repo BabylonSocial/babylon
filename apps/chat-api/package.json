@@ -1,0 +1,47 @@
+{
+  "name": "@babylon/chat-api",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build --compile --minify --sourcemap src/index.ts --outfile chat-api",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "test": "bun test --preload ./test/setup.ts",
+    "test:watch": "bun test --watch --preload ./test/setup.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@electric-sql/pglite": "^0.3.14",
+    "@orpc/client": "^1.5.0",
+    "@orpc/openapi": "^1.5.0",
+    "@orpc/server": "^1.5.0",
+    "@orpc/zod": "^1.5.0",
+    "@privy-io/server-auth": "^1.18.4",
+    "drizzle-orm": "^0.44.7",
+    "hono": "^4.7.10",
+    "neverthrow": "^8.2.0",
+    "pino": "^9.6.0",
+    "postgres": "^3.4.7",
+    "typeid-js": "^1.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.4",
+    "pino-pretty": "^13.0.0",
+    "redis-memory-server": "^0.14.0",
+    "typescript": "^5.9.3"
+  }
+}

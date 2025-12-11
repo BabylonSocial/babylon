@@ -1,5 +1,7 @@
 import { logger } from '@babylon/shared';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createChatClient } from '@/lib/chat-api-client';
 import { useSSEChannel } from './useSSE';
 
 /**
@@ -30,8 +32,7 @@ export interface ChatMessage {
  * - Automatic deduplication
  * - Polling fallback for multi-instance serverless environments
  *
- * Replaces the previous WebSocket-based implementation with SSE for better
- * Vercel compatibility. Messages are automatically sorted by timestamp.
+ * Uses the Chat API service via oRPC client for type-safe API calls.
  *
  * @param chatId - The ID of the chat to load messages for, or null to clear messages.
  *
@@ -59,6 +60,7 @@ export interface ChatMessage {
  * ```
  */
 export function useChatMessages(chatId: string | null) {
+  const { getAccessToken } = usePrivy();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -67,76 +69,76 @@ export function useChatMessages(chatId: string | null) {
   const previousChatIdRef = useRef<string | null>(null);
   const hasLoadedRef = useRef<Set<string>>(new Set());
 
+  // Create chat client with Privy auth
+  const chatClient = useMemo(
+    () => createChatClient(getAccessToken),
+    [getAccessToken]
+  );
+
   // Load existing messages from API (initial load)
-  const loadMessages = useCallback(async (chatId: string) => {
-    // Skip if already loaded
-    if (hasLoadedRef.current.has(chatId)) {
+  const loadMessages = useCallback(
+    async (targetChatId: string) => {
+      // Skip if already loaded
+      if (hasLoadedRef.current.has(targetChatId)) {
+        logger.debug(
+          `Skipping reload for ${targetChatId} - already loaded`,
+          { chatId: targetChatId },
+          'useChatMessages'
+        );
+        setIsLoading(false);
+        return;
+      }
+
       logger.debug(
-        `Skipping reload for ${chatId} - already loaded`,
-        { chatId },
+        `Loading initial messages for chat ${targetChatId}`,
+        { chatId: targetChatId },
         'useChatMessages'
       );
-      setIsLoading(false);
-      return;
-    }
+      setIsLoading(true);
 
-    logger.debug(
-      `Loading initial messages for chat ${chatId}`,
-      { chatId },
-      'useChatMessages'
-    );
-    setIsLoading(true);
-    const response = await fetch(`/api/chats/${chatId}?limit=50`);
-    logger.debug(
-      `Response status: ${response.status}`,
-      { chatId, status: response.status },
-      'useChatMessages'
-    );
+      try {
+        const data = await chatClient.message.list({
+          chatId: targetChatId,
+          limit: 50,
+        });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.messages) {
-        const formattedMessages: ChatMessage[] = data.messages.map(
-          (msg: {
-            id: string;
-            content: string;
-            senderId: string;
-            createdAt: string | Date;
-          }) => ({
-            id: msg.id,
-            content: msg.content,
-            chatId: chatId,
-            senderId: msg.senderId,
-            createdAt:
-              typeof msg.createdAt === 'string'
-                ? msg.createdAt
-                : msg.createdAt.toISOString(),
-          })
-        );
+        const formattedMessages: ChatMessage[] = data.messages.map((msg) => ({
+          id: msg.id,
+          content: msg.content,
+          chatId: targetChatId,
+          senderId: msg.senderId,
+          createdAt:
+            typeof msg.createdAt === 'string'
+              ? msg.createdAt
+              : new Date(msg.createdAt).toISOString(),
+        }));
+
         setMessages(formattedMessages);
         setHasMore(data.pagination?.hasMore || false);
         setNextCursor(data.pagination?.nextCursor || null);
-        hasLoadedRef.current.add(chatId);
+        hasLoadedRef.current.add(targetChatId);
+
         logger.debug(
-          `Loaded ${formattedMessages.length} messages for chat ${chatId}`,
+          `Loaded ${formattedMessages.length} messages for chat ${targetChatId}`,
           {
-            chatId,
+            chatId: targetChatId,
             count: formattedMessages.length,
             hasMore: data.pagination?.hasMore,
           },
           'useChatMessages'
         );
+      } catch (error) {
+        logger.error(
+          'Failed to load messages',
+          { chatId: targetChatId, error },
+          'useChatMessages'
+        );
       }
-    } else {
-      const errorData = await response.json().catch(() => null);
-      logger.error(
-        'Failed to load messages',
-        { chatId, errorData, status: response.status },
-        'useChatMessages'
-      );
-    }
-    setIsLoading(false);
-  }, []);
+
+      setIsLoading(false);
+    },
+    [chatClient]
+  );
 
   // Load more older messages (pagination)
   const loadMore = useCallback(async () => {
@@ -156,31 +158,24 @@ export function useChatMessages(chatId: string | null) {
     );
     setIsLoadingMore(true);
 
-    const response = await fetch(
-      `/api/chats/${chatId}?cursor=${nextCursor}&limit=50`
-    );
-
-    if (response.ok) {
-      const data = await response.json();
+    try {
+      const data = await chatClient.message.list({
+        chatId,
+        cursor: nextCursor,
+        limit: 50,
+      });
 
       if (data.messages && data.messages.length > 0) {
-        const formattedMessages: ChatMessage[] = data.messages.map(
-          (msg: {
-            id: string;
-            content: string;
-            senderId: string;
-            createdAt: string | Date;
-          }) => ({
-            id: msg.id,
-            content: msg.content,
-            chatId: chatId,
-            senderId: msg.senderId,
-            createdAt:
-              typeof msg.createdAt === 'string'
-                ? msg.createdAt
-                : msg.createdAt.toISOString(),
-          })
-        );
+        const formattedMessages: ChatMessage[] = data.messages.map((msg) => ({
+          id: msg.id,
+          content: msg.content,
+          chatId: chatId,
+          senderId: msg.senderId,
+          createdAt:
+            typeof msg.createdAt === 'string'
+              ? msg.createdAt
+              : new Date(msg.createdAt).toISOString(),
+        }));
 
         // Prepend older messages to the beginning
         setMessages((prev) => [...formattedMessages, ...prev]);
@@ -197,16 +192,16 @@ export function useChatMessages(chatId: string | null) {
           'useChatMessages'
         );
       }
-    } else {
+    } catch (error) {
       logger.error(
         'Failed to load more messages',
-        { chatId, status: response.status, statusText: response.statusText },
+        { chatId, error },
         'useChatMessages'
       );
     }
 
     setIsLoadingMore(false);
-  }, [chatId, nextCursor, isLoadingMore, hasMore]);
+  }, [chatId, nextCursor, isLoadingMore, hasMore, chatClient]);
 
   // Handle SSE updates for this chat
   const handleChatUpdate = useCallback(
@@ -255,7 +250,7 @@ export function useChatMessages(chatId: string | null) {
     [chatId]
   );
 
-  // Subscribe to chat channel
+  // Subscribe to chat channel (uses existing SSE infrastructure)
   const channel: `chat:${string}` | null = chatId ? `chat:${chatId}` : null;
   const { isConnected } = useSSEChannel(channel, handleChatUpdate);
 
@@ -285,35 +280,30 @@ export function useChatMessages(chatId: string | null) {
     if (!chatId || !hasLoadedRef.current.has(chatId)) return;
 
     const interval = setInterval(async () => {
-      // Fetch new messages without blocking - bypass the hasLoadedRef check
-      // by fetching directly instead of calling loadMessages
       logger.debug(
         `Polling for new messages in chat ${chatId}`,
         { chatId },
         'useChatMessages'
       );
 
-      const response = await fetch(`/api/chats/${chatId}?limit=50`);
-      if (response.ok) {
-        const data = await response.json();
+      try {
+        const data = await chatClient.message.list({
+          chatId,
+          limit: 50,
+        });
+
         if (data.messages) {
-          const formattedMessages: ChatMessage[] = data.messages.map(
-            (msg: {
-              id: string;
-              content: string;
-              senderId: string;
-              createdAt: string | Date;
-            }) => ({
-              id: msg.id,
-              content: msg.content,
-              chatId: chatId,
-              senderId: msg.senderId,
-              createdAt:
-                typeof msg.createdAt === 'string'
-                  ? msg.createdAt
-                  : msg.createdAt.toISOString(),
-            })
-          );
+          const formattedMessages: ChatMessage[] = data.messages.map((msg) => ({
+            id: msg.id,
+            content: msg.content,
+            chatId: chatId,
+            senderId: msg.senderId,
+            createdAt:
+              typeof msg.createdAt === 'string'
+                ? msg.createdAt
+                : new Date(msg.createdAt).toISOString(),
+          }));
+
           // Merge with existing messages, avoiding duplicates
           setMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
@@ -335,11 +325,13 @@ export function useChatMessages(chatId: string | null) {
             return prev;
           });
         }
+      } catch (error) {
+        logger.error('Polling failed', { chatId, error }, 'useChatMessages');
       }
-    }, 15000); // 15 seconds (more frequent for chat)
+    }, 15000); // 15 seconds
 
     return () => clearInterval(interval);
-  }, [chatId]);
+  }, [chatId, chatClient]);
 
   // Mark as loaded when connected
   useEffect(() => {

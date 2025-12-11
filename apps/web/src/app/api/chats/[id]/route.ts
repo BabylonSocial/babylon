@@ -2,6 +2,9 @@
  * API Route: /api/chats/[id]
  * Methods: GET (get chat details and messages)
  *
+ * @deprecated Use Chat API service instead (apps/chat-api)
+ * Frontend should migrate to using the oRPC client from @/lib/chat-api-client.ts
+ *
  * @openapi
  * /api/chats/{id}:
  *   get:

@@ -11,6 +11,7 @@
     "postinstall": "bun run scripts/postinstall-solidity-deps.ts && bun run scripts/postinstall-install-python-deps.ts",
     "dev": "bun run scripts/pre-dev/pre-dev-local.ts && bun run scripts/dev-wrapper.ts",
     "dev:web": "turbo dev --filter=web",
+    "dev:chat-api": "turbo dev --filter=@babylon/chat-api",
     "dev:web:staging": "NODE_ENV=development bun --env-file=.env.staging.local run dev:web",
     "dev:web:production": "NODE_ENV=development bun --env-file=.env.production.local run dev:web",
     "vercel:dev:web:staging": "bun run env:pull:staging && bun run dev:web:staging",

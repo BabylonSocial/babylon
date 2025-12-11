@@ -14,7 +14,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { JsonValue } from '../types';
 import { agentPerformanceMetrics } from './agents';
-import { onboardingStatusEnum } from './enums';
+import { onboardingStatusEnum, userTypeEnum } from './enums';
 import { userAgentConfigs } from './user-agent-configs';
 
 // User - Main user table
@@ -191,8 +191,16 @@ export const users = pgTable(
     emailVerified: boolean('emailVerified').notNull().default(false),
     email: text('email'),
     waitlistGraduatedAt: timestamp('waitlistGraduatedAt', { mode: 'date' }),
+
+    // User type - replaces isActor/isAgent (kept for backwards compat)
+    userType: userTypeEnum('userType').notNull().default('human'),
+    // Privy embedded wallet address (separate from external walletAddress)
+    privyWalletAddress: text('privyWalletAddress'),
+
     // Agent flags (config stored in UserAgentConfig table)
+    // @deprecated Use userType instead - kept for backwards compatibility
     isAgent: boolean('isAgent').notNull().default(false),
+    // @deprecated Use userType instead - kept for backwards compatibility
     managedBy: text('managedBy'),
   },
   (table) => [
@@ -218,6 +226,8 @@ export const users = pgTable(
     index('User_walletAddress_idx').on(table.walletAddress),
     index('User_registrationIpHash_idx').on(table.registrationIpHash),
     index('User_lastReferralIpHash_idx').on(table.lastReferralIpHash),
+    index('User_userType_idx').on(table.userType),
+    index('User_privyWalletAddress_idx').on(table.privyWalletAddress),
   ]
 );
 

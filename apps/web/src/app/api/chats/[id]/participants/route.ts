@@ -1,6 +1,9 @@
 /**
  * Chat Participants API
  *
+ * @deprecated Use Chat API service instead (apps/chat-api)
+ * Frontend should migrate to using the oRPC client from @/lib/chat-api-client.ts
+ *
  * @route GET /api/chats/[id]/participants - Get chat participants
  * @route POST /api/chats/[id]/participants - Add users to chat
  * @access Authenticated (participants only)

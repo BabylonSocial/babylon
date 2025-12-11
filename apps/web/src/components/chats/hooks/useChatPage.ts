@@ -1,10 +1,14 @@
 'use client';
 
 import { usePrivy } from '@privy-io/react-auth';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import {
+  createChatClient,
+  createPublicChatClient,
+} from '@/lib/chat-api-client';
 import { useAuthStore } from '@/stores/authStore';
 import type { Chat, ChatDetails, ChatFilter } from '../types';
 
@@ -12,6 +16,13 @@ export function useChatPage() {
   const { ready, authenticated } = useAuth();
   const { user } = useAuthStore();
   const { getAccessToken } = usePrivy();
+
+  // Create chat clients
+  const chatClient = useMemo(
+    () => createChatClient(getAccessToken),
+    [getAccessToken]
+  );
+  const publicChatClient = useMemo(() => createPublicChatClient(), []);
 
   // UI state
   const [activeFilter, setActiveFilter] = useState<ChatFilter>('all');
@@ -79,7 +90,7 @@ export function useChatPage() {
     addMessage,
   } = useChatMessages(selectedChatId);
 
-  // Load chats
+  // Load chats using Chat API
   const loadChats = useCallback(async () => {
     setLoading(true);
 
@@ -90,97 +101,142 @@ export function useChatPage() {
       }
     }
 
-    const token = await getAccessToken();
-    if (!token && !isDebugMode) {
-      setLoading(false);
-      return;
+    try {
+      // Load personal chats and game chats in parallel
+      const [personalData, gameData] = await Promise.all([
+        chatClient.chat.list({ all: false }),
+        isDebugMode ? publicChatClient.chat.list({ all: true }) : null,
+      ]);
+
+      const gameChats: Chat[] =
+        gameData?.chats?.map((c) => ({
+          id: c.id,
+          name: c.name || 'Game Chat',
+          isGroup: c.isGroup,
+          lastMessage: c.lastMessage
+            ? {
+                id: c.lastMessage.id,
+                content: c.lastMessage.content,
+                senderId: c.lastMessage.senderId,
+                createdAt:
+                  typeof c.lastMessage.createdAt === 'string'
+                    ? c.lastMessage.createdAt
+                    : new Date(c.lastMessage.createdAt).toISOString(),
+              }
+            : null,
+          updatedAt:
+            typeof c.updatedAt === 'string'
+              ? c.updatedAt
+              : new Date(c.updatedAt).toISOString(),
+        })) || [];
+
+      // Format personal chats
+      const groupChats: Chat[] = (personalData.groupChats || []).map((c) => ({
+        id: c.id,
+        name: c.name || 'Group Chat',
+        isGroup: true,
+        lastMessage: c.lastMessage
+          ? {
+              id: c.lastMessage.id,
+              content: c.lastMessage.content,
+              senderId: c.lastMessage.senderId,
+              createdAt:
+                typeof c.lastMessage.createdAt === 'string'
+                  ? c.lastMessage.createdAt
+                  : new Date(c.lastMessage.createdAt).toISOString(),
+            }
+          : null,
+        updatedAt:
+          typeof c.updatedAt === 'string'
+            ? c.updatedAt
+            : new Date(c.updatedAt).toISOString(),
+      }));
+
+      const directChats: Chat[] = (personalData.directChats || []).map((c) => ({
+        id: c.id,
+        name: c.name || 'Direct Message',
+        isGroup: false,
+        lastMessage: c.lastMessage
+          ? {
+              id: c.lastMessage.id,
+              content: c.lastMessage.content,
+              senderId: c.lastMessage.senderId,
+              createdAt:
+                typeof c.lastMessage.createdAt === 'string'
+                  ? c.lastMessage.createdAt
+                  : new Date(c.lastMessage.createdAt).toISOString(),
+            }
+          : null,
+        updatedAt:
+          typeof c.updatedAt === 'string'
+            ? c.updatedAt
+            : new Date(c.updatedAt).toISOString(),
+        otherUser: c.otherUser
+          ? {
+              id: c.otherUser.id,
+              displayName: c.otherUser.displayName,
+              username: c.otherUser.username,
+              profileImageUrl: c.otherUser.profileImageUrl,
+            }
+          : undefined,
+      }));
+
+      const combined = [...groupChats, ...directChats, ...gameChats].sort(
+        (a, b) => {
+          const aTime = a.lastMessage?.createdAt || a.updatedAt;
+          const bTime = b.lastMessage?.createdAt || b.updatedAt;
+          return new Date(bTime).getTime() - new Date(aTime).getTime();
+        }
+      );
+
+      setAllChats(combined);
+    } catch (error) {
+      console.error('Failed to load chats:', error);
     }
 
-    const [personalResponse, gameResponse] = await Promise.all([
-      fetch('/api/chats', {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      isDebugMode ? fetch('/api/chats?all=true') : Promise.resolve(null),
-    ]);
-
-    if (!personalResponse.ok) {
-      setLoading(false);
-      return;
-    }
-
-    const personalData = await personalResponse.json();
-
-    let gameChats: Chat[] = [];
-    if (gameResponse?.ok) {
-      const gameData = await gameResponse.json();
-      gameChats = gameData.chats || [];
-    }
-
-    const combined = [
-      ...(personalData.groupChats || []),
-      ...(personalData.directChats || []),
-      ...gameChats,
-    ].sort((a, b) => {
-      const aTime = a.lastMessage?.createdAt || a.updatedAt;
-      const bTime = b.lastMessage?.createdAt || b.updatedAt;
-      return new Date(bTime).getTime() - new Date(aTime).getTime();
-    });
-
-    setAllChats(combined);
     setLoading(false);
-  }, [getAccessToken, isDebugMode, ready, authenticated]);
+  }, [chatClient, publicChatClient, isDebugMode, ready, authenticated]);
 
-  // Load chat details
+  // Load chat details using Chat API
   const loadChatDetails = useCallback(
     async (chatId: string) => {
       setLoadingChat(true);
 
-      if (isDebugMode) {
-        const response = await fetch(`/api/chats/${chatId}?debug=true`);
-        const data = await response.json();
+      try {
+        const data = await chatClient.chat.get({ chatId });
+
         setChatDetails({
-          ...data,
-          chat: data.chat || null,
-          messages: data.messages || [],
-          participants: data.participants || [],
+          chat: {
+            id: data.id,
+            name: data.name,
+            isGroup: data.isGroup,
+            createdAt:
+              typeof data.createdAt === 'string'
+                ? data.createdAt
+                : new Date(data.createdAt).toISOString(),
+            updatedAt:
+              typeof data.updatedAt === 'string'
+                ? data.updatedAt
+                : new Date(data.updatedAt).toISOString(),
+          },
+          messages: [], // Messages loaded by useChatMessages hook
+          participants: data.participantIds.map((id) => ({
+            id,
+            displayName: null,
+            username: null,
+            profileImageUrl: null,
+          })),
         });
-        setLoadingChat(false);
-        return;
+      } catch (error) {
+        console.error('Failed to load chat details:', error);
       }
 
-      const token = await getAccessToken();
-      if (!token) {
-        setLoadingChat(false);
-        return;
-      }
-
-      const response = await fetch(`/api/chats/${chatId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 404) {
-        setLoadingChat(false);
-        return;
-      }
-
-      if (!response.ok) {
-        setLoadingChat(false);
-        return;
-      }
-
-      const data = await response.json();
-      setChatDetails({
-        ...data,
-        chat: data.chat || null,
-        messages: data.messages || [],
-        participants: data.participants || [],
-      });
       setLoadingChat(false);
     },
-    [getAccessToken, isDebugMode]
+    [chatClient]
   );
 
-  // Send message
+  // Send message using Chat API
   const sendMessage = useCallback(async () => {
     if (!selectedChatId || !messageInput.trim() || sending) return;
 
@@ -189,108 +245,65 @@ export function useChatPage() {
     setSendWarning(null);
     setSendSuccess(false);
 
-    const token = await getAccessToken();
-    if (!token) {
-      setSendError('Authentication required. Please log in again.');
-      setSending(false);
-      return;
-    }
-
-    const response = await fetch(`/api/chats/${selectedChatId}/message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ content: messageInput.trim() }),
-    }).catch((error: Error) => {
-      setSendError('Failed to send message. Please try again.');
-      setSending(false);
-      throw error;
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const message =
-        (data && (data.error || data.message)) ||
-        'Failed to send message. Please try again.';
-      setSendError(message);
-      setSending(false);
-      return;
-    }
-
-    const warnings = Array.isArray(data?.warnings) ? data.warnings : [];
-    if (warnings.length > 0) {
-      setSendWarning(warnings.join('. '));
-      setTimeout(() => setSendWarning(null), 5000);
-    }
-
-    setSendSuccess(true);
-    setTimeout(() => setSendSuccess(false), 2000);
-
-    if (data.message) {
-      addMessage({
-        id: data.message.id,
-        content: data.message.content,
-        chatId: data.message.chatId,
-        senderId: data.message.senderId,
-        createdAt:
-          typeof data.message.createdAt === 'string'
-            ? data.message.createdAt
-            : new Date(data.message.createdAt).toISOString(),
+    try {
+      const data = await chatClient.message.send({
+        chatId: selectedChatId,
+        content: messageInput.trim(),
       });
+
+      setSendSuccess(true);
+      setTimeout(() => setSendSuccess(false), 2000);
+
+      if (data.message) {
+        addMessage({
+          id: data.message.id,
+          content: data.message.content,
+          chatId: data.message.chatId,
+          senderId: data.message.senderId,
+          createdAt:
+            typeof data.message.createdAt === 'string'
+              ? data.message.createdAt
+              : new Date(data.message.createdAt).toISOString(),
+        });
+      }
+
+      setMessageInput('');
+      void loadChats();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to send message';
+      setSendError(message);
     }
 
-    setMessageInput('');
-    void loadChats();
     setSending(false);
   }, [
     selectedChatId,
     messageInput,
     sending,
-    getAccessToken,
+    chatClient,
     addMessage,
     loadChats,
   ]);
 
-  // Leave chat
+  // Leave chat using Chat API
   const handleLeaveChat = useCallback(async () => {
     if (!selectedChatId) return;
     setIsLeavingChat(true);
     setLeaveChatError(null);
 
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setLeaveChatError('Authentication failed. Please try again.');
-      setIsLeavingChat(false);
-      return;
+    try {
+      await chatClient.chat.leave({ chatId: selectedChatId });
+      setLeaveConfirmOpen(false);
+      setSelectedChatId(null);
+      await loadChats();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to leave chat';
+      setLeaveChatError(message);
     }
 
-    const response = await fetch(
-      `/api/chats/${selectedChatId}/participants/me`,
-      {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    ).catch((error: Error) => {
-      setLeaveChatError(error.message);
-      setIsLeavingChat(false);
-      throw error;
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      setLeaveChatError(errorData.message || 'Failed to leave chat');
-      setIsLeavingChat(false);
-      return;
-    }
-
-    setLeaveConfirmOpen(false);
-    setSelectedChatId(null);
-    await loadChats();
     setIsLeavingChat(false);
-  }, [selectedChatId, getAccessToken, loadChats]);
+  }, [selectedChatId, chatClient, loadChats]);
 
   // Group handlers
   const handleGroupCreated = useCallback(
@@ -314,22 +327,18 @@ export function useChatPage() {
   const handleManageGroup = useCallback(async () => {
     if (!chatDetails?.chat.id) return;
 
-    const token = await getAccessToken();
-    const response = await fetch(`/api/chats/${chatDetails.chat.id}/group`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch((error: Error) => {
-      console.error('Error fetching group ID:', error);
-      throw error;
-    });
-
-    if (response.ok) {
-      const data = await response.json();
+    try {
+      const data = await chatClient.chat.getGroupId({
+        chatId: chatDetails.chat.id,
+      });
       setSelectedGroupId(data.groupId);
       setIsGroupManagementModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching group ID:', error);
     }
-  }, [chatDetails?.chat.id, getAccessToken]);
+  }, [chatDetails?.chat.id, chatClient]);
 
-  // Load new DM chat
+  // Load new DM chat (still uses main API for user profile)
   const loadNewDMChat = useCallback(
     async (chatId: string, targetUserId: string) => {
       setLoadingChat(true);
@@ -340,67 +349,68 @@ export function useChatPage() {
         return;
       }
 
-      const response = await fetch(`/api/users/${targetUserId}/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {
-        setLoadingChat(false);
-        throw new Error('Failed to load user info');
-      });
+      try {
+        const response = await fetch(`/api/users/${targetUserId}/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      if (!response.ok) {
-        setLoadingChat(false);
-        return;
-      }
+        if (!response.ok) {
+          setLoadingChat(false);
+          return;
+        }
 
-      const userData = await response.json();
-      const targetUser = userData.user;
+        const userData = await response.json();
+        const targetUser = userData.user;
 
-      setChatDetails({
-        chat: {
-          id: chatId,
-          name: null,
-          isGroup: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        messages: [],
-        participants: [
-          {
-            id: user!.id,
-            displayName: user!.displayName || user!.username || 'You',
-            username: user!.username,
-            profileImageUrl: user!.profileImageUrl,
+        setChatDetails({
+          chat: {
+            id: chatId,
+            name: null,
+            isGroup: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           },
-          {
+          messages: [],
+          participants: [
+            {
+              id: user!.id,
+              displayName: user!.displayName || user!.username || 'You',
+              username: user!.username,
+              profileImageUrl: user!.profileImageUrl,
+            },
+            {
+              id: targetUser.id,
+              displayName:
+                targetUser.displayName || targetUser.username || 'User',
+              username: targetUser.username,
+              profileImageUrl: targetUser.profileImageUrl,
+            },
+          ],
+        });
+
+        const newChat: Chat = {
+          id: chatId,
+          name: targetUser.displayName || targetUser.username || 'User',
+          isGroup: false,
+          lastMessage: null,
+          updatedAt: new Date().toISOString(),
+          otherUser: {
             id: targetUser.id,
-            displayName:
-              targetUser.displayName || targetUser.username || 'User',
+            displayName: targetUser.displayName,
             username: targetUser.username,
             profileImageUrl: targetUser.profileImageUrl,
           },
-        ],
-      });
+        };
 
-      const newChat: Chat = {
-        id: chatId,
-        name: targetUser.displayName || targetUser.username || 'User',
-        isGroup: false,
-        lastMessage: null,
-        updatedAt: new Date().toISOString(),
-        otherUser: {
-          id: targetUser.id,
-          displayName: targetUser.displayName,
-          username: targetUser.username,
-          profileImageUrl: targetUser.profileImageUrl,
-        },
-      };
-
-      setAllChats((prev) => {
-        if (prev.some((c) => c.id === chatId)) {
-          return prev;
-        }
-        return [newChat, ...prev];
-      });
+        setAllChats((prev) => {
+          if (prev.some((c) => c.id === chatId)) {
+            return prev;
+          }
+          return [newChat, ...prev];
+        });
+      } catch (error) {
+        console.error('Failed to load new DM chat:', error);
+      }
 
       setLoadingChat(false);
     },

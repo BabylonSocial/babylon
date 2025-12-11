@@ -128,6 +128,31 @@ services:
       timeout: 20s
       retries: 3
 
+  chat-api:
+    image: oven/bun:1
+    container_name: babylon-chat-api
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      NODE_ENV: development
+      DATABASE_URL: postgresql://babylon:babylon_dev_password@postgres:5432/babylon
+      REDIS_URL: redis://redis:6379
+      PRIVY_APP_ID: ${PRIVY_APP_ID}
+      PRIVY_APP_SECRET: ${PRIVY_APP_SECRET}
+      CHAT_API_SECRET: ${CHAT_API_SECRET:-chat_api_secret_for_local_development_only}
+    command: bun run --hot apps/chat-api/src/index.ts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     driver: local

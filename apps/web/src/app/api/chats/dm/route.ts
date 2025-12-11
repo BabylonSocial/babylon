@@ -1,6 +1,9 @@
 /**
  * Direct Message (DM) Chat API
  *
+ * @deprecated Use Chat API service instead (apps/chat-api)
+ * Frontend should migrate to using the oRPC client from @/lib/chat-api-client.ts
+ *
  * @route POST /api/chats/dm
  * @access Authenticated
  *

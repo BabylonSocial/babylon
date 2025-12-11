@@ -1,6 +1,9 @@
 /**
  * Chat Management API
  *
+ * @deprecated Use Chat API service instead (apps/chat-api)
+ * Frontend should migrate to using the oRPC client from @/lib/chat-api-client.ts
+ *
  * @route GET /api/chats - List user's chats
  * @route POST /api/chats - Create new chat
  * @access Authenticated
