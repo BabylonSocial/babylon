@@ -217,7 +217,9 @@ export const chatRouter = {
    * Get unread message counts for authenticated user
    */
   getUnreadCount: protectedProcedure.handler(async ({ context }) => {
-    const result = await context.chatService.getUnreadCount(context.user.userId);
+    const result = await context.chatService.getUnreadCount(
+      context.user.userId
+    );
 
     return result.match(
       (data) => data,

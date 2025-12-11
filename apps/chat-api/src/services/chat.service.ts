@@ -662,17 +662,12 @@ export function createChatService(deps: ChatServiceDeps) {
       }
     },
 
-    /**
-     * Get unread message counts for a user
-     * Returns pending DM requests and whether there are new messages in the last 24h
-     */
     async getUnreadCount(
       userId: UserId
     ): Promise<Result<UnreadCountResult, ChatServiceError>> {
       logger.debug({ msg: 'Getting unread count', userId });
 
       try {
-        // Count pending DM acceptances where user is the recipient
         const pendingDmResults = await db
           .select({ count: count() })
           .from(dmAcceptancesTable)
@@ -685,7 +680,6 @@ export function createChatService(deps: ChatServiceDeps) {
 
         const pendingDms = pendingDmResults[0]?.count ?? 0;
 
-        // Get all chat IDs where user is a participant
         const participations = await db
           .select({ chatId: chatParticipantsTable.chatId })
           .from(chatParticipantsTable)
@@ -696,7 +690,6 @@ export function createChatService(deps: ChatServiceDeps) {
         let hasNewMessages = false;
 
         if (chatIds.length > 0) {
-          // Check for messages in last 24h from other users
           const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
           const recentMessages = await db
@@ -724,10 +717,6 @@ export function createChatService(deps: ChatServiceDeps) {
       }
     },
 
-    /**
-     * Get participants of a chat
-     * Returns user IDs with placeholder user details (caller should enrich from user service)
-     */
     async getParticipants(
       userId: UserId,
       chatId: ChatId
@@ -735,7 +724,6 @@ export function createChatService(deps: ChatServiceDeps) {
       logger.debug({ msg: 'Getting chat participants', userId, chatId });
 
       try {
-        // Get chat to check type
         const [chat] = await db
           .select()
           .from(chatsTable)
@@ -750,7 +738,6 @@ export function createChatService(deps: ChatServiceDeps) {
         }
 
         if (chat.isGroup) {
-          // Check membership for group chats
           const [membership] = await db
             .select()
             .from(groupChatMembershipsTable)
@@ -770,7 +757,6 @@ export function createChatService(deps: ChatServiceDeps) {
             });
           }
 
-          // Get all active members
           const members = await db
             .select()
             .from(groupChatMembershipsTable)
@@ -781,7 +767,6 @@ export function createChatService(deps: ChatServiceDeps) {
               )
             );
 
-          // Note: We return placeholder user details - caller should enrich from user service
           const participants: ChatParticipant[] = members.map((m) => ({
             id: m.userId,
             displayName: null,
@@ -792,45 +777,41 @@ export function createChatService(deps: ChatServiceDeps) {
           }));
 
           return ok(participants);
-        } else {
-          // DM chat - check participation
-          const [participation] = await db
-            .select()
-            .from(chatParticipantsTable)
-            .where(
-              and(
-                eq(chatParticipantsTable.chatId, chatId),
-                eq(chatParticipantsTable.userId, userId)
-              )
-            )
-            .limit(1);
-
-          if (!participation) {
-            return err({
-              type: 'ACCESS_DENIED',
-              message: 'Access denied to chat',
-            });
-          }
-
-          // Get all participants
-          const participantRecords = await db
-            .select()
-            .from(chatParticipantsTable)
-            .where(eq(chatParticipantsTable.chatId, chatId));
-
-          const participants: ChatParticipant[] = participantRecords.map(
-            (p) => ({
-              id: p.userId,
-              displayName: null,
-              username: null,
-              profileImageUrl: null,
-              joinedAt: p.joinedAt,
-              isActive: p.isActive,
-            })
-          );
-
-          return ok(participants);
         }
+
+        const [participation] = await db
+          .select()
+          .from(chatParticipantsTable)
+          .where(
+            and(
+              eq(chatParticipantsTable.chatId, chatId),
+              eq(chatParticipantsTable.userId, userId)
+            )
+          )
+          .limit(1);
+
+        if (!participation) {
+          return err({
+            type: 'ACCESS_DENIED',
+            message: 'Access denied to chat',
+          });
+        }
+
+        const participantRecords = await db
+          .select()
+          .from(chatParticipantsTable)
+          .where(eq(chatParticipantsTable.chatId, chatId));
+
+        const participants: ChatParticipant[] = participantRecords.map((p) => ({
+          id: p.userId,
+          displayName: null,
+          username: null,
+          profileImageUrl: null,
+          joinedAt: p.joinedAt,
+          isActive: p.isActive,
+        }));
+
+        return ok(participants);
       } catch (error) {
         logger.error({
           msg: 'Error getting participants',

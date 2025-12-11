@@ -23,6 +23,59 @@ import { createTestSetup, type TestSetup } from './setup';
 // Redis memory server can take time to start
 setDefaultTimeout(30_000);
 
+/**
+ * Helper to create MCP test context with proper lifecycle management.
+ * Returns getters to access test fixtures after beforeAll runs.
+ */
+function createMcpTestContext() {
+  let testSetup: TestSetup;
+  let mcpServer: ChatMcpServer;
+  let client: Client;
+
+  beforeAll(async () => {
+    testSetup = await createTestSetup();
+
+    mcpServer = createChatMcpServer({
+      chatService: testSetup.deps.chatService,
+      dmService: testSetup.deps.dmService,
+      messageService: testSetup.deps.messageService,
+      logger: testSetup.deps.logger,
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await mcpServer.server.connect(serverTransport);
+
+    client = new Client(
+      { name: 'test-client', version: '1.0.0' },
+      { capabilities: {} }
+    );
+    await client.connect(clientTransport);
+  });
+
+  afterEach(async () => {
+    await testSetup.cleanup();
+  });
+
+  afterAll(async () => {
+    await client.close();
+    await mcpServer.server.close();
+    await testSetup.close();
+  });
+
+  return {
+    get setup() {
+      return testSetup;
+    },
+    get mcp() {
+      return mcpServer;
+    },
+    get client() {
+      return client;
+    },
+  };
+}
+
 describe('MCP Server - Tool Discovery', () => {
   let testSetup: TestSetup;
   let mcpServer: ChatMcpServer;
@@ -532,5 +585,557 @@ describe('MCP Server - Input Validation', () => {
     });
 
     expect(result.isError).toBe(true);
+  });
+
+  test('rejects message content over 5000 chars', async () => {
+    const { users, deps } = testSetup;
+
+    const dmResult = await deps.dmService.createOrGetDm(
+      users.userA.id,
+      users.userB.id
+    );
+    if (!dmResult.isOk()) return;
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'send_message',
+      arguments: {
+        chatId: dmResult.value.id,
+        content: 'x'.repeat(5001), // Over limit
+      },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('MCP Server - Group Management', () => {
+  const ctx = createMcpTestContext();
+
+  test('create_chat creates group with name', async () => {
+    const { users } = ctx.setup;
+    ctx.mcp.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'create_chat',
+      arguments: {
+        name: 'Test Group',
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(data.name).toBe('Test Group');
+      expect(data.isGroup).toBe(true);
+      expect(data.id).toMatch(/^cht_/);
+    }
+  });
+
+  test('create_chat creates group with participants', async () => {
+    const { users } = testSetup;
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'create_chat',
+      arguments: {
+        name: 'Group with Friends',
+        participantIds: [users.userB.id],
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(data.name).toBe('Group with Friends');
+      expect(data.isGroup).toBe(true);
+    }
+  });
+
+  test('create_chat rejects empty name', async () => {
+    const { users } = testSetup;
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'create_chat',
+      arguments: {
+        name: '',
+      },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+
+  test('create_chat rejects name over 100 chars', async () => {
+    const { users } = testSetup;
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'create_chat',
+      arguments: {
+        name: 'a'.repeat(101),
+      },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+
+  test('leave_chat removes user from group', async () => {
+    const { users, helpers } = testSetup;
+
+    // Create group with userA
+    const chatId = await helpers.createGroupChat('Leave Test', [
+      users.userA.id,
+    ]);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'leave_chat',
+      arguments: { chatId },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      expect(content.text).toContain('Successfully left');
+    }
+  });
+
+  test('leave_chat fails for non-member', async () => {
+    const { users, helpers } = testSetup;
+
+    // Create group with only userA
+    const chatId = await helpers.createGroupChat('Private Group', [
+      users.userA.id,
+    ]);
+
+    // userB tries to leave (not a member)
+    mcpServer.setAuthenticatedUser(users.userB.id);
+
+    const result = await client.callTool({
+      name: 'leave_chat',
+      arguments: { chatId },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('MCP Server - DM Tools', () => {
+  let testSetup: TestSetup;
+  let mcpServer: ChatMcpServer;
+  let client: Client;
+
+  beforeAll(async () => {
+    testSetup = await createTestSetup();
+
+    mcpServer = createChatMcpServer({
+      chatService: testSetup.deps.chatService,
+      dmService: testSetup.deps.dmService,
+      messageService: testSetup.deps.messageService,
+      logger: testSetup.deps.logger,
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await mcpServer.server.connect(serverTransport);
+
+    client = new Client(
+      { name: 'test-client', version: '1.0.0' },
+      { capabilities: {} }
+    );
+    await client.connect(clientTransport);
+  });
+
+  afterEach(async () => {
+    await testSetup.cleanup();
+  });
+
+  afterAll(async () => {
+    await client.close();
+    await mcpServer.server.close();
+    await testSetup.close();
+  });
+
+  test('list_dms returns empty for new user', async () => {
+    const { users } = testSetup;
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_dms',
+      arguments: {},
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBe(0);
+    }
+  });
+
+  test('list_dms returns created DMs', async () => {
+    const { users, deps } = testSetup;
+
+    // Create DM via service
+    await deps.dmService.createOrGetDm(users.userA.id, users.userB.id);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_dms',
+      arguments: {},
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBe(1);
+    }
+  });
+
+  test('list_dms excludes group chats', async () => {
+    const { users, deps, helpers } = testSetup;
+
+    // Create a DM
+    await deps.dmService.createOrGetDm(users.userA.id, users.userB.id);
+
+    // Create a group chat
+    await helpers.createGroupChat('Test Group', [users.userA.id]);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_dms',
+      arguments: {},
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(data.length).toBe(1); // Only the DM, not the group
+    }
+  });
+});
+
+describe('MCP Server - Message Pagination', () => {
+  let testSetup: TestSetup;
+  let mcpServer: ChatMcpServer;
+  let client: Client;
+
+  beforeAll(async () => {
+    testSetup = await createTestSetup();
+
+    mcpServer = createChatMcpServer({
+      chatService: testSetup.deps.chatService,
+      dmService: testSetup.deps.dmService,
+      messageService: testSetup.deps.messageService,
+      logger: testSetup.deps.logger,
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await mcpServer.server.connect(serverTransport);
+
+    client = new Client(
+      { name: 'test-client', version: '1.0.0' },
+      { capabilities: {} }
+    );
+    await client.connect(clientTransport);
+  });
+
+  afterEach(async () => {
+    await testSetup.cleanup();
+  });
+
+  afterAll(async () => {
+    await client.close();
+    await mcpServer.server.close();
+    await testSetup.close();
+  });
+
+  test('list_messages returns empty for new chat', async () => {
+    const { users, helpers } = testSetup;
+
+    const chatId = await helpers.createDmChat(users.userA.id, users.userB.id);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_messages',
+      arguments: { chatId },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(data.messages).toEqual([]);
+      expect(data.pagination.hasMore).toBe(false);
+    }
+  });
+
+  test('list_messages handles cursor pagination', async () => {
+    const { users, deps, helpers } = testSetup;
+
+    const chatId = await helpers.createDmChat(users.userA.id, users.userB.id);
+
+    // Create 5 messages with small delay to ensure ordering
+    for (let i = 1; i <= 5; i++) {
+      await deps.messageService.sendMessage(
+        users.userA.id,
+        chatId,
+        `Message ${i}`
+      );
+    }
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    // Get first page (limit 2)
+    const page1 = await client.callTool({
+      name: 'list_messages',
+      arguments: { chatId, limit: 2 },
+    });
+
+    expect(page1.isError).toBeFalsy();
+    const content1 = page1.content[0];
+    if (content1.type === 'text') {
+      const data1 = JSON.parse(content1.text);
+      expect(data1.messages.length).toBe(2);
+      expect(data1.pagination.hasMore).toBe(true);
+      expect(data1.pagination.nextCursor).toBeDefined();
+
+      // Get second page using cursor
+      const page2 = await client.callTool({
+        name: 'list_messages',
+        arguments: {
+          chatId,
+          limit: 2,
+          cursor: data1.pagination.nextCursor,
+        },
+      });
+
+      expect(page2.isError).toBeFalsy();
+      const content2 = page2.content[0];
+      if (content2.type === 'text') {
+        const data2 = JSON.parse(content2.text);
+        expect(data2.messages.length).toBe(2);
+        // Messages should be different from first page
+        expect(data2.messages[0].id).not.toBe(data1.messages[0].id);
+      }
+    }
+  });
+
+  test('list_messages rejects limit below 1', async () => {
+    const { users, helpers } = testSetup;
+
+    const chatId = await helpers.createDmChat(users.userA.id, users.userB.id);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_messages',
+      arguments: { chatId, limit: 0 },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+
+  test('list_messages rejects limit above 100', async () => {
+    const { users, helpers } = testSetup;
+
+    const chatId = await helpers.createDmChat(users.userA.id, users.userB.id);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_messages',
+      arguments: { chatId, limit: 101 },
+    });
+
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('MCP Server - List Chats with Data', () => {
+  let testSetup: TestSetup;
+  let mcpServer: ChatMcpServer;
+  let client: Client;
+
+  beforeAll(async () => {
+    testSetup = await createTestSetup();
+
+    mcpServer = createChatMcpServer({
+      chatService: testSetup.deps.chatService,
+      dmService: testSetup.deps.dmService,
+      messageService: testSetup.deps.messageService,
+      logger: testSetup.deps.logger,
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await mcpServer.server.connect(serverTransport);
+
+    client = new Client(
+      { name: 'test-client', version: '1.0.0' },
+      { capabilities: {} }
+    );
+    await client.connect(clientTransport);
+  });
+
+  afterEach(async () => {
+    await testSetup.cleanup();
+  });
+
+  afterAll(async () => {
+    await client.close();
+    await mcpServer.server.close();
+    await testSetup.close();
+  });
+
+  test('list_chats returns both groups and DMs', async () => {
+    const { users, deps, helpers } = testSetup;
+
+    // Create a group
+    await helpers.createGroupChat('Test Group', [users.userA.id]);
+
+    // Create a DM
+    await deps.dmService.createOrGetDm(users.userA.id, users.userB.id);
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+
+    const result = await client.callTool({
+      name: 'list_chats',
+      arguments: {},
+    });
+
+    expect(result.isError).toBeFalsy();
+    const content = result.content[0];
+    if (content.type === 'text') {
+      const data = JSON.parse(content.text);
+      expect(data.groupChats.length).toBe(1);
+      expect(data.directChats.length).toBe(1);
+    }
+  });
+});
+
+describe('MCP Server - Real-time Features', () => {
+  let testSetup: TestSetup;
+  let mcpServer: ChatMcpServer;
+  let client: Client;
+
+  beforeAll(async () => {
+    testSetup = await createTestSetup();
+
+    mcpServer = createChatMcpServer({
+      chatService: testSetup.deps.chatService,
+      dmService: testSetup.deps.dmService,
+      messageService: testSetup.deps.messageService,
+      logger: testSetup.deps.logger,
+    });
+
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    await mcpServer.server.connect(serverTransport);
+
+    client = new Client(
+      { name: 'test-client', version: '1.0.0' },
+      { capabilities: {} }
+    );
+    await client.connect(clientTransport);
+  });
+
+  afterEach(async () => {
+    await testSetup.cleanup();
+  });
+
+  afterAll(async () => {
+    await client.close();
+    await mcpServer.server.close();
+    await testSetup.close();
+  });
+
+  test('send_message publishes to Redis channel', async () => {
+    const { users, helpers } = testSetup;
+
+    const chatId = await helpers.createDmChat(users.userA.id, users.userB.id);
+
+    // Create subscriber
+    const subscriber = await helpers.createSubscriber();
+    const channel = `chat:${chatId}`;
+
+    const receivedMessages: string[] = [];
+
+    // Subscribe to channel
+    await subscriber.subscribe(channel, (message: string) => {
+      receivedMessages.push(message);
+    });
+
+    // Send message via MCP
+    mcpServer.setAuthenticatedUser(users.userA.id);
+    await client.callTool({
+      name: 'send_message',
+      arguments: {
+        chatId,
+        content: 'Test Redis pub/sub',
+      },
+    });
+
+    // Wait for pub/sub propagation
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(receivedMessages.length).toBe(1);
+    const payload = JSON.parse(receivedMessages[0]);
+    expect(payload.type).toBe('message');
+    expect(payload.data.content).toBe('Test Redis pub/sub');
+
+    subscriber.close();
+  });
+
+  test('message payload includes expected fields', async () => {
+    const { users, helpers } = testSetup;
+
+    const chatId = await helpers.createDmChat(users.userA.id, users.userB.id);
+
+    const subscriber = await helpers.createSubscriber();
+    const channel = `chat:${chatId}`;
+
+    let receivedPayload: Record<string, unknown> | null = null;
+
+    await subscriber.subscribe(channel, (message: string) => {
+      receivedPayload = JSON.parse(message);
+    });
+
+    mcpServer.setAuthenticatedUser(users.userA.id);
+    await client.callTool({
+      name: 'send_message',
+      arguments: {
+        chatId,
+        content: 'Payload test',
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(receivedPayload).not.toBeNull();
+    if (receivedPayload) {
+      expect(receivedPayload.type).toBe('message');
+      const data = receivedPayload.data as Record<string, unknown>;
+      expect(data.id).toBeDefined();
+      expect(data.chatId).toBe(chatId);
+      expect(data.senderId).toBe(users.userA.id);
+      expect(data.content).toBe('Payload test');
+      expect(data.createdAt).toBeDefined();
+    }
+
+    subscriber.close();
   });
 });

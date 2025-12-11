@@ -2,7 +2,10 @@ import { logger } from '@babylon/shared';
 import { usePrivy } from '@privy-io/react-auth';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createChatClient } from '@/lib/chat-api-client';
-import { useSSEChannel } from './useSSE';
+import {
+  type ChatMessageEvent,
+  useChatSubscription,
+} from './useChatSubscription';
 
 /**
  * Represents a chat message in the system.
@@ -203,30 +206,26 @@ export function useChatMessages(chatId: string | null) {
     setIsLoadingMore(false);
   }, [chatId, nextCursor, isLoadingMore, hasMore, chatClient]);
 
-  // Handle SSE updates for this chat
-  const handleChatUpdate = useCallback(
-    (data: Record<string, unknown>) => {
-      if (data.type === 'new_message' && data.message) {
-        const messageData = data.message as Record<string, unknown>;
+  // Handle SSE message events from oRPC subscription
+  const handleSSEMessage = useCallback(
+    (event: ChatMessageEvent) => {
+      if (event.type === 'message' && event.data) {
+        const {
+          id,
+          content,
+          chatId: msgChatId,
+          senderId,
+          createdAt,
+        } = event.data;
 
-        // Type guard for ChatMessage
-        if (
-          typeof messageData.id === 'string' &&
-          typeof messageData.content === 'string' &&
-          typeof messageData.chatId === 'string' &&
-          typeof messageData.senderId === 'string' &&
-          typeof messageData.createdAt === 'string'
-        ) {
+        // Type guard for required fields
+        if (id && content && msgChatId && senderId && createdAt) {
           const newMessage: ChatMessage = {
-            id: messageData.id,
-            content: messageData.content,
-            chatId: messageData.chatId,
-            senderId: messageData.senderId,
-            createdAt: messageData.createdAt,
-            isGameChat:
-              typeof messageData.isGameChat === 'boolean'
-                ? messageData.isGameChat
-                : undefined,
+            id,
+            content,
+            chatId: msgChatId,
+            senderId,
+            createdAt,
           };
 
           // Only add message if it's for the current chat
@@ -243,6 +242,12 @@ export function useChatMessages(chatId: string | null) {
                   new Date(b.createdAt).getTime()
               );
             });
+
+            logger.debug(
+              'Added message from SSE',
+              { messageId: id, chatId: msgChatId },
+              'useChatMessages'
+            );
           }
         }
       }
@@ -250,9 +255,10 @@ export function useChatMessages(chatId: string | null) {
     [chatId]
   );
 
-  // Subscribe to chat channel (uses existing SSE infrastructure)
-  const channel: `chat:${string}` | null = chatId ? `chat:${chatId}` : null;
-  const { isConnected } = useSSEChannel(channel, handleChatUpdate);
+  // Subscribe to chat messages via oRPC SSE
+  const { isConnected } = useChatSubscription(chatId, {
+    onMessage: handleSSEMessage,
+  });
 
   // Load messages when switching chats
   useEffect(() => {
