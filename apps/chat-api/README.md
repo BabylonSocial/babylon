@@ -1165,7 +1165,3 @@ When adding new features:
 - Log structured JSON (pino)
 
 ---
-
-## License
-
-MIT

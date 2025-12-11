@@ -1,10 +1,3 @@
-/**
- * Chat Service
- *
- * Business logic for chat operations. Operates directly on the database
- * without RLS - authorization is handled at the API layer.
- */
-
 import { and, count, desc, eq, gt, inArray, ne } from 'drizzle-orm';
 import { err, ok, type Result } from 'neverthrow';
 import type { Database } from '../db/db';
@@ -82,9 +75,6 @@ export function createChatService(deps: ChatServiceDeps) {
   const { db, logger } = deps;
 
   return {
-    /**
-     * List all chats for a user (both group and DMs)
-     */
     async listChats(
       userId: UserId
     ): Promise<
@@ -96,7 +86,6 @@ export function createChatService(deps: ChatServiceDeps) {
       logger.debug({ msg: 'Listing chats', userId });
 
       try {
-        // Get user's group chat memberships
         const memberships = await db
           .select()
           .from(groupChatMembershipsTable)
@@ -108,7 +97,6 @@ export function createChatService(deps: ChatServiceDeps) {
           )
           .orderBy(desc(groupChatMembershipsTable.lastMessageAt));
 
-        // Get chat details for group chats
         const groupChatIds = memberships.map((m) => m.chatId);
         const groupChatDetails =
           groupChatIds.length > 0
@@ -118,7 +106,6 @@ export function createChatService(deps: ChatServiceDeps) {
                 .where(inArray(chatsTable.id, groupChatIds))
             : [];
 
-        // Get last messages for group chats
         const groupChatMessages = await Promise.all(
           groupChatIds.map(async (chatId) => {
             const msgs = await db
@@ -136,7 +123,6 @@ export function createChatService(deps: ChatServiceDeps) {
         );
         const chatDetailsMap = new Map(groupChatDetails.map((c) => [c.id, c]));
 
-        // Get DM chats
         const dmParticipantsList = await db
           .select()
           .from(chatParticipantsTable)
