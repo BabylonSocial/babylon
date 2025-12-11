@@ -90,10 +90,7 @@ export function useChatSubscription(
     );
 
     try {
-      // Call the oRPC subscribe endpoint which returns an async iterator
       const subscription = await chatClient.message.subscribe({ chatId });
-
-      // Mark as connected once we start receiving events
       updateConnectionState(true);
       reconnectAttemptsRef.current = 0;
 
