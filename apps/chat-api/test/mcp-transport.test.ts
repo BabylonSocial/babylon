@@ -128,10 +128,12 @@ describe('MCP Transport - Health Endpoints', () => {
     await testSetup.close();
   });
 
-  test('GET / returns OK', async () => {
+  test('GET / returns Scalar API docs', async () => {
     const res = await app.request('/');
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe('OK');
+    const html = await res.text();
+    expect(html).toContain('Scalar API Reference');
+    expect(html).toContain('/openapi.json');
   });
 
   test('GET /health returns status JSON', async () => {

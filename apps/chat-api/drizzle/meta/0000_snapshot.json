@@ -1,5 +1,5 @@
 {
-  "id": "3235c85c-e64a-457d-977f-84571eec8a7b",
+  "id": "158c0d31-ab5d-42cd-8430-6d6e8facb042",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -77,8 +77,12 @@
           "name": "chat_admins_chat_id_chats_id_fk",
           "tableFrom": "chat_admins",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -88,7 +92,10 @@
         "chat_admins_chat_user_key": {
           "name": "chat_admins_chat_user_key",
           "nullsNotDistinct": false,
-          "columns": ["chat_id", "user_id"]
+          "columns": [
+            "chat_id",
+            "user_id"
+          ]
         }
       },
       "policies": {},
@@ -209,8 +216,12 @@
           "name": "chat_invites_chat_id_chats_id_fk",
           "tableFrom": "chat_invites",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -220,7 +231,10 @@
         "chat_invites_chat_user_key": {
           "name": "chat_invites_chat_user_key",
           "nullsNotDistinct": false,
-          "columns": ["chat_id", "invited_user_id"]
+          "columns": [
+            "chat_id",
+            "invited_user_id"
+          ]
         }
       },
       "policies": {},
@@ -376,8 +390,12 @@
           "name": "chat_moderation_log_chat_id_chats_id_fk",
           "tableFrom": "chat_moderation_log",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -549,8 +567,12 @@
           "name": "chat_participants_chat_id_chats_id_fk",
           "tableFrom": "chat_participants",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -560,7 +582,10 @@
         "chat_participants_chat_user_key": {
           "name": "chat_participants_chat_user_key",
           "nullsNotDistinct": false,
-          "columns": ["chat_id", "user_id"]
+          "columns": [
+            "chat_id",
+            "user_id"
+          ]
         }
       },
       "policies": {},
@@ -642,7 +667,9 @@
         "chat_users_privy_id_unique": {
           "name": "chat_users_privy_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["privy_id"]
+          "columns": [
+            "privy_id"
+          ]
         }
       },
       "policies": {},
@@ -867,6 +894,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejected_at": {
+          "name": "rejected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -918,8 +957,12 @@
           "name": "dm_acceptances_chat_id_chats_id_fk",
           "tableFrom": "dm_acceptances",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -929,7 +972,9 @@
         "dm_acceptances_chat_id_unique": {
           "name": "dm_acceptances_chat_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["chat_id"]
+          "columns": [
+            "chat_id"
+          ]
         }
       },
       "policies": {},
@@ -1076,8 +1121,12 @@
           "name": "group_chat_memberships_chat_id_chats_id_fk",
           "tableFrom": "group_chat_memberships",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1087,7 +1136,10 @@
         "group_memberships_user_chat_key": {
           "name": "group_memberships_user_chat_key",
           "nullsNotDistinct": false,
-          "columns": ["user_id", "chat_id"]
+          "columns": [
+            "user_id",
+            "chat_id"
+          ]
         }
       },
       "policies": {},
@@ -1180,8 +1232,12 @@
           "name": "messages_chat_id_chats_id_fk",
           "tableFrom": "messages",
           "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "chat_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

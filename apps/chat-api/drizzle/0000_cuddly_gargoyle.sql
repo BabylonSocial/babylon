@@ -80,6 +80,8 @@ CREATE TABLE "dm_acceptances" (
 	"status" text DEFAULT 'pending' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"accepted_at" timestamp with time zone,
+	"rejected_at" timestamp with time zone,
 	CONSTRAINT "dm_acceptances_chat_id_unique" UNIQUE("chat_id")
 );
 --> statement-breakpoint

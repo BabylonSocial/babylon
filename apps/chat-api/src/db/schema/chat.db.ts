@@ -268,8 +268,8 @@ export const dmAcceptancesTable = pgTable(
     status: text('status').notNull().default('pending'), // pending, accepted, rejected
 
     ...baseEntityFields,
-    acceptedAt: baseEntityFields.updatedAt,
-    rejectedAt: baseEntityFields.updatedAt,
+    acceptedAt: timestamp('accepted_at', { withTimezone: true, mode: 'date' }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true, mode: 'date' }),
   },
   (table) => [
     index('dm_acceptances_status_created_idx').on(

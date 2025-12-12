@@ -925,6 +925,9 @@ describe('MCP Server - Real-time Features', () => {
       subscriber.subscribe(channel, (message: string) => resolve(message));
     });
 
+    // Wait for subscription to be established before sending message
+    await Bun.sleep(100);
+
     ctx.mcp.setAuthenticatedUser(users.userA.id);
     await ctx.client.callTool({
       name: 'send_message',
@@ -951,6 +954,9 @@ describe('MCP Server - Real-time Features', () => {
         resolve(JSON.parse(message))
       );
     });
+
+    // Wait for subscription to be established before sending message
+    await Bun.sleep(100);
 
     ctx.mcp.setAuthenticatedUser(users.userA.id);
     await ctx.client.callTool({

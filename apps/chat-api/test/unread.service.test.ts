@@ -7,7 +7,8 @@ import {
   setDefaultTimeout,
   test,
 } from 'bun:test';
-import { typeIdGenerator, typeIdToUuid } from '../src/db/typeid';
+import { chatsTable, dmAcceptancesTable } from '../src/db/schema/chat.db';
+import { typeIdGenerator } from '../src/db/typeid';
 import { createTestSetup, type TestSetup } from './setup';
 
 // Redis memory server can take time to start
@@ -103,19 +104,20 @@ describe('Chat Service - Unread Count', () => {
 
     // Create a pending DM acceptance directly in the database
     const chatId = typeIdGenerator('chat');
-    const { uuid: chatUuid } = typeIdToUuid(chatId);
 
-    // Create the chat first
-    await deps.db.execute(`
-      INSERT INTO chats (id, is_group, created_at, updated_at)
-      VALUES ('${chatUuid}', false, NOW(), NOW())
-    `);
+    // Create the chat first using Drizzle ORM
+    await deps.db.insert(chatsTable).values({
+      id: chatId,
+      isGroup: false,
+    });
 
     // Create a pending DM acceptance where userA is the recipient
-    await deps.db.execute(`
-      INSERT INTO dm_acceptances (chat_id, user_id, other_user_id, status, created_at, updated_at)
-      VALUES ('${chatUuid}', '${users.userA.id}', '${users.userB.id}', 'pending', NOW(), NOW())
-    `);
+    await deps.db.insert(dmAcceptancesTable).values({
+      chatId,
+      userId: users.userA.id,
+      otherUserId: users.userB.id,
+      status: 'pending',
+    });
 
     // Check unread count for userA
     const result = await deps.chatService.getUnreadCount(users.userA.id);
@@ -131,17 +133,20 @@ describe('Chat Service - Unread Count', () => {
 
     // Create an accepted DM acceptance
     const chatId = typeIdGenerator('chat');
-    const { uuid: chatUuid } = typeIdToUuid(chatId);
 
-    await deps.db.execute(`
-      INSERT INTO chats (id, is_group, created_at, updated_at)
-      VALUES ('${chatUuid}', false, NOW(), NOW())
-    `);
+    // Create the chat first using Drizzle ORM
+    await deps.db.insert(chatsTable).values({
+      id: chatId,
+      isGroup: false,
+    });
 
-    await deps.db.execute(`
-      INSERT INTO dm_acceptances (chat_id, user_id, other_user_id, status, created_at, updated_at)
-      VALUES ('${chatUuid}', '${users.userA.id}', '${users.userB.id}', 'accepted', NOW(), NOW())
-    `);
+    // Create an accepted DM acceptance
+    await deps.db.insert(dmAcceptancesTable).values({
+      chatId,
+      userId: users.userA.id,
+      otherUserId: users.userB.id,
+      status: 'accepted',
+    });
 
     // Check unread count for userA
     const result = await deps.chatService.getUnreadCount(users.userA.id);
