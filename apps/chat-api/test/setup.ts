@@ -12,7 +12,7 @@ import { uuid_ossp } from '@electric-sql/pglite/contrib/uuid_ossp';
 import { RedisClient } from 'bun';
 import pino from 'pino';
 import type { Context } from '../src/context';
-import { createDb, runMigrations, type Database } from '../src/db/db';
+import { createDb, type Database, runMigrations } from '../src/db/db';
 import {
   chatAdminsTable,
   chatInvitesTable,
