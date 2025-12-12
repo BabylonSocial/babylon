@@ -7,7 +7,7 @@ import { HTTPException } from 'hono/http-exception';
 import { type ContextDeps, createContext } from './context';
 import { handleMcpDiscovery, handleMcpRequest } from './mcp/transport';
 import { getOpenAPISpec } from './openapi';
-import { appRouter } from './routers';
+import { appRouter } from './routers/routers';
 import { generateRequestId } from './utils';
 
 export type AppVariables = {

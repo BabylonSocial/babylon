@@ -7,7 +7,7 @@
 
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-import { appRouter } from './routers';
+import { appRouter } from './routers/routers';
 
 /**
  * OpenAPI spec info

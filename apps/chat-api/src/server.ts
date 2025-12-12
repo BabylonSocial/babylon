@@ -80,4 +80,4 @@ main().catch((error) => {
 
 export type { Context } from './context';
 // Re-export types for client usage
-export type { AppRouter, AppRouterClient } from './routers';
+export type { AppRouter, AppRouterClient } from './routers/routers';
