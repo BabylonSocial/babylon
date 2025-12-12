@@ -459,8 +459,8 @@ ${contextString}`;
       if (org && trade.amount <= Number(balance.balance)) {
         if (trade.action === 'open_long' || trade.action === 'open_short') {
           const side = trade.action === 'open_long' ? 'long' : 'short';
-          // Use org.name as ticker (Organization model doesn't have ticker field, name is used as ticker)
-          const ticker = org.name;
+          // Use org.ticker for PerpMarketSnapshot lookup, fallback to org.name
+          const ticker = org.ticker || org.name;
 
           await asUser({ userId: agentUserId }, async () => {
             const service = new PerpMarketService({
@@ -509,7 +509,7 @@ ${contextString}`;
             agentId: agentUserId,
             userId: agent.managedBy || agentUserId,
             marketType: 'perp',
-            ticker: org.name, // Use org.name as ticker
+            ticker,
             action: 'open',
             side,
             amount: trade.amount,
@@ -518,7 +518,7 @@ ${contextString}`;
           });
 
           tradesExecuted++;
-          lastTicker = org.name; // Use org.name as ticker
+          lastTicker = ticker;
           lastSide = side;
           lastMarketType = 'perp';
           logger.info(
