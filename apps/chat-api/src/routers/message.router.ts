@@ -2,7 +2,10 @@ import { eventIterator, ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import type { ChatId } from '../db/typeid';
 import { protectedProcedure } from '../procedures';
-import { ListMessagesOutputSchema, SendMessageOutputSchema } from './schemas.zod';
+import {
+  ListMessagesOutputSchema,
+  SendMessageOutputSchema,
+} from './schemas.zod';
 
 // Input schemas
 const ListMessagesInputSchema = z.object({

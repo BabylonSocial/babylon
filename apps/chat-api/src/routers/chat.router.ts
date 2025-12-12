@@ -42,7 +42,12 @@ const GetParticipantsInputSchema = z.object({
 
 export const chatRouter = {
   list: publicProcedure
-    .route({ method: 'GET', path: '/chats', tags: ['Chats'], successStatus: 200 })
+    .route({
+      method: 'GET',
+      path: '/chats',
+      tags: ['Chats'],
+      successStatus: 200,
+    })
     .input(ListChatsInputSchema)
     .output(ListChatsOutputSchema)
     .handler(async ({ input, context }) => {
@@ -83,7 +88,12 @@ export const chatRouter = {
     }),
 
   get: protectedProcedure
-    .route({ method: 'GET', path: '/chats/{chatId}', tags: ['Chats'], successStatus: 200 })
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}',
+      tags: ['Chats'],
+      successStatus: 200,
+    })
     .input(GetChatInputSchema)
     .output(GetChatOutputSchema)
     .handler(async ({ input, context }) => {
@@ -111,7 +121,12 @@ export const chatRouter = {
     }),
 
   create: protectedProcedure
-    .route({ method: 'POST', path: '/chats', tags: ['Chats'], successStatus: 201 })
+    .route({
+      method: 'POST',
+      path: '/chats',
+      tags: ['Chats'],
+      successStatus: 201,
+    })
     .input(CreateChatInputSchema)
     .output(CreateChatOutputSchema)
     .handler(async ({ input, context }) => {
@@ -147,7 +162,12 @@ export const chatRouter = {
     }),
 
   leave: protectedProcedure
-    .route({ method: 'POST', path: '/chats/{chatId}/leave', tags: ['Chats'], successStatus: 200 })
+    .route({
+      method: 'POST',
+      path: '/chats/{chatId}/leave',
+      tags: ['Chats'],
+      successStatus: 200,
+    })
     .input(LeaveChatInputSchema)
     .output(LeaveChatOutputSchema)
     .handler(async ({ input, context }) => {
@@ -184,7 +204,12 @@ export const chatRouter = {
     }),
 
   getGroupId: protectedProcedure
-    .route({ method: 'GET', path: '/chats/{chatId}/group-id', tags: ['Chats'], successStatus: 200 })
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}/group-id',
+      tags: ['Chats'],
+      successStatus: 200,
+    })
     .input(GetGroupIdInputSchema)
     .output(GetGroupIdOutputSchema)
     .handler(async ({ input, context }) => {
@@ -219,23 +244,28 @@ export const chatRouter = {
     }),
 
   getUnreadCount: protectedProcedure
-    .route({ method: 'GET', path: '/chats/unread-count', tags: ['Chats'], successStatus: 200 })
+    .route({
+      method: 'GET',
+      path: '/chats/unread-count',
+      tags: ['Chats'],
+      successStatus: 200,
+    })
     .input(EmptyInputSchema)
     .output(GetUnreadCountOutputSchema)
     .handler(async ({ context }) => {
-    const result = await context.chatService.getUnreadCount(
-      context.user.userId
-    );
+      const result = await context.chatService.getUnreadCount(
+        context.user.userId
+      );
 
-    return result.match(
-      (data) => data,
-      (error) => {
-        throw new ORPCError('INTERNAL_SERVER_ERROR', {
-          message: error.message,
-        });
-      }
-    );
-  }),
+      return result.match(
+        (data) => data,
+        (error) => {
+          throw new ORPCError('INTERNAL_SERVER_ERROR', {
+            message: error.message,
+          });
+        }
+      );
+    }),
 
   getParticipants: protectedProcedure
     .route({

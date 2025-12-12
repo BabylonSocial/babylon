@@ -216,21 +216,28 @@ export const groupRouter = {
     }),
 
   listInvites: protectedProcedure
-    .route({ method: 'GET', path: '/invites', tags: ['Groups'], successStatus: 200 })
+    .route({
+      method: 'GET',
+      path: '/invites',
+      tags: ['Groups'],
+      successStatus: 200,
+    })
     .input(EmptyInputSchema)
     .output(ListInvitesOutputSchema)
     .handler(async ({ context }) => {
-    const result = await context.groupService.listInvites(context.user.userId);
+      const result = await context.groupService.listInvites(
+        context.user.userId
+      );
 
-    return result.match(
-      (invites) => ({ invites }),
-      (error) => {
-        throw new ORPCError('INTERNAL_SERVER_ERROR', {
-          message: error.message,
-        });
-      }
-    );
-  }),
+      return result.match(
+        (invites) => ({ invites }),
+        (error) => {
+          throw new ORPCError('INTERNAL_SERVER_ERROR', {
+            message: error.message,
+          });
+        }
+      );
+    }),
 
   listMembers: protectedProcedure
     .route({

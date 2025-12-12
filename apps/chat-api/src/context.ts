@@ -1,13 +1,13 @@
 import type { RedisClient } from 'bun';
+import type { Database } from './db/db';
+import type { UserId } from './db/typeid';
+import { env } from './env';
+import type { Logger } from './logger';
 import {
   type AuthenticatedUser as BaseAuthenticatedUser,
   extractToken,
   verifyPrivyToken,
 } from './privy-auth';
-import type { Database } from './db/db';
-import type { UserId } from './db/typeid';
-import { env } from './env';
-import type { Logger } from './logger';
 import type { ChatService } from './services/chat.service';
 import type { DmService } from './services/dm.service';
 import type { GroupService } from './services/group.service';
@@ -108,7 +108,8 @@ async function verifyAuth(
   try {
     const user = await verifyPrivyToken(
       token,
-      (privyId, walletAddress) => userService.lookupByPrivyId(privyId, walletAddress),
+      (privyId, walletAddress) =>
+        userService.lookupByPrivyId(privyId, walletAddress),
       logger
     );
     return {

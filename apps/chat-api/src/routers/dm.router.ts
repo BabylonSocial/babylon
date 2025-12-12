@@ -15,7 +15,12 @@ const CreateOrGetDmInputSchema = z.object({
 
 export const dmRouter = {
   createOrGet: protectedProcedure
-    .route({ method: 'POST', path: '/dms', tags: ['Direct Messages'], successStatus: 200 })
+    .route({
+      method: 'POST',
+      path: '/dms',
+      tags: ['Direct Messages'],
+      successStatus: 200,
+    })
     .input(CreateOrGetDmInputSchema)
     .output(CreateOrGetDmOutputSchema)
     .handler(async ({ input, context }) => {
@@ -57,26 +62,31 @@ export const dmRouter = {
     }),
 
   list: protectedProcedure
-    .route({ method: 'GET', path: '/dms', tags: ['Direct Messages'], successStatus: 200 })
+    .route({
+      method: 'GET',
+      path: '/dms',
+      tags: ['Direct Messages'],
+      successStatus: 200,
+    })
     .input(EmptyInputSchema)
     .output(ListDmsOutputSchema)
     .handler(async ({ context }) => {
-    const result = await context.dmService.listDms(context.user.userId);
+      const result = await context.dmService.listDms(context.user.userId);
 
-    return result.match(
-      (dms) => ({
-        chats: dms.map((dm) => ({
-          id: dm.id,
-          name: dm.name,
-          isGroup: dm.isGroup,
-          otherUserId: dm.otherUserId,
-        })),
-      }),
-      (error) => {
-        throw new ORPCError('INTERNAL_SERVER_ERROR', {
-          message: error.message,
-        });
-      }
-    );
-  }),
+      return result.match(
+        (dms) => ({
+          chats: dms.map((dm) => ({
+            id: dm.id,
+            name: dm.name,
+            isGroup: dm.isGroup,
+            otherUserId: dm.otherUserId,
+          })),
+        }),
+        (error) => {
+          throw new ORPCError('INTERNAL_SERVER_ERROR', {
+            message: error.message,
+          });
+        }
+      );
+    }),
 };

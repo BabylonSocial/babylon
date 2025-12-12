@@ -1,17 +1,12 @@
 import { z } from 'zod';
 import {
-  ChatId,
-  MessageId,
-  ModerationLogId,
-  UserId,
-} from '../db/typeid';
-import {
   ModerationActionSchema,
   SelectChatInviteSchema,
   SelectChatSchema,
   SelectGroupMembershipSchema,
   SelectMessageSchema,
 } from '../db/schema/chat.zod';
+import { ChatId, MessageId, ModerationLogId, UserId } from '../db/typeid';
 
 export const OtherUserSchema = z.object({
   id: UserId,

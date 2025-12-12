@@ -32,7 +32,10 @@ export type McpServerDeps = {
  * Returns server instance with setAuthenticatedUser for testing.
  * In production, create a new server per request instead of reusing.
  */
-export function createChatMcpServer(deps: McpServerDeps, initialUserId?: UserIdType | null) {
+export function createChatMcpServer(
+  deps: McpServerDeps,
+  initialUserId?: UserIdType | null
+) {
   const { chatService, dmService, messageService, logger } = deps;
 
   // Mutable ref for userId - allows testing to change user between calls
@@ -199,7 +202,11 @@ export function createChatMcpServer(deps: McpServerDeps, initialUserId?: UserIdT
     },
     async ({ targetUserId }) => {
       const authedUserId = requireAuth();
-      logger.debug({ msg: 'MCP: create_dm', userId: authedUserId, targetUserId });
+      logger.debug({
+        msg: 'MCP: create_dm',
+        userId: authedUserId,
+        targetUserId,
+      });
 
       const result = await dmService.createOrGetDm(authedUserId, targetUserId);
 
@@ -255,7 +262,12 @@ export function createChatMcpServer(deps: McpServerDeps, initialUserId?: UserIdT
     },
     async ({ chatId, cursor, limit }) => {
       const authedUserId = requireAuth();
-      logger.debug({ msg: 'MCP: list_messages', userId: authedUserId, chatId, limit });
+      logger.debug({
+        msg: 'MCP: list_messages',
+        userId: authedUserId,
+        chatId,
+        limit,
+      });
 
       const result = await messageService.listMessages(authedUserId, chatId, {
         cursor,
@@ -293,7 +305,11 @@ export function createChatMcpServer(deps: McpServerDeps, initialUserId?: UserIdT
         contentLength: content.length,
       });
 
-      const result = await messageService.sendMessage(authedUserId, chatId, content);
+      const result = await messageService.sendMessage(
+        authedUserId,
+        chatId,
+        content
+      );
 
       if (result.isErr()) {
         return {

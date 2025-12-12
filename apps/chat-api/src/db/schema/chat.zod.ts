@@ -163,7 +163,12 @@ export const InsertDmAcceptanceSchema = createInsertSchema(dmAcceptancesTable, {
   userId: UserId,
   otherUserId: UserId,
   status: z.enum(['pending', 'accepted', 'rejected']).optional(),
-}).omit({ createdAt: true, updatedAt: true, acceptedAt: true, rejectedAt: true });
+}).omit({
+  createdAt: true,
+  updatedAt: true,
+  acceptedAt: true,
+  rejectedAt: true,
+});
 
 export type SelectDmAcceptance = z.infer<typeof SelectDmAcceptanceSchema>;
 export type InsertDmAcceptance = z.infer<typeof InsertDmAcceptanceSchema>;
