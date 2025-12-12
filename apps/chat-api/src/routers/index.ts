@@ -5,28 +5,23 @@ import { dmRouter } from './dm.router';
 import { groupRouter } from './group.router';
 import { messageRouter } from './message.router';
 import { moderationRouter } from './moderation.router';
+import { EmptyInputSchema, HealthCheckOutputSchema } from './schemas.zod';
 
 export const appRouter = {
-  // Health check
-  healthCheck: publicProcedure.handler(() => ({
-    status: 'ok',
-    service: 'chat-api',
-    timestamp: new Date().toISOString(),
-  })),
+  healthCheck: publicProcedure
+    .route({ method: 'GET', path: '/health', successStatus: 200 })
+    .input(EmptyInputSchema)
+    .output(HealthCheckOutputSchema)
+    .handler(() => ({
+      status: 'ok' as const,
+      service: 'chat-api' as const,
+      timestamp: new Date().toISOString(),
+    })),
 
-  // Chat operations
   chat: chatRouter,
-
-  // DM operations
   dm: dmRouter,
-
-  // Message operations
   message: messageRouter,
-
-  // Moderation operations
   moderation: moderationRouter,
-
-  // Group operations
   group: groupRouter,
 };
 

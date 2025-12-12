@@ -3,11 +3,14 @@
  *
  * Exposes chat functionality as MCP tools for external AI agents.
  * Uses the official @modelcontextprotocol/sdk.
+ *
+ * Production: Each request creates a new server instance with userId baked in.
+ * Testing: Use createChatMcpServer() which allows changing userId via setAuthenticatedUser.
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { ChatId, UserId } from '../db/typeid';
+import { ChatId, UserId, type UserId as UserIdType } from '../db/typeid';
 import type { Logger } from '../logger';
 import type { ChatService } from '../services/chat.service';
 import type { DmService } from '../services/dm.service';
@@ -21,37 +24,43 @@ export type McpServerDeps = {
 };
 
 /**
- * Create MCP server with chat tools
+ * Create MCP server with chat tools.
  *
- * Note: Tools receive userId from authenticated context (closure),
- * not from tool arguments - prevents impersonation.
+ * @param deps - Service dependencies
+ * @param initialUserId - Initial authenticated user ID (null for unauthenticated)
+ *
+ * Returns server instance with setAuthenticatedUser for testing.
+ * In production, create a new server per request instead of reusing.
  */
-export function createChatMcpServer(deps: McpServerDeps) {
+export function createChatMcpServer(deps: McpServerDeps, initialUserId?: UserIdType | null) {
   const { chatService, dmService, messageService, logger } = deps;
+
+  // Mutable ref for userId - allows testing to change user between calls
+  // Production creates fresh server per request, so mutation doesn't matter
+  const userIdRef = { current: initialUserId ?? null };
 
   const server = new McpServer({
     name: 'babylon-chat',
     version: '1.0.0',
   });
 
-  // Current authenticated user (set per-request)
-  let currentUserId: string | null = null;
-
   /**
-   * Set authenticated user for subsequent tool calls
+   * Set authenticated user (for testing).
+   * Production should create new server instance instead.
    */
-  function setAuthenticatedUser(userId: string | null) {
-    currentUserId = userId;
+  function setAuthenticatedUser(userId: UserIdType | null) {
+    userIdRef.current = userId;
   }
 
   /**
-   * Get authenticated user, throws if not authenticated
+   * Get authenticated user, throws if not authenticated.
+   * Uses userIdRef to support test-time user switching.
    */
-  function requireAuth(): string {
-    if (!currentUserId) {
+  function requireAuth(): UserIdType {
+    if (!userIdRef.current) {
       throw new Error('Authentication required');
     }
-    return currentUserId;
+    return userIdRef.current;
   }
 
   // ============================================================================
@@ -63,10 +72,10 @@ export function createChatMcpServer(deps: McpServerDeps) {
     "List authenticated user's group and direct chats",
     {},
     async () => {
-      const userId = requireAuth();
-      logger.debug({ msg: 'MCP: list_chats', userId });
+      const authedUserId = requireAuth();
+      logger.debug({ msg: 'MCP: list_chats', userId: authedUserId });
 
-      const result = await chatService.listChats(userId as UserId);
+      const result = await chatService.listChats(authedUserId);
 
       if (result.isErr()) {
         return {
@@ -94,10 +103,10 @@ export function createChatMcpServer(deps: McpServerDeps) {
       chatId: ChatId.describe('Chat ID (cht_xxx format)'),
     },
     async ({ chatId }) => {
-      const userId = requireAuth();
-      logger.debug({ msg: 'MCP: get_chat', userId, chatId });
+      const authedUserId = requireAuth();
+      logger.debug({ msg: 'MCP: get_chat', userId: authedUserId, chatId });
 
-      const result = await chatService.getChatById(userId as UserId, chatId);
+      const result = await chatService.getChatById(authedUserId, chatId);
 
       if (result.isErr()) {
         return {
@@ -129,10 +138,10 @@ export function createChatMcpServer(deps: McpServerDeps) {
         .describe('User IDs to add as participants'),
     },
     async ({ name, participantIds }) => {
-      const userId = requireAuth();
-      logger.debug({ msg: 'MCP: create_chat', userId, name });
+      const authedUserId = requireAuth();
+      logger.debug({ msg: 'MCP: create_chat', userId: authedUserId, name });
 
-      const result = await chatService.createChat(userId as UserId, {
+      const result = await chatService.createChat(authedUserId, {
         name,
         isGroup: true,
         participantIds: participantIds as UserId[] | undefined,
@@ -160,10 +169,10 @@ export function createChatMcpServer(deps: McpServerDeps) {
       chatId: ChatId.describe('Chat ID to leave'),
     },
     async ({ chatId }) => {
-      const userId = requireAuth();
-      logger.debug({ msg: 'MCP: leave_chat', userId, chatId });
+      const authedUserId = requireAuth();
+      logger.debug({ msg: 'MCP: leave_chat', userId: authedUserId, chatId });
 
-      const result = await chatService.leaveChat(userId as UserId, chatId);
+      const result = await chatService.leaveChat(authedUserId, chatId);
 
       if (result.isErr()) {
         return {
@@ -189,13 +198,10 @@ export function createChatMcpServer(deps: McpServerDeps) {
       targetUserId: UserId.describe('User ID to DM (usr_xxx format)'),
     },
     async ({ targetUserId }) => {
-      const userId = requireAuth();
-      logger.debug({ msg: 'MCP: create_dm', userId, targetUserId });
+      const authedUserId = requireAuth();
+      logger.debug({ msg: 'MCP: create_dm', userId: authedUserId, targetUserId });
 
-      const result = await dmService.createOrGetDm(
-        userId as UserId,
-        targetUserId
-      );
+      const result = await dmService.createOrGetDm(authedUserId, targetUserId);
 
       if (result.isErr()) {
         return {
@@ -213,10 +219,10 @@ export function createChatMcpServer(deps: McpServerDeps) {
   );
 
   server.tool('list_dms', 'List all direct message chats', {}, async () => {
-    const userId = requireAuth();
-    logger.debug({ msg: 'MCP: list_dms', userId });
+    const authedUserId = requireAuth();
+    logger.debug({ msg: 'MCP: list_dms', userId: authedUserId });
 
-    const result = await dmService.listDms(userId as UserId);
+    const result = await dmService.listDms(authedUserId);
 
     if (result.isErr()) {
       return {
@@ -248,17 +254,13 @@ export function createChatMcpServer(deps: McpServerDeps) {
         .describe('Max messages to return'),
     },
     async ({ chatId, cursor, limit }) => {
-      const userId = requireAuth();
-      logger.debug({ msg: 'MCP: list_messages', userId, chatId, limit });
+      const authedUserId = requireAuth();
+      logger.debug({ msg: 'MCP: list_messages', userId: authedUserId, chatId, limit });
 
-      const result = await messageService.listMessages(
-        userId as UserId,
-        chatId,
-        {
-          cursor,
-          limit,
-        }
-      );
+      const result = await messageService.listMessages(authedUserId, chatId, {
+        cursor,
+        limit,
+      });
 
       if (result.isErr()) {
         return {
@@ -283,19 +285,15 @@ export function createChatMcpServer(deps: McpServerDeps) {
       content: z.string().min(1).max(5000).describe('Message content'),
     },
     async ({ chatId, content }) => {
-      const userId = requireAuth();
+      const authedUserId = requireAuth();
       logger.debug({
         msg: 'MCP: send_message',
-        userId,
+        userId: authedUserId,
         chatId,
         contentLength: content.length,
       });
 
-      const result = await messageService.sendMessage(
-        userId as UserId,
-        chatId,
-        content
-      );
+      const result = await messageService.sendMessage(authedUserId, chatId, content);
 
       if (result.isErr()) {
         return {
@@ -312,10 +310,7 @@ export function createChatMcpServer(deps: McpServerDeps) {
     }
   );
 
-  return {
-    server,
-    setAuthenticatedUser,
-  };
+  return { server, setAuthenticatedUser };
 }
 
 export type ChatMcpServer = ReturnType<typeof createChatMcpServer>;

@@ -2,9 +2,8 @@ import type { RedisClient } from 'bun';
 import {
   type AuthenticatedUser as BaseAuthenticatedUser,
   extractToken,
-  type UserLookupFn,
   verifyPrivyToken,
-} from './auth';
+} from './privy-auth';
 import type { Database } from './db/db';
 import type { UserId } from './db/typeid';
 import { env } from './env';
@@ -14,6 +13,7 @@ import type { DmService } from './services/dm.service';
 import type { GroupService } from './services/group.service';
 import type { MessageService } from './services/message.service';
 import type { ModerationService } from './services/moderation.service';
+import type { UserService } from './services/user.service';
 
 /**
  * Authenticated user in chat-api context
@@ -22,9 +22,6 @@ import type { ModerationService } from './services/moderation.service';
 export type AuthenticatedUser = Omit<BaseAuthenticatedUser, 'userId'> & {
   userId: UserId;
 };
-
-// Re-export UserLookupFn for use in index.ts
-export type { UserLookupFn } from './auth';
 
 /**
  * Dependencies passed to createApp
@@ -38,8 +35,7 @@ export type ContextDeps = {
   messageService: MessageService;
   moderationService: ModerationService;
   groupService: GroupService;
-  /** Function to lookup user by privyId - injected to allow using main DB */
-  lookupUserByPrivyId: UserLookupFn;
+  userService: UserService;
 };
 
 /**
@@ -81,7 +77,7 @@ export type Context = {
  */
 async function verifyAuth(
   headers: Headers,
-  lookupUser: UserLookupFn,
+  userService: UserService,
   logger?: Logger
 ): Promise<AuthenticatedUser | null> {
   // Try inter-service auth first (backwards compatibility)
@@ -110,7 +106,11 @@ async function verifyAuth(
   }
 
   try {
-    const user = await verifyPrivyToken(token, lookupUser, logger);
+    const user = await verifyPrivyToken(
+      token,
+      (privyId, walletAddress) => userService.lookupByPrivyId(privyId, walletAddress),
+      logger
+    );
     return {
       ...user,
       userId: user.userId as UserId,
@@ -141,10 +141,10 @@ export async function createContext(
     messageService,
     moderationService,
     groupService,
-    lookupUserByPrivyId,
+    userService,
   } = options;
 
-  const user = await verifyAuth(headers, lookupUserByPrivyId, logger);
+  const user = await verifyAuth(headers, userService, logger);
 
   return {
     requestId,

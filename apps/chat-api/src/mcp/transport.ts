@@ -1,35 +1,39 @@
 /**
  * Hono Transport Adapter for MCP
  *
- * Adapts StreamableHTTPServerTransport for use with Hono framework.
+ * Uses @hono/mcp for native Hono integration.
+ * Creates request-scoped MCP server instances to prevent race conditions.
  */
 
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { StreamableHTTPTransport } from '@hono/mcp';
 import type { Context as HonoContext } from 'hono';
 import type { AuthenticatedUser } from '../context';
+import type { UserId } from '../db/typeid';
 import type { Logger } from '../logger';
-import type { ChatMcpServer } from './server';
+import type { ChatService } from '../services/chat.service';
+import type { DmService } from '../services/dm.service';
+import type { MessageService } from '../services/message.service';
+import { createChatMcpServer } from './server';
 
 export type McpTransportDeps = {
-  mcpServer: ChatMcpServer;
+  chatService: ChatService;
+  dmService: DmService;
+  messageService: MessageService;
   logger: Logger;
 };
 
 /**
  * Handle MCP requests via Hono
  *
- * Supports both stateless (no session) and stateful modes.
- * For chat-api, we use stateless mode since auth comes from headers.
+ * Creates a fresh MCP server instance per request with userId baked in.
+ * This eliminates race conditions from shared mutable state.
  */
 export async function handleMcpRequest(
   c: HonoContext,
   deps: McpTransportDeps,
   user: AuthenticatedUser | null
 ): Promise<Response> {
-  const { mcpServer, logger } = deps;
-
-  // Set authenticated user for tool calls
-  mcpServer.setAuthenticatedUser(user?.userId ?? null);
+  const { chatService, dmService, messageService, logger } = deps;
 
   logger.debug({
     msg: 'MCP request',
@@ -38,21 +42,28 @@ export async function handleMcpRequest(
     userId: user?.userId,
   });
 
-  // Create stateless transport (no session tracking)
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // Stateless
-  });
+  // Create request-scoped server with userId in closure (thread-safe)
+  const { server } = createChatMcpServer(
+    { chatService, dmService, messageService, logger },
+    (user?.userId as UserId) ?? null
+  );
+
+  // Create Hono-native transport
+  const transport = new StreamableHTTPTransport();
 
   // Connect server to transport
-  await mcpServer.server.connect(transport);
+  await server.connect(transport);
 
   try {
-    // Handle the request
-    const response = await transport.handleRequest(c.req.raw);
+    // Handle the request using @hono/mcp transport (pass Hono context)
+    const response = await transport.handleRequest(c);
+    if (!response) {
+      return c.json({ error: 'No response from MCP server' }, 500);
+    }
     return response;
   } finally {
-    // Clean up connection
-    await mcpServer.server.close();
+    // Clean up - safe because server is request-scoped
+    await server.close();
   }
 }
 
@@ -61,7 +72,7 @@ export async function handleMcpRequest(
  */
 export async function handleMcpDiscovery(
   c: HonoContext,
-  deps: McpTransportDeps
+  deps: Pick<McpTransportDeps, 'logger'>
 ): Promise<Response> {
   const { logger } = deps;
 

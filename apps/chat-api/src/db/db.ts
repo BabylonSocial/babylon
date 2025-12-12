@@ -14,7 +14,7 @@ import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
 import { migrate as migratePostgres } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import type { Logger } from '../logger';
-import * as schema from './schema';
+import * as schema from './schema/schema';
 
 export const DB_SCHEMA = schema;
 

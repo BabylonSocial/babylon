@@ -2,6 +2,11 @@ import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import type { UserId } from '../db/typeid';
 import { protectedProcedure } from '../procedures';
+import {
+  CreateOrGetDmOutputSchema,
+  EmptyInputSchema,
+  ListDmsOutputSchema,
+} from './schemas.zod';
 
 // Input schemas
 const CreateOrGetDmInputSchema = z.object({
@@ -9,12 +14,10 @@ const CreateOrGetDmInputSchema = z.object({
 });
 
 export const dmRouter = {
-  /**
-   * Create or get an existing DM chat with another user
-   * Idempotent - returns same chat for same participant pair
-   */
   createOrGet: protectedProcedure
+    .route({ method: 'POST', path: '/dms', tags: ['Direct Messages'], successStatus: 200 })
     .input(CreateOrGetDmInputSchema)
+    .output(CreateOrGetDmOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.dmService.createOrGetDm(
         context.user.userId,
@@ -53,10 +56,11 @@ export const dmRouter = {
       );
     }),
 
-  /**
-   * List all DM chats for authenticated user
-   */
-  list: protectedProcedure.handler(async ({ context }) => {
+  list: protectedProcedure
+    .route({ method: 'GET', path: '/dms', tags: ['Direct Messages'], successStatus: 200 })
+    .input(EmptyInputSchema)
+    .output(ListDmsOutputSchema)
+    .handler(async ({ context }) => {
     const result = await context.dmService.listDms(context.user.userId);
 
     return result.match(

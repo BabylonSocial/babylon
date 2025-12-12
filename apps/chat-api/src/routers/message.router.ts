@@ -2,6 +2,7 @@ import { eventIterator, ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import type { ChatId } from '../db/typeid';
 import { protectedProcedure } from '../procedures';
+import { ListMessagesOutputSchema, SendMessageOutputSchema } from './schemas.zod';
 
 // Input schemas
 const ListMessagesInputSchema = z.object({
@@ -33,12 +34,15 @@ const MessageEventSchema = z.object({
 });
 
 export const messageRouter = {
-  /**
-   * List messages in a chat with cursor pagination
-   * Supports sinceMessageId for client cache synchronization
-   */
   list: protectedProcedure
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}/messages',
+      tags: ['Messages'],
+      successStatus: 200,
+    })
     .input(ListMessagesInputSchema)
+    .output(ListMessagesOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.messageService.listMessages(
         context.user.userId,
@@ -68,11 +72,15 @@ export const messageRouter = {
       );
     }),
 
-  /**
-   * Send a message to a chat
-   */
   send: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/chats/{chatId}/messages',
+      tags: ['Messages'],
+      successStatus: 201,
+    })
     .input(SendMessageInputSchema)
+    .output(SendMessageOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.messageService.sendMessage(
         context.user.userId,
@@ -108,21 +116,13 @@ export const messageRouter = {
       );
     }),
 
-  /**
-   * Subscribe to new messages in a chat via SSE
-   *
-   * Uses Redis pub/sub for real-time delivery.
-   *
-   * @example
-   * ```typescript
-   * // Client usage with oRPC client
-   * const subscription = await client.message.subscribe({ chatId: 'xxx' });
-   * for await (const event of subscription) {
-   *   console.log('New event:', event);
-   * }
-   * ```
-   */
   subscribe: protectedProcedure
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}/messages/subscribe',
+      tags: ['Messages'],
+      successStatus: 200,
+    })
     .input(SubscribeMessagesInputSchema)
     .output(eventIterator(MessageEventSchema))
     .handler(async function* ({ input, context }) {

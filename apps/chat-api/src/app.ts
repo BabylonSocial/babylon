@@ -1,13 +1,11 @@
+import { OpenAPIHandler } from '@orpc/openapi/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
+import { apiReference } from '@scalar/hono-api-reference';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { type ContextDeps, createContext } from './context';
-import {
-  createChatMcpServer,
-  handleMcpDiscovery,
-  handleMcpRequest,
-} from './mcp';
+import { handleMcpDiscovery, handleMcpRequest } from './mcp/transport';
 import { getOpenAPISpec } from './openapi';
 import { appRouter } from './routers';
 import { generateRequestId } from './utils';
@@ -21,16 +19,14 @@ export async function createApp(deps: ContextDeps) {
 
   logger.info({ msg: 'Creating chat-api app' });
 
-  // Initialize oRPC handler
-  const orpcHandler = new RPCHandler(appRouter);
+  // Initialize oRPC handlers
+  // RPC handler for frontend (POST /rpc/*)
+  const rpcHandler = new RPCHandler(appRouter);
+  // OpenAPI handler for third-party integrations (REST /api/*)
+  const openApiHandler = new OpenAPIHandler(appRouter);
 
-  // Initialize MCP server
-  const mcpServer = createChatMcpServer({
-    chatService,
-    dmService,
-    messageService,
-    logger,
-  });
+  // MCP deps (server is created per-request in handleMcpRequest)
+  const mcpDeps = { chatService, dmService, messageService, logger };
 
   const app = new Hono<{ Variables: AppVariables }>()
     // Request ID middleware
@@ -39,8 +35,14 @@ export async function createApp(deps: ContextDeps) {
       c.set('requestId', requestId);
       await next();
     })
-    // Health check (no logging)
-    .get('/', (c) => c.text('OK'))
+    // API docs at root
+    .get(
+      '/',
+      apiReference({
+        theme: 'kepler',
+        spec: { url: '/openapi.json' },
+      })
+    )
     .get('/health', (c) =>
       c.json({
         status: 'ok',
@@ -55,7 +57,7 @@ export async function createApp(deps: ContextDeps) {
     })
     // MCP endpoint - GET for discovery (no auth)
     .get('/mcp', async (c) => {
-      return handleMcpDiscovery(c, { mcpServer, logger });
+      return handleMcpDiscovery(c, { logger });
     })
     // MCP endpoint - POST for tool calls (auth required)
     .post('/mcp', async (c) => {
@@ -68,19 +70,77 @@ export async function createApp(deps: ContextDeps) {
         requestId,
       });
 
-      return handleMcpRequest(c, { mcpServer, logger }, context.user);
+      // Server is created per-request with userId baked in (thread-safe)
+      return handleMcpRequest(c, mcpDeps, context.user);
     })
     // CORS
     .use(
       '/*',
       cors({
         origin: ['http://localhost:3000', 'https://*.babylon.game'],
-        allowMethods: ['GET', 'POST', 'OPTIONS'],
+        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
         credentials: true,
       })
     )
-    // oRPC handler
+    // OpenAPI handler for third-party integrations (REST style)
+    .use('/api/*', async (c, next) => {
+      const requestId = c.get('requestId');
+      const startTime = performance.now();
+      const url = new URL(c.req.url);
+      const apiPath = url.pathname;
+
+      logger.debug({
+        msg: 'API request',
+        path: apiPath,
+        method: c.req.method,
+        requestId,
+      });
+
+      const context = await createContext({
+        ...deps,
+        headers: c.req.raw.headers,
+        requestId,
+      });
+
+      try {
+        const { matched, response } = await openApiHandler.handle(c.req.raw, {
+          prefix: '/api',
+          context,
+        });
+
+        if (matched) {
+          const duration = Math.round(performance.now() - startTime);
+
+          logger.info({
+            msg: 'API completed',
+            path: apiPath,
+            method: c.req.method,
+            status: response.status,
+            duration,
+            requestId,
+          });
+
+          return c.newResponse(response.body, response);
+        }
+
+        await next();
+      } catch (error) {
+        const duration = Math.round(performance.now() - startTime);
+
+        logger.error({
+          msg: 'API failed',
+          path: apiPath,
+          method: c.req.method,
+          duration,
+          error: error instanceof Error ? error.message : String(error),
+          requestId,
+        });
+
+        throw error;
+      }
+    })
+    // RPC handler for frontend
     .use('/rpc/*', async (c, next) => {
       const requestId = c.get('requestId');
       const startTime = performance.now();
@@ -100,7 +160,7 @@ export async function createApp(deps: ContextDeps) {
       });
 
       try {
-        const { matched, response } = await orpcHandler.handle(c.req.raw, {
+        const { matched, response } = await rpcHandler.handle(c.req.raw, {
           prefix: '/rpc',
           context,
         });

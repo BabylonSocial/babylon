@@ -250,7 +250,6 @@ export function createChatService(deps: ChatServiceDeps) {
       logger.debug({ msg: 'Getting chat', userId, chatId });
 
       try {
-        // Get chat
         const [chat] = await db
           .select()
           .from(chatsTable)
@@ -264,7 +263,6 @@ export function createChatService(deps: ChatServiceDeps) {
           });
         }
 
-        // Check user has access (either participant or group member)
         if (chat.isGroup) {
           const [membership] = await db
             .select()
@@ -304,7 +302,6 @@ export function createChatService(deps: ChatServiceDeps) {
           }
         }
 
-        // Get participant IDs
         const participantRecords = await db
           .select()
           .from(chatParticipantsTable)
@@ -328,9 +325,6 @@ export function createChatService(deps: ChatServiceDeps) {
       }
     },
 
-    /**
-     * Create a new chat
-     */
     async createChat(
       userId: UserId,
       input: CreateChatInput
@@ -339,8 +333,6 @@ export function createChatService(deps: ChatServiceDeps) {
 
       try {
         const chatId = typeIdGenerator('chat');
-
-        // Create chat
         const [newChat] = await db
           .insert(chatsTable)
           .values({
@@ -358,13 +350,11 @@ export function createChatService(deps: ChatServiceDeps) {
           });
         }
 
-        // Add creator as participant
         await db.insert(chatParticipantsTable).values({
           chatId: newChat.id,
           userId,
         });
 
-        // Add other participants
         const participantIds = [userId];
         if (input.participantIds?.length) {
           for (const participantId of input.participantIds) {
@@ -394,9 +384,6 @@ export function createChatService(deps: ChatServiceDeps) {
       }
     },
 
-    /**
-     * Get all public game chats (no auth required)
-     */
     async listGameChats(): Promise<Result<ChatListItem[], ChatServiceError>> {
       logger.debug({ msg: 'Listing game chats' });
 
@@ -413,8 +400,6 @@ export function createChatService(deps: ChatServiceDeps) {
           .orderBy(chatsTable.createdAt);
 
         const chatIds = gameChatsList.map((c) => c.id);
-
-        // Get message counts
         const messageCounts =
           chatIds.length > 0
             ? await db
@@ -431,7 +416,6 @@ export function createChatService(deps: ChatServiceDeps) {
           messageCounts.map((mc) => [mc.chatId, mc.count])
         );
 
-        // Get latest messages
         const latestMessages = await Promise.all(
           chatIds.map(async (chatId) => {
             const msgs = await db
@@ -489,7 +473,6 @@ export function createChatService(deps: ChatServiceDeps) {
       logger.debug({ msg: 'Leaving chat', userId, chatId });
 
       try {
-        // Get chat
         const [chat] = await db
           .select()
           .from(chatsTable)
@@ -504,7 +487,6 @@ export function createChatService(deps: ChatServiceDeps) {
         }
 
         if (chat.isGroup) {
-          // Remove from group membership
           const [membership] = await db
             .select()
             .from(groupChatMembershipsTable)
@@ -524,7 +506,6 @@ export function createChatService(deps: ChatServiceDeps) {
             });
           }
 
-          // Mark as inactive (soft delete)
           await db
             .update(groupChatMembershipsTable)
             .set({
@@ -538,7 +519,6 @@ export function createChatService(deps: ChatServiceDeps) {
               )
             );
         } else {
-          // Remove from DM participants
           const [participant] = await db
             .select()
             .from(chatParticipantsTable)
@@ -557,7 +537,6 @@ export function createChatService(deps: ChatServiceDeps) {
             });
           }
 
-          // Delete participation
           await db
             .delete(chatParticipantsTable)
             .where(
@@ -579,9 +558,6 @@ export function createChatService(deps: ChatServiceDeps) {
       }
     },
 
-    /**
-     * Get group ID for a chat (for group management modal)
-     */
     async getGroupId(
       userId: UserId,
       chatId: ChatId
@@ -589,7 +565,6 @@ export function createChatService(deps: ChatServiceDeps) {
       logger.debug({ msg: 'Getting group ID', userId, chatId });
 
       try {
-        // Get chat
         const [chat] = await db
           .select()
           .from(chatsTable)
@@ -610,7 +585,6 @@ export function createChatService(deps: ChatServiceDeps) {
           });
         }
 
-        // Verify membership
         const [membership] = await db
           .select()
           .from(groupChatMembershipsTable)

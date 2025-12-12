@@ -2,6 +2,16 @@ import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import type { ChatId, UserId } from '../db/typeid';
 import { protectedProcedure, publicProcedure } from '../procedures';
+import {
+  CreateChatOutputSchema,
+  EmptyInputSchema,
+  GetChatOutputSchema,
+  GetGroupIdOutputSchema,
+  GetParticipantsOutputSchema,
+  GetUnreadCountOutputSchema,
+  LeaveChatOutputSchema,
+  ListChatsOutputSchema,
+} from './schemas.zod';
 
 // Input schemas
 const ListChatsInputSchema = z.object({
@@ -31,11 +41,10 @@ const GetParticipantsInputSchema = z.object({
 });
 
 export const chatRouter = {
-  /**
-   * List chats for authenticated user, or all game chats if all=true
-   */
   list: publicProcedure
+    .route({ method: 'GET', path: '/chats', tags: ['Chats'], successStatus: 200 })
     .input(ListChatsInputSchema)
+    .output(ListChatsOutputSchema)
     .handler(async ({ input, context }) => {
       if (input.all) {
         // Public endpoint - list game chats
@@ -73,11 +82,10 @@ export const chatRouter = {
       );
     }),
 
-  /**
-   * Get chat details by ID
-   */
   get: protectedProcedure
+    .route({ method: 'GET', path: '/chats/{chatId}', tags: ['Chats'], successStatus: 200 })
     .input(GetChatInputSchema)
+    .output(GetChatOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.chatService.getChatById(
         context.user.userId,
@@ -102,11 +110,10 @@ export const chatRouter = {
       );
     }),
 
-  /**
-   * Create a new chat
-   */
   create: protectedProcedure
+    .route({ method: 'POST', path: '/chats', tags: ['Chats'], successStatus: 201 })
     .input(CreateChatInputSchema)
+    .output(CreateChatOutputSchema)
     .handler(async ({ input, context }) => {
       // Validate group chat has name
       if (input.isGroup && !input.name) {
@@ -139,11 +146,10 @@ export const chatRouter = {
       );
     }),
 
-  /**
-   * Leave a chat
-   */
   leave: protectedProcedure
+    .route({ method: 'POST', path: '/chats/{chatId}/leave', tags: ['Chats'], successStatus: 200 })
     .input(LeaveChatInputSchema)
+    .output(LeaveChatOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.chatService.leaveChat(
         context.user.userId,
@@ -177,11 +183,10 @@ export const chatRouter = {
       );
     }),
 
-  /**
-   * Get group ID for a chat (for group management)
-   */
   getGroupId: protectedProcedure
+    .route({ method: 'GET', path: '/chats/{chatId}/group-id', tags: ['Chats'], successStatus: 200 })
     .input(GetGroupIdInputSchema)
+    .output(GetGroupIdOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.chatService.getGroupId(
         context.user.userId,
@@ -213,10 +218,11 @@ export const chatRouter = {
       );
     }),
 
-  /**
-   * Get unread message counts for authenticated user
-   */
-  getUnreadCount: protectedProcedure.handler(async ({ context }) => {
+  getUnreadCount: protectedProcedure
+    .route({ method: 'GET', path: '/chats/unread-count', tags: ['Chats'], successStatus: 200 })
+    .input(EmptyInputSchema)
+    .output(GetUnreadCountOutputSchema)
+    .handler(async ({ context }) => {
     const result = await context.chatService.getUnreadCount(
       context.user.userId
     );
@@ -231,11 +237,15 @@ export const chatRouter = {
     );
   }),
 
-  /**
-   * Get participants of a chat
-   */
   getParticipants: protectedProcedure
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}/participants',
+      tags: ['Chats'],
+      successStatus: 200,
+    })
     .input(GetParticipantsInputSchema)
+    .output(GetParticipantsOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.chatService.getParticipants(
         context.user.userId,

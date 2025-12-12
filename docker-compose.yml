@@ -128,30 +128,38 @@ services:
       timeout: 20s
       retries: 3
 
-  chat-api:
-    image: oven/bun:1
-    container_name: babylon-chat-api
+  chat-api-postgres:
+    image: postgres:16-alpine
+    container_name: babylon-chat-api-postgres
     restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - .:/app
-      - /app/node_modules
     ports:
-      - "3001:3001"
+      - "5434:5432"
     environment:
-      PORT: 3001
-      NODE_ENV: development
-      DATABASE_URL: postgresql://babylon:babylon_dev_password@postgres:5432/babylon
-      REDIS_URL: redis://redis:6379
-      PRIVY_APP_ID: ${PRIVY_APP_ID}
-      PRIVY_APP_SECRET: ${PRIVY_APP_SECRET}
-      CHAT_API_SECRET: ${CHAT_API_SECRET:-chat_api_secret_for_local_development_only}
-    command: bun run --hot apps/chat-api/src/index.ts
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: chat_dev_password
+      POSTGRES_DB: chat
+    volumes:
+      - chat_api_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  chat-api-redis:
+    image: redis:7-alpine
+    container_name: babylon-chat-api-redis
+    restart: unless-stopped
+    ports:
+      - "6381:6379"
+    volumes:
+      - chat_api_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
@@ -159,4 +167,8 @@ volumes:
   minio_data:
     driver: local
   redis_data:
+    driver: local
+  chat_api_postgres_data:
+    driver: local
+  chat_api_redis_data:
     driver: local

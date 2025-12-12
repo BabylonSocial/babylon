@@ -1,10 +1,6 @@
 import { RedisClient } from 'bun';
-import { eq } from 'drizzle-orm';
 import { createApp } from './app';
-import type { UserLookupFn } from './context';
-import { createDb, type Database } from './db/db';
-import { chatUsersTable } from './db/schema';
-import { typeIdGenerator, type UserId } from './db/typeid';
+import { createDb } from './db/db';
 import { env } from './env';
 import { logger } from './logger';
 import { createChatService } from './services/chat.service';
@@ -12,55 +8,7 @@ import { createDmService } from './services/dm.service';
 import { createGroupService } from './services/group.service';
 import { createMessageService } from './services/message.service';
 import { createModerationService } from './services/moderation.service';
-
-/**
- * Create user lookup function for Privy auth
- * Queries the local chat_users table and creates user if not exists
- */
-function createUserLookup(db: Database): UserLookupFn {
-  return async (privyId: string, walletAddress?: string) => {
-    // Try to find existing user
-    const existing = await db.query.chatUsersTable.findFirst({
-      where: eq(chatUsersTable.privyId, privyId),
-    });
-
-    if (existing) {
-      return {
-        id: existing.id,
-        walletAddress: existing.walletAddress,
-        isAgent: false, // chat-api users are always human for now
-      };
-    }
-
-    // Create new user if not found
-    const newUserId = typeIdGenerator('user');
-    const result = await db
-      .insert(chatUsersTable)
-      .values({
-        id: newUserId as UserId,
-        privyId,
-        walletAddress: walletAddress ?? null,
-      })
-      .returning();
-
-    const created = result[0];
-    if (!created) {
-      throw new Error('Failed to create user');
-    }
-
-    logger.info({
-      msg: 'Created new chat user',
-      userId: created.id,
-      privyId,
-    });
-
-    return {
-      id: created.id,
-      walletAddress: created.walletAddress,
-      isAgent: false,
-    };
-  };
-}
+import { createUserService } from './services/user.service';
 
 async function main() {
   logger.info({ msg: 'Starting chat-api', env: env.NODE_ENV, port: env.PORT });
@@ -81,10 +29,8 @@ async function main() {
   await redis.connect();
   logger.info({ msg: 'Redis connected', url: env.REDIS_URL });
 
-  // Create user lookup function (uses local chat DB)
-  const lookupUserByPrivyId = createUserLookup(db);
-
   // Create services
+  const userService = createUserService({ db, logger });
   const chatService = createChatService({ db, logger });
   const dmService = createDmService({ db, logger });
   const messageService = createMessageService({ db, logger, redis });
@@ -96,12 +42,12 @@ async function main() {
     db,
     logger,
     redis,
+    userService,
     chatService,
     dmService,
     messageService,
     moderationService,
     groupService,
-    lookupUserByPrivyId,
   });
 
   // Start server

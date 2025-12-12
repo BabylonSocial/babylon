@@ -6,8 +6,8 @@
  */
 
 import { PrivyClient } from '@privy-io/server-auth';
-import { env } from '../env';
-import type { Logger } from '../logger';
+import { env } from './env';
+import type { Logger } from './logger';
 
 /**
  * Authenticated user information returned after successful auth

@@ -188,6 +188,7 @@ describe('MCP Server - Authentication', () => {
     });
 
     expect(result.isError).toBe(true);
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     expect(content.type).toBe('text');
     if (content.type === 'text') {
@@ -207,6 +208,7 @@ describe('MCP Server - Authentication', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     expect(content.type).toBe('text');
     if (content.type === 'text') {
@@ -263,6 +265,7 @@ describe('MCP Server - Chat Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -283,6 +286,7 @@ describe('MCP Server - Chat Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -313,6 +317,8 @@ describe('MCP Server - Chat Tools', () => {
     expect(result1.isError).toBeFalsy();
     expect(result2.isError).toBeFalsy();
 
+    if (!('content' in result1)) throw new Error('Expected content');
+    if (!('content' in result2)) throw new Error('Expected content');
     const content1 = result1.content[0];
     const content2 = result2.content[0];
 
@@ -338,6 +344,7 @@ describe('MCP Server - Chat Tools', () => {
     });
 
     expect(result.isError).toBe(true);
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       expect(content.text).toContain('Cannot DM yourself');
@@ -405,6 +412,7 @@ describe('MCP Server - Message Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -444,6 +452,7 @@ describe('MCP Server - Message Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -479,6 +488,7 @@ describe('MCP Server - Message Tools', () => {
     });
 
     expect(result.isError).toBe(true);
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       expect(content.text).toContain('Access denied');
@@ -506,6 +516,7 @@ describe('MCP Server - Message Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -623,6 +634,7 @@ describe('MCP Server - Group Management', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -645,6 +657,7 @@ describe('MCP Server - Group Management', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -689,6 +702,7 @@ describe('MCP Server - Group Management', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       expect(content.text).toContain('Successfully left');
@@ -724,6 +738,7 @@ describe('MCP Server - DM Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -744,6 +759,7 @@ describe('MCP Server - DM Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -765,6 +781,7 @@ describe('MCP Server - DM Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -785,6 +802,7 @@ describe('MCP Server - DM Tools', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -809,6 +827,7 @@ describe('MCP Server - Message Pagination', () => {
     });
 
     expect(result.isError).toBeFalsy();
+    if (!('content' in result)) throw new Error('Expected content');
     const content = result.content[0];
     if (content.type === 'text') {
       const data = JSON.parse(content.text);
@@ -838,6 +857,7 @@ describe('MCP Server - Message Pagination', () => {
     });
 
     expect(page1.isError).toBeFalsy();
+    if (!('content' in page1)) throw new Error('Expected content');
     const content1 = page1.content[0];
     if (content1.type === 'text') {
       const data1 = JSON.parse(content1.text);
@@ -851,6 +871,7 @@ describe('MCP Server - Message Pagination', () => {
       });
 
       expect(page2.isError).toBeFalsy();
+      if (!('content' in page2)) throw new Error('Expected content');
       const content2 = page2.content[0];
       if (content2.type === 'text') {
         const data2 = JSON.parse(content2.text);

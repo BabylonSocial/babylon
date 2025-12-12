@@ -2,8 +2,12 @@ import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import type { ChatId, UserId } from '../db/typeid';
 import { protectedProcedure } from '../procedures';
+import {
+  CheckBanOutputSchema,
+  GetModerationLogOutputSchema,
+  ModerationResultOutputSchema,
+} from './schemas.zod';
 
-// Input schemas with AI SDK-friendly descriptions
 const KickUserInputSchema = z.object({
   chatId: z.string().min(1).describe('The chat ID to kick the user from'),
   targetUserId: z.string().min(1).describe('The user ID to kick'),
@@ -42,12 +46,15 @@ const GetModerationLogInputSchema = z.object({
 });
 
 export const moderationRouter = {
-  /**
-   * Kick a user from a chat
-   * Removes them from participants but doesn't prevent re-joining
-   */
   kick: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/chats/{chatId}/kick',
+      tags: ['Moderation'],
+      successStatus: 200,
+    })
     .input(KickUserInputSchema)
+    .output(ModerationResultOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.moderationService.kickUser(
         context.user.userId,
@@ -87,12 +94,15 @@ export const moderationRouter = {
       );
     }),
 
-  /**
-   * Ban a user from a chat
-   * Removes them and prevents re-joining until unbanned or ban expires
-   */
   ban: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/chats/{chatId}/ban',
+      tags: ['Moderation'],
+      successStatus: 200,
+    })
     .input(BanUserInputSchema)
+    .output(ModerationResultOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.moderationService.banUser(
         context.user.userId,
@@ -133,12 +143,15 @@ export const moderationRouter = {
       );
     }),
 
-  /**
-   * Unban a user from a chat
-   * Allows them to re-join
-   */
   unban: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/chats/{chatId}/unban',
+      tags: ['Moderation'],
+      successStatus: 200,
+    })
     .input(UnbanUserInputSchema)
+    .output(ModerationResultOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.moderationService.unbanUser(
         context.user.userId,
@@ -174,11 +187,15 @@ export const moderationRouter = {
       );
     }),
 
-  /**
-   * Check if a user is banned from a chat
-   */
   checkBan: protectedProcedure
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}/bans/{userId}',
+      tags: ['Moderation'],
+      successStatus: 200,
+    })
     .input(CheckBanInputSchema)
+    .output(CheckBanOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.moderationService.isUserBanned(
         input.userId as UserId,
@@ -195,12 +212,15 @@ export const moderationRouter = {
       );
     }),
 
-  /**
-   * Get the moderation log for a chat
-   * Returns recent kick/ban/unban actions
-   */
   log: protectedProcedure
+    .route({
+      method: 'GET',
+      path: '/chats/{chatId}/moderation-log',
+      tags: ['Moderation'],
+      successStatus: 200,
+    })
     .input(GetModerationLogInputSchema)
+    .output(GetModerationLogOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.moderationService.getModerationLog(
         input.chatId as ChatId,

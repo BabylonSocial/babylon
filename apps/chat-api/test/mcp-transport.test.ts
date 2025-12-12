@@ -37,7 +37,11 @@ describe('MCP Transport - Discovery Endpoint', () => {
       messageService: testSetup.deps.messageService,
       moderationService: testSetup.deps.moderationService,
       groupService: testSetup.deps.groupService,
-      lookupUserByPrivyId: async () => null, // Mock - no user lookup needed for discovery
+      userService: {
+        lookupByPrivyId: async () => {
+          throw new Error('User lookup not expected in discovery tests');
+        },
+      },
     };
 
     app = await createApp(contextDeps);
@@ -54,7 +58,11 @@ describe('MCP Transport - Discovery Endpoint', () => {
 
     expect(res.status).toBe(200);
 
-    const json = await res.json();
+    const json = (await res.json()) as {
+      name: string;
+      version: string;
+      tools: { name: string }[];
+    };
     expect(json.name).toBe('babylon-chat');
     expect(json.version).toBe('1.0.0');
     expect(json.tools).toBeDefined();
@@ -67,8 +75,8 @@ describe('MCP Transport - Discovery Endpoint', () => {
       method: 'GET',
     });
 
-    const json = await res.json();
-    const toolNames = json.tools.map((t: { name: string }) => t.name);
+    const json = (await res.json()) as { tools: { name: string }[] };
+    const toolNames = json.tools.map((t) => t.name);
 
     expect(toolNames).toContain('list_chats');
     expect(toolNames).toContain('get_chat');
@@ -106,7 +114,11 @@ describe('MCP Transport - Health Endpoints', () => {
       messageService: testSetup.deps.messageService,
       moderationService: testSetup.deps.moderationService,
       groupService: testSetup.deps.groupService,
-      lookupUserByPrivyId: async () => null,
+      userService: {
+        lookupByPrivyId: async () => {
+          throw new Error('User lookup not expected in health tests');
+        },
+      },
     };
 
     app = await createApp(contextDeps);
@@ -126,7 +138,11 @@ describe('MCP Transport - Health Endpoints', () => {
     const res = await app.request('/health');
     expect(res.status).toBe(200);
 
-    const json = await res.json();
+    const json = (await res.json()) as {
+      status: string;
+      service: string;
+      timestamp: string;
+    };
     expect(json.status).toBe('ok');
     expect(json.service).toBe('chat-api');
     expect(json.timestamp).toBeDefined();
@@ -149,8 +165,11 @@ describe('MCP Transport - POST Endpoint', () => {
       messageService: testSetup.deps.messageService,
       moderationService: testSetup.deps.moderationService,
       groupService: testSetup.deps.groupService,
-      // Mock user lookup for inter-service auth
-      lookupUserByPrivyId: async () => null,
+      userService: {
+        lookupByPrivyId: async () => {
+          throw new Error('User lookup not expected in POST tests');
+        },
+      },
     };
 
     app = await createApp(contextDeps);
@@ -201,7 +220,11 @@ describe('MCP Transport - CORS', () => {
       messageService: testSetup.deps.messageService,
       moderationService: testSetup.deps.moderationService,
       groupService: testSetup.deps.groupService,
-      lookupUserByPrivyId: async () => null,
+      userService: {
+        lookupByPrivyId: async () => {
+          throw new Error('User lookup not expected in CORS tests');
+        },
+      },
     };
 
     app = await createApp(contextDeps);

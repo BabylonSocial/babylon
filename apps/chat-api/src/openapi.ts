@@ -6,7 +6,7 @@
  */
 
 import { OpenAPIGenerator } from '@orpc/openapi';
-import { ZodToJsonSchemaConverter } from '@orpc/zod';
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { appRouter } from './routers';
 
 /**
@@ -31,12 +31,44 @@ Some endpoints (like listing game chats) are public and don't require authentica
 
 ## Rate Limiting
 API calls are rate-limited per user. Contact support for higher limits.
+
+## Endpoints
+
+This API provides two interfaces:
+- **REST API** (\`/api/*\`): OpenAPI-compliant REST endpoints for third-party integrations
+- **RPC API** (\`/rpc/*\`): Type-safe RPC endpoints for frontend applications
   `.trim(),
   contact: {
     name: 'Babylon Support',
     url: 'https://babylon.game',
   },
 };
+
+/**
+ * API tags for grouping endpoints
+ */
+const API_TAGS = [
+  {
+    name: 'Chats',
+    description: 'Chat room operations - list, create, join, leave',
+  },
+  {
+    name: 'Direct Messages',
+    description: 'Direct messaging between users',
+  },
+  {
+    name: 'Messages',
+    description: 'Send and receive messages in chats',
+  },
+  {
+    name: 'Groups',
+    description: 'Group chat management - members, invites',
+  },
+  {
+    name: 'Moderation',
+    description: 'Chat moderation - kick, ban, unban',
+  },
+];
 
 /**
  * Create OpenAPI generator with Zod schema conversion
@@ -57,14 +89,15 @@ export async function generateOpenAPISpec(): Promise<object> {
     info: API_INFO,
     servers: [
       {
-        url: 'http://localhost:3001',
+        url: 'http://localhost:3001/api',
         description: 'Local development',
       },
       {
-        url: 'https://chat-api.babylon.game',
+        url: 'https://chat-api.babylon.game/api',
         description: 'Production',
       },
     ],
+    tags: API_TAGS,
     security: [
       {
         bearerAuth: [],

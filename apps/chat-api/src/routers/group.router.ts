@@ -2,8 +2,16 @@ import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import type { ChatId, ChatInviteId, UserId } from '../db/typeid';
 import { protectedProcedure } from '../procedures';
+import {
+  AddMembersOutputSchema,
+  EmptyInputSchema,
+  InviteUserOutputSchema,
+  ListInvitesOutputSchema,
+  ListMembersOutputSchema,
+  RemoveMemberOutputSchema,
+  RespondToInviteOutputSchema,
+} from './schemas.zod';
 
-// Input schemas with AI SDK-friendly descriptions
 const AddMembersInputSchema = z.object({
   chatId: z.string().min(1).describe('The group chat ID'),
   userIds: z
@@ -34,11 +42,15 @@ const ListMembersInputSchema = z.object({
 });
 
 export const groupRouter = {
-  /**
-   * Add members to a group chat directly
-   */
   addMembers: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/groups/{chatId}/members',
+      tags: ['Groups'],
+      successStatus: 200,
+    })
     .input(AddMembersInputSchema)
+    .output(AddMembersOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.groupService.addMembers(
         context.user.userId,
@@ -69,11 +81,15 @@ export const groupRouter = {
       );
     }),
 
-  /**
-   * Remove a member from a group chat
-   */
   removeMember: protectedProcedure
+    .route({
+      method: 'DELETE',
+      path: '/groups/{chatId}/members/{userId}',
+      tags: ['Groups'],
+      successStatus: 200,
+    })
     .input(RemoveMemberInputSchema)
+    .output(RemoveMemberOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.groupService.removeMember(
         context.user.userId,
@@ -108,11 +124,15 @@ export const groupRouter = {
       );
     }),
 
-  /**
-   * Invite a user to join a group chat
-   */
   invite: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/groups/{chatId}/invites',
+      tags: ['Groups'],
+      successStatus: 201,
+    })
     .input(InviteUserInputSchema)
+    .output(InviteUserOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.groupService.inviteUser(
         context.user.userId,
@@ -149,11 +169,15 @@ export const groupRouter = {
       );
     }),
 
-  /**
-   * Respond to a group invite (accept or reject)
-   */
   respondToInvite: protectedProcedure
+    .route({
+      method: 'POST',
+      path: '/invites/{inviteId}/respond',
+      tags: ['Groups'],
+      successStatus: 200,
+    })
     .input(RespondToInviteInputSchema)
+    .output(RespondToInviteOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.groupService.respondToInvite(
         context.user.userId,
@@ -191,10 +215,11 @@ export const groupRouter = {
       );
     }),
 
-  /**
-   * List pending invites for the authenticated user
-   */
-  listInvites: protectedProcedure.handler(async ({ context }) => {
+  listInvites: protectedProcedure
+    .route({ method: 'GET', path: '/invites', tags: ['Groups'], successStatus: 200 })
+    .input(EmptyInputSchema)
+    .output(ListInvitesOutputSchema)
+    .handler(async ({ context }) => {
     const result = await context.groupService.listInvites(context.user.userId);
 
     return result.match(
@@ -207,11 +232,15 @@ export const groupRouter = {
     );
   }),
 
-  /**
-   * List members of a group chat
-   */
   listMembers: protectedProcedure
+    .route({
+      method: 'GET',
+      path: '/groups/{chatId}/members',
+      tags: ['Groups'],
+      successStatus: 200,
+    })
     .input(ListMembersInputSchema)
+    .output(ListMembersOutputSchema)
     .handler(async ({ input, context }) => {
       const result = await context.groupService.listMembers(
         context.user.userId,

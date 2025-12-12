@@ -130,7 +130,6 @@ export function useChatSubscription(
 
       updateConnectionState(false, errorMessage);
 
-      // Schedule reconnect with exponential backoff
       if (reconnectAttemptsRef.current < maxReconnectAttempts) {
         const delay =
           reconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
@@ -166,18 +165,12 @@ export function useChatSubscription(
     reconnectDelay,
   ]);
 
-  // Manual reconnect
   const reconnect = useCallback(() => {
-    // Clear any pending reconnect
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-
-    // Reset attempts
     reconnectAttemptsRef.current = 0;
-
-    // Abort current and start fresh
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -185,14 +178,11 @@ export function useChatSubscription(
     void subscribe();
   }, [subscribe]);
 
-  // Start subscription when chatId changes
   useEffect(() => {
     if (chatId && authenticated && enabled) {
       void subscribe();
     }
-
     return () => {
-      // Cleanup on unmount or chatId change
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
