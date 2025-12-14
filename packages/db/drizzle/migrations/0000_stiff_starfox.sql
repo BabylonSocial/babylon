@@ -2,6 +2,15 @@ CREATE TYPE "public"."AgentStatus" AS ENUM('REGISTERED', 'INITIALIZED', 'ACTIVE'
 CREATE TYPE "public"."AgentType" AS ENUM('USER_CONTROLLED', 'NPC', 'EXTERNAL');--> statement-breakpoint
 CREATE TYPE "public"."OnboardingStatus" AS ENUM('PENDING_PROFILE', 'PENDING_ONCHAIN', 'ONCHAIN_IN_PROGRESS', 'ONCHAIN_FAILED', 'COMPLETED');--> statement-breakpoint
 CREATE TYPE "public"."RealtimeOutboxStatus" AS ENUM('pending', 'sent', 'failed');--> statement-breakpoint
+CREATE TABLE "ActorState" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tradingBalance" numeric(18, 2) DEFAULT '10000' NOT NULL,
+	"reputationPoints" integer DEFAULT 10000 NOT NULL,
+	"hasPool" boolean DEFAULT false NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "ActorFollow" (
 	"id" text PRIMARY KEY NOT NULL,
 	"followerId" text NOT NULL,
@@ -25,28 +34,6 @@ CREATE TABLE "ActorRelationship" (
 	"lastInteraction" timestamp,
 	"interactionCount" integer DEFAULT 0 NOT NULL,
 	"evolutionCount" integer DEFAULT 0 NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "Actor" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"description" text,
-	"domain" text[] DEFAULT '{}' NOT NULL,
-	"personality" text,
-	"tier" text,
-	"affiliations" text[] DEFAULT '{}' NOT NULL,
-	"postStyle" text,
-	"postExample" text[] DEFAULT '{}' NOT NULL,
-	"role" text,
-	"initialLuck" text DEFAULT 'medium' NOT NULL,
-	"initialMood" double precision DEFAULT 0 NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp NOT NULL,
-	"hasPool" boolean DEFAULT false NOT NULL,
-	"profileImageUrl" text,
-	"reputationPoints" integer DEFAULT 10000 NOT NULL,
-	"tradingBalance" numeric(18, 2) DEFAULT '10000' NOT NULL,
-	"isTest" boolean DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "NPCInteraction" (
@@ -291,7 +278,9 @@ CREATE TABLE "Market" (
 	"onChainMarketId" text,
 	"onChainResolutionTxHash" text,
 	"onChainResolved" boolean DEFAULT false NOT NULL,
-	"oracleAddress" text
+	"oracleAddress" text,
+	"resolutionProofUrl" text,
+	"resolutionDescription" text
 );
 --> statement-breakpoint
 CREATE TABLE "Organization" (
@@ -306,6 +295,29 @@ CREATE TABLE "Organization" (
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL,
 	"imageUrl" text
+);
+--> statement-breakpoint
+CREATE TABLE "PerpMarketSnapshot" (
+	"ticker" text PRIMARY KEY NOT NULL,
+	"organizationId" text NOT NULL,
+	"name" text,
+	"currentPrice" double precision NOT NULL,
+	"price24hAgo" double precision,
+	"price24hAgoUpdatedAt" timestamp,
+	"metrics24hResetAt" timestamp,
+	"change24h" double precision DEFAULT 0 NOT NULL,
+	"changePercent24h" double precision DEFAULT 0 NOT NULL,
+	"high24h" double precision NOT NULL,
+	"low24h" double precision NOT NULL,
+	"volume24h" double precision DEFAULT 0 NOT NULL,
+	"openInterest" double precision DEFAULT 0 NOT NULL,
+	"fundingRate" jsonb NOT NULL,
+	"maxLeverage" integer DEFAULT 100 NOT NULL,
+	"minOrderSize" integer DEFAULT 10 NOT NULL,
+	"markPrice" double precision,
+	"indexPrice" double precision,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "PerpPosition" (
@@ -497,6 +509,7 @@ CREATE TABLE "Notification" (
 	"actorId" text,
 	"postId" text,
 	"commentId" text,
+	"chatId" text,
 	"message" text NOT NULL,
 	"read" boolean DEFAULT false NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
@@ -542,19 +555,6 @@ CREATE TABLE "UserGroup" (
 	"createdById" text NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "CharacterMapping" (
-	"id" text PRIMARY KEY NOT NULL,
-	"realName" text NOT NULL,
-	"parodyName" text NOT NULL,
-	"category" text NOT NULL,
-	"aliases" text[] DEFAULT '{}' NOT NULL,
-	"isActive" boolean DEFAULT true NOT NULL,
-	"priority" integer DEFAULT 0 NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp NOT NULL,
-	CONSTRAINT "CharacterMapping_realName_unique" UNIQUE("realName")
 );
 --> statement-breakpoint
 CREATE TABLE "GameConfig" (
@@ -628,19 +628,6 @@ CREATE TABLE "OracleTransaction" (
 	CONSTRAINT "OracleTransaction_txHash_unique" UNIQUE("txHash")
 );
 --> statement-breakpoint
-CREATE TABLE "OrganizationMapping" (
-	"id" text PRIMARY KEY NOT NULL,
-	"realName" text NOT NULL,
-	"parodyName" text NOT NULL,
-	"category" text NOT NULL,
-	"aliases" text[] DEFAULT '{}' NOT NULL,
-	"isActive" boolean DEFAULT true NOT NULL,
-	"priority" integer DEFAULT 0 NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp NOT NULL,
-	CONSTRAINT "OrganizationMapping_realName_unique" UNIQUE("realName")
-);
---> statement-breakpoint
 CREATE TABLE "ParodyHeadline" (
 	"id" text PRIMARY KEY NOT NULL,
 	"originalHeadlineId" text NOT NULL,
@@ -696,10 +683,23 @@ CREATE TABLE "RSSHeadline" (
 --> statement-breakpoint
 CREATE TABLE "SystemSettings" (
 	"id" text PRIMARY KEY DEFAULT 'system' NOT NULL,
-	"wandbModel" text,
-	"wandbEnabled" boolean DEFAULT false NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "TickTokenStats" (
+	"id" text PRIMARY KEY NOT NULL,
+	"tickId" text NOT NULL,
+	"tickStartedAt" timestamp NOT NULL,
+	"tickCompletedAt" timestamp NOT NULL,
+	"tickDurationMs" integer NOT NULL,
+	"totalCalls" integer NOT NULL,
+	"totalInputTokens" integer NOT NULL,
+	"totalOutputTokens" integer NOT NULL,
+	"totalTokens" integer NOT NULL,
+	"byPromptType" json NOT NULL,
+	"byModel" json NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "WidgetCache" (
@@ -732,6 +732,25 @@ CREATE TABLE "WorldFact" (
 	"lastUpdated" timestamp NOT NULL,
 	"isActive" boolean DEFAULT true NOT NULL,
 	"priority" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "QuestionArcPlan" (
+	"id" text PRIMARY KEY NOT NULL,
+	"questionId" text NOT NULL,
+	"uncertaintyPeakDay" integer NOT NULL,
+	"clarityOnsetDay" integer NOT NULL,
+	"verificationDay" integer NOT NULL,
+	"insiderActorIds" jsonb DEFAULT '[]'::jsonb,
+	"deceiverActorIds" jsonb DEFAULT '[]'::jsonb,
+	"phaseRatios" jsonb NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "OrganizationState" (
+	"id" text PRIMARY KEY NOT NULL,
+	"currentPrice" double precision,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL
 );
@@ -1117,6 +1136,7 @@ CREATE TABLE "trajectories" (
 	"id" text PRIMARY KEY NOT NULL,
 	"trajectoryId" text NOT NULL,
 	"agentId" text NOT NULL,
+	"archetype" varchar(50),
 	"startTime" timestamp NOT NULL,
 	"endTime" timestamp NOT NULL,
 	"durationMs" integer NOT NULL,
@@ -1146,6 +1166,41 @@ CREATE TABLE "trajectories" (
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL,
 	CONSTRAINT "trajectories_trajectoryId_unique" UNIQUE("trajectoryId")
+);
+--> statement-breakpoint
+CREATE TABLE "UserAgentConfig" (
+	"id" text PRIMARY KEY NOT NULL,
+	"userId" text NOT NULL,
+	"personality" text,
+	"system" text,
+	"tradingStrategy" text,
+	"style" json,
+	"messageExamples" json,
+	"personaPrompt" text,
+	"goals" json,
+	"directives" json,
+	"constraints" json,
+	"planningHorizon" text DEFAULT 'single' NOT NULL,
+	"riskTolerance" text DEFAULT 'medium' NOT NULL,
+	"maxActionsPerTick" integer DEFAULT 3 NOT NULL,
+	"modelTier" text DEFAULT 'free' NOT NULL,
+	"autonomousPosting" boolean DEFAULT false NOT NULL,
+	"autonomousCommenting" boolean DEFAULT false NOT NULL,
+	"autonomousTrading" boolean DEFAULT false NOT NULL,
+	"autonomousDMs" boolean DEFAULT false NOT NULL,
+	"autonomousGroupChats" boolean DEFAULT false NOT NULL,
+	"a2aEnabled" boolean DEFAULT false NOT NULL,
+	"status" text DEFAULT 'idle' NOT NULL,
+	"errorMessage" text,
+	"lastTickAt" timestamp,
+	"lastChatAt" timestamp,
+	"pointsBalance" integer DEFAULT 0 NOT NULL,
+	"totalDeposited" integer DEFAULT 0 NOT NULL,
+	"totalWithdrawn" integer DEFAULT 0 NOT NULL,
+	"totalPointsSpent" integer DEFAULT 0 NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp NOT NULL,
+	CONSTRAINT "UserAgentConfig_userId_unique" UNIQUE("userId")
 );
 --> statement-breakpoint
 CREATE TABLE "Favorite" (
@@ -1209,6 +1264,7 @@ CREATE TABLE "Referral" (
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"completedAt" timestamp,
 	"qualifiedAt" timestamp,
+	"signupPointsAwarded" boolean DEFAULT false NOT NULL,
 	"suspiciousReferralFlags" json,
 	CONSTRAINT "Referral_referralCode_referredUserId_key" UNIQUE("referralCode","referredUserId")
 );
@@ -1232,6 +1288,17 @@ CREATE TABLE "UserActorFollow" (
 	CONSTRAINT "UserActorFollow_userId_actorId_key" UNIQUE("userId","actorId")
 );
 --> statement-breakpoint
+CREATE TABLE "UserApiKey" (
+	"id" text PRIMARY KEY NOT NULL,
+	"userId" text NOT NULL,
+	"keyHash" text NOT NULL,
+	"name" text,
+	"lastUsedAt" timestamp,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"expiresAt" timestamp,
+	"revokedAt" timestamp
+);
+--> statement-breakpoint
 CREATE TABLE "UserBlock" (
 	"id" text PRIMARY KEY NOT NULL,
 	"blockerId" text NOT NULL,
@@ -1251,17 +1318,6 @@ CREATE TABLE "UserInteraction" (
 	"qualityScore" double precision DEFAULT 1 NOT NULL,
 	"wasFollowed" boolean DEFAULT false NOT NULL,
 	"wasInvitedToChat" boolean DEFAULT false NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "UserApiKey" (
-	"id" text PRIMARY KEY NOT NULL,
-	"userId" text NOT NULL,
-	"keyHash" text NOT NULL,
-	"name" text,
-	"lastUsedAt" timestamp,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"expiresAt" timestamp,
-	"revokedAt" timestamp
 );
 --> statement-breakpoint
 CREATE TABLE "UserMute" (
@@ -1389,37 +1445,8 @@ CREATE TABLE "User" (
 	"emailVerified" boolean DEFAULT false NOT NULL,
 	"email" text,
 	"waitlistGraduatedAt" timestamp,
-	"agentCount" integer DEFAULT 0 NOT NULL,
-	"totalAgentPnL" numeric(18, 2) DEFAULT '0' NOT NULL,
-	"agentErrorMessage" text,
-	"agentLastChatAt" timestamp,
-	"agentLastTickAt" timestamp,
-	"agentMessageExamples" json,
-	"agentModelTier" text DEFAULT 'free' NOT NULL,
-	"agentPersonality" text,
-	"agentPointsBalance" integer DEFAULT 0 NOT NULL,
-	"agentStatus" text DEFAULT 'idle' NOT NULL,
-	"agentStyle" json,
-	"agentSystem" text,
-	"agentTotalDeposited" integer DEFAULT 0 NOT NULL,
-	"agentTotalPointsSpent" integer DEFAULT 0 NOT NULL,
-	"agentTotalWithdrawn" integer DEFAULT 0 NOT NULL,
-	"agentTradingStrategy" text,
-	"autonomousCommenting" boolean DEFAULT false NOT NULL,
-	"autonomousDMs" boolean DEFAULT false NOT NULL,
-	"autonomousGroupChats" boolean DEFAULT false NOT NULL,
-	"autonomousPosting" boolean DEFAULT false NOT NULL,
-	"autonomousTrading" boolean DEFAULT false NOT NULL,
-	"a2aEnabled" boolean DEFAULT false NOT NULL,
 	"isAgent" boolean DEFAULT false NOT NULL,
 	"managedBy" text,
-	"agentGoals" json,
-	"agentDirectives" json,
-	"agentConstraints" json,
-	"agentPersonaPrompt" text,
-	"agentPlanningHorizon" text DEFAULT 'single' NOT NULL,
-	"agentRiskTolerance" text DEFAULT 'medium' NOT NULL,
-	"agentMaxActionsPerTick" integer DEFAULT 3 NOT NULL,
 	CONSTRAINT "User_walletAddress_unique" UNIQUE("walletAddress"),
 	CONSTRAINT "User_username_unique" UNIQUE("username"),
 	CONSTRAINT "User_nftTokenId_unique" UNIQUE("nftTokenId"),
@@ -1430,6 +1457,9 @@ CREATE TABLE "User" (
 	CONSTRAINT "User_discordId_unique" UNIQUE("discordId")
 );
 --> statement-breakpoint
+ALTER TABLE "QuestionArcPlan" ADD CONSTRAINT "QuestionArcPlan_questionId_Question_id_fk" FOREIGN KEY ("questionId") REFERENCES "public"."Question"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "ActorState_hasPool_idx" ON "ActorState" USING btree ("hasPool");--> statement-breakpoint
+CREATE INDEX "ActorState_reputationPoints_idx" ON "ActorState" USING btree ("reputationPoints");--> statement-breakpoint
 CREATE INDEX "ActorFollow_followerId_idx" ON "ActorFollow" USING btree ("followerId");--> statement-breakpoint
 CREATE INDEX "ActorFollow_followingId_idx" ON "ActorFollow" USING btree ("followingId");--> statement-breakpoint
 CREATE INDEX "ActorFollow_isMutual_idx" ON "ActorFollow" USING btree ("isMutual");--> statement-breakpoint
@@ -1439,10 +1469,6 @@ CREATE INDEX "ActorRelationship_relationshipType_idx" ON "ActorRelationship" USI
 CREATE INDEX "ActorRelationship_sentiment_idx" ON "ActorRelationship" USING btree ("sentiment");--> statement-breakpoint
 CREATE INDEX "ActorRelationship_strength_idx" ON "ActorRelationship" USING btree ("strength");--> statement-breakpoint
 CREATE INDEX "ActorRelationship_lastInteraction_idx" ON "ActorRelationship" USING btree ("lastInteraction");--> statement-breakpoint
-CREATE INDEX "Actor_hasPool_idx" ON "Actor" USING btree ("hasPool");--> statement-breakpoint
-CREATE INDEX "Actor_reputationPoints_idx" ON "Actor" USING btree ("reputationPoints");--> statement-breakpoint
-CREATE INDEX "Actor_role_idx" ON "Actor" USING btree ("role");--> statement-breakpoint
-CREATE INDEX "Actor_tier_idx" ON "Actor" USING btree ("tier");--> statement-breakpoint
 CREATE INDEX "NPCInteraction_actor1Id_actor2Id_timestamp_idx" ON "NPCInteraction" USING btree ("actor1Id","actor2Id","timestamp");--> statement-breakpoint
 CREATE INDEX "NPCInteraction_timestamp_idx" ON "NPCInteraction" USING btree ("timestamp");--> statement-breakpoint
 CREATE INDEX "NPCInteraction_actor1Id_idx" ON "NPCInteraction" USING btree ("actor1Id");--> statement-breakpoint
@@ -1493,6 +1519,7 @@ CREATE INDEX "Market_resolved_endDate_idx" ON "Market" USING btree ("resolved","
 CREATE INDEX "Organization_currentPrice_idx" ON "Organization" USING btree ("currentPrice");--> statement-breakpoint
 CREATE INDEX "Organization_type_idx" ON "Organization" USING btree ("type");--> statement-breakpoint
 CREATE INDEX "Organization_ticker_idx" ON "Organization" USING btree ("ticker");--> statement-breakpoint
+CREATE INDEX "PerpMarketSnapshot_orgId_idx" ON "PerpMarketSnapshot" USING btree ("organizationId");--> statement-breakpoint
 CREATE INDEX "PerpPosition_organizationId_idx" ON "PerpPosition" USING btree ("organizationId");--> statement-breakpoint
 CREATE INDEX "PerpPosition_settledToChain_idx" ON "PerpPosition" USING btree ("settledToChain");--> statement-breakpoint
 CREATE INDEX "PerpPosition_ticker_idx" ON "PerpPosition" USING btree ("ticker");--> statement-breakpoint
@@ -1534,6 +1561,7 @@ CREATE INDEX "GroupChatMembership_lastMessageAt_idx" ON "GroupChatMembership" US
 CREATE INDEX "GroupChatMembership_userId_isActive_idx" ON "GroupChatMembership" USING btree ("userId","isActive");--> statement-breakpoint
 CREATE INDEX "Message_chatId_createdAt_idx" ON "Message" USING btree ("chatId","createdAt");--> statement-breakpoint
 CREATE INDEX "Message_senderId_idx" ON "Message" USING btree ("senderId");--> statement-breakpoint
+CREATE INDEX "Notification_chatId_idx" ON "Notification" USING btree ("chatId");--> statement-breakpoint
 CREATE INDEX "Notification_groupId_idx" ON "Notification" USING btree ("groupId");--> statement-breakpoint
 CREATE INDEX "Notification_inviteId_idx" ON "Notification" USING btree ("inviteId");--> statement-breakpoint
 CREATE INDEX "Notification_read_idx" ON "Notification" USING btree ("read");--> statement-breakpoint
@@ -1549,8 +1577,6 @@ CREATE INDEX "UserGroupMember_groupId_idx" ON "UserGroupMember" USING btree ("gr
 CREATE INDEX "UserGroupMember_userId_idx" ON "UserGroupMember" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "UserGroup_createdAt_idx" ON "UserGroup" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "UserGroup_createdById_idx" ON "UserGroup" USING btree ("createdById");--> statement-breakpoint
-CREATE INDEX "CharacterMapping_category_isActive_idx" ON "CharacterMapping" USING btree ("category","isActive");--> statement-breakpoint
-CREATE INDEX "CharacterMapping_priority_idx" ON "CharacterMapping" USING btree ("priority");--> statement-breakpoint
 CREATE INDEX "GameConfig_key_idx" ON "GameConfig" USING btree ("key");--> statement-breakpoint
 CREATE INDEX "Game_isContinuous_idx" ON "Game" USING btree ("isContinuous");--> statement-breakpoint
 CREATE INDEX "Game_isRunning_idx" ON "Game" USING btree ("isRunning");--> statement-breakpoint
@@ -1564,8 +1590,6 @@ CREATE INDEX "OracleTransaction_questionId_idx" ON "OracleTransaction" USING btr
 CREATE INDEX "OracleTransaction_status_createdAt_idx" ON "OracleTransaction" USING btree ("status","createdAt");--> statement-breakpoint
 CREATE INDEX "OracleTransaction_txHash_idx" ON "OracleTransaction" USING btree ("txHash");--> statement-breakpoint
 CREATE INDEX "OracleTransaction_txType_idx" ON "OracleTransaction" USING btree ("txType");--> statement-breakpoint
-CREATE INDEX "OrganizationMapping_category_isActive_idx" ON "OrganizationMapping" USING btree ("category","isActive");--> statement-breakpoint
-CREATE INDEX "OrganizationMapping_priority_idx" ON "OrganizationMapping" USING btree ("priority");--> statement-breakpoint
 CREATE INDEX "ParodyHeadline_isUsed_generatedAt_idx" ON "ParodyHeadline" USING btree ("isUsed","generatedAt");--> statement-breakpoint
 CREATE INDEX "ParodyHeadline_generatedAt_idx" ON "ParodyHeadline" USING btree ("generatedAt");--> statement-breakpoint
 CREATE INDEX "RealtimeOutbox_status_createdAt_idx" ON "RealtimeOutbox" USING btree ("status","createdAt");--> statement-breakpoint
@@ -1574,6 +1598,9 @@ CREATE INDEX "RSSFeedSource_isActive_lastFetched_idx" ON "RSSFeedSource" USING b
 CREATE INDEX "RSSFeedSource_category_idx" ON "RSSFeedSource" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "RSSHeadline_sourceId_publishedAt_idx" ON "RSSHeadline" USING btree ("sourceId","publishedAt");--> statement-breakpoint
 CREATE INDEX "RSSHeadline_publishedAt_idx" ON "RSSHeadline" USING btree ("publishedAt");--> statement-breakpoint
+CREATE INDEX "TickTokenStats_tickStartedAt_idx" ON "TickTokenStats" USING btree ("tickStartedAt");--> statement-breakpoint
+CREATE INDEX "TickTokenStats_tickId_idx" ON "TickTokenStats" USING btree ("tickId");--> statement-breakpoint
+CREATE INDEX "TickTokenStats_createdAt_idx" ON "TickTokenStats" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "WidgetCache_widget_updatedAt_idx" ON "WidgetCache" USING btree ("widget","updatedAt");--> statement-breakpoint
 CREATE INDEX "WorldEvent_gameId_dayNumber_idx" ON "WorldEvent" USING btree ("gameId","dayNumber");--> statement-breakpoint
 CREATE INDEX "WorldEvent_relatedQuestion_idx" ON "WorldEvent" USING btree ("relatedQuestion");--> statement-breakpoint
@@ -1581,6 +1608,8 @@ CREATE INDEX "WorldEvent_timestamp_idx" ON "WorldEvent" USING btree ("timestamp"
 CREATE INDEX "WorldFact_category_isActive_idx" ON "WorldFact" USING btree ("category","isActive");--> statement-breakpoint
 CREATE INDEX "WorldFact_priority_idx" ON "WorldFact" USING btree ("priority");--> statement-breakpoint
 CREATE INDEX "WorldFact_lastUpdated_idx" ON "WorldFact" USING btree ("lastUpdated");--> statement-breakpoint
+CREATE INDEX "QuestionArcPlan_questionId_idx" ON "QuestionArcPlan" USING btree ("questionId");--> statement-breakpoint
+CREATE INDEX "OrganizationState_currentPrice_idx" ON "OrganizationState" USING btree ("currentPrice");--> statement-breakpoint
 CREATE INDEX "PoolDeposit_poolId_userId_idx" ON "PoolDeposit" USING btree ("poolId","userId");--> statement-breakpoint
 CREATE INDEX "PoolDeposit_poolId_withdrawnAt_idx" ON "PoolDeposit" USING btree ("poolId","withdrawnAt");--> statement-breakpoint
 CREATE INDEX "PoolDeposit_userId_depositedAt_idx" ON "PoolDeposit" USING btree ("userId","depositedAt");--> statement-breakpoint
@@ -1681,6 +1710,10 @@ CREATE INDEX "trajectories_scenarioId_createdAt_idx" ON "trajectories" USING btr
 CREATE INDEX "trajectories_trainedInBatch_idx" ON "trajectories" USING btree ("trainedInBatch");--> statement-breakpoint
 CREATE INDEX "trajectories_windowId_agentId_idx" ON "trajectories" USING btree ("windowId","agentId");--> statement-breakpoint
 CREATE INDEX "trajectories_windowId_idx" ON "trajectories" USING btree ("windowId");--> statement-breakpoint
+CREATE INDEX "trajectories_archetype_idx" ON "trajectories" USING btree ("archetype");--> statement-breakpoint
+CREATE INDEX "UserAgentConfig_userId_idx" ON "UserAgentConfig" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "UserAgentConfig_status_idx" ON "UserAgentConfig" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "UserAgentConfig_autonomousTrading_idx" ON "UserAgentConfig" USING btree ("autonomousTrading");--> statement-breakpoint
 CREATE INDEX "Favorite_targetUserId_idx" ON "Favorite" USING btree ("targetUserId");--> statement-breakpoint
 CREATE INDEX "Favorite_userId_idx" ON "Favorite" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "FollowStatus_npcId_idx" ON "FollowStatus" USING btree ("npcId");--> statement-breakpoint
@@ -1695,23 +1728,23 @@ CREATE INDEX "Referral_referrerId_idx" ON "Referral" USING btree ("referrerId");
 CREATE INDEX "Referral_referredUserId_idx" ON "Referral" USING btree ("referredUserId");--> statement-breakpoint
 CREATE INDEX "Referral_status_createdAt_idx" ON "Referral" USING btree ("status","createdAt");--> statement-breakpoint
 CREATE INDEX "Referral_qualifiedAt_idx" ON "Referral" USING btree ("qualifiedAt");--> statement-breakpoint
+CREATE INDEX "Referral_referrerId_status_qualifiedAt_signupPointsAwarded_idx" ON "Referral" USING btree ("referrerId","status","qualifiedAt","signupPointsAwarded");--> statement-breakpoint
+CREATE INDEX "Referral_referrerId_signupPointsAwarded_completedAt_idx" ON "Referral" USING btree ("referrerId","signupPointsAwarded","completedAt");--> statement-breakpoint
 CREATE INDEX "TwitterOAuthToken_userId_idx" ON "TwitterOAuthToken" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "UserActorFollow_actorId_idx" ON "UserActorFollow" USING btree ("actorId");--> statement-breakpoint
 CREATE INDEX "UserActorFollow_userId_idx" ON "UserActorFollow" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "UserApiKey_userId_idx" ON "UserApiKey" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "UserApiKey_keyHash_idx" ON "UserApiKey" USING btree ("keyHash");--> statement-breakpoint
+CREATE INDEX "UserApiKey_userId_revokedAt_idx" ON "UserApiKey" USING btree ("userId","revokedAt");--> statement-breakpoint
 CREATE INDEX "UserBlock_blockerId_idx" ON "UserBlock" USING btree ("blockerId");--> statement-breakpoint
 CREATE INDEX "UserBlock_blockedId_idx" ON "UserBlock" USING btree ("blockedId");--> statement-breakpoint
 CREATE INDEX "UserBlock_createdAt_idx" ON "UserBlock" USING btree ("createdAt");--> statement-breakpoint
 CREATE INDEX "UserInteraction_npcId_timestamp_idx" ON "UserInteraction" USING btree ("npcId","timestamp");--> statement-breakpoint
 CREATE INDEX "UserInteraction_userId_npcId_timestamp_idx" ON "UserInteraction" USING btree ("userId","npcId","timestamp");--> statement-breakpoint
 CREATE INDEX "UserInteraction_userId_timestamp_idx" ON "UserInteraction" USING btree ("userId","timestamp");--> statement-breakpoint
-CREATE INDEX "UserApiKey_userId_idx" ON "UserApiKey" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "UserApiKey_keyHash_idx" ON "UserApiKey" USING btree ("keyHash");--> statement-breakpoint
-CREATE INDEX "UserApiKey_userId_revokedAt_idx" ON "UserApiKey" USING btree ("userId","revokedAt");--> statement-breakpoint
 CREATE INDEX "UserMute_muterId_idx" ON "UserMute" USING btree ("muterId");--> statement-breakpoint
 CREATE INDEX "UserMute_mutedId_idx" ON "UserMute" USING btree ("mutedId");--> statement-breakpoint
 CREATE INDEX "UserMute_createdAt_idx" ON "UserMute" USING btree ("createdAt");--> statement-breakpoint
-CREATE INDEX "User_agentCount_idx" ON "User" USING btree ("agentCount");--> statement-breakpoint
-CREATE INDEX "User_autonomousTrading_idx" ON "User" USING btree ("autonomousTrading");--> statement-breakpoint
 CREATE INDEX "User_displayName_idx" ON "User" USING btree ("displayName");--> statement-breakpoint
 CREATE INDEX "User_earnedPoints_idx" ON "User" USING btree ("earnedPoints");--> statement-breakpoint
 CREATE INDEX "User_invitePoints_idx" ON "User" USING btree ("invitePoints");--> statement-breakpoint
@@ -1725,43 +1758,9 @@ CREATE INDEX "User_managedBy_idx" ON "User" USING btree ("managedBy");--> statem
 CREATE INDEX "User_profileComplete_createdAt_idx" ON "User" USING btree ("profileComplete","createdAt");--> statement-breakpoint
 CREATE INDEX "User_referralCode_idx" ON "User" USING btree ("referralCode");--> statement-breakpoint
 CREATE INDEX "User_reputationPoints_idx" ON "User" USING btree ("reputationPoints");--> statement-breakpoint
-CREATE INDEX "User_totalAgentPnL_idx" ON "User" USING btree ("totalAgentPnL");--> statement-breakpoint
 CREATE INDEX "User_username_idx" ON "User" USING btree ("username");--> statement-breakpoint
 CREATE INDEX "User_waitlistJoinedAt_idx" ON "User" USING btree ("waitlistJoinedAt");--> statement-breakpoint
 CREATE INDEX "User_waitlistPosition_idx" ON "User" USING btree ("waitlistPosition");--> statement-breakpoint
 CREATE INDEX "User_walletAddress_idx" ON "User" USING btree ("walletAddress");--> statement-breakpoint
 CREATE INDEX "User_registrationIpHash_idx" ON "User" USING btree ("registrationIpHash");--> statement-breakpoint
-CREATE INDEX "User_lastReferralIpHash_idx" ON "User" USING btree ("lastReferralIpHash");--> statement-breakpoint
-ALTER TABLE "UserApiKey" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-CREATE POLICY "Users can view their own API keys"
-ON "UserApiKey"
-FOR SELECT
-USING (
-  "userId" = current_setting('app.current_user_id', true)::text
-  OR current_setting('app.current_user_id', true) = 'system'
-);--> statement-breakpoint
-CREATE POLICY "Users can create their own API keys"
-ON "UserApiKey"
-FOR INSERT
-WITH CHECK (
-  "userId" = current_setting('app.current_user_id', true)::text
-  OR current_setting('app.current_user_id', true) = 'system'
-);--> statement-breakpoint
-CREATE POLICY "Users can update their own API keys"
-ON "UserApiKey"
-FOR UPDATE
-USING (
-  "userId" = current_setting('app.current_user_id', true)::text
-  OR current_setting('app.current_user_id', true) = 'system'
-)
-WITH CHECK (
-  "userId" = current_setting('app.current_user_id', true)::text
-  OR current_setting('app.current_user_id', true) = 'system'
-);--> statement-breakpoint
-CREATE POLICY "Users can delete their own API keys"
-ON "UserApiKey"
-FOR DELETE
-USING (
-  "userId" = current_setting('app.current_user_id', true)::text
-  OR current_setting('app.current_user_id', true) = 'system'
-);
+CREATE INDEX "User_lastReferralIpHash_idx" ON "User" USING btree ("lastReferralIpHash");

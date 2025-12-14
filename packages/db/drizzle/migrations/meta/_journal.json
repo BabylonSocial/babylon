@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1764237293545,
-      "tag": "0000_demonic_ego",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1764609327597,
-      "tag": "0001_wonderful_omega_sentinel",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1733616000000,
-      "tag": "0002_optimize_user_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1765097167382,
-      "tag": "0003_amusing_wrecking_crew",
+      "when": 1765671056285,
+      "tag": "0000_stiff_starfox",
       "breakpoints": true
     },
     {

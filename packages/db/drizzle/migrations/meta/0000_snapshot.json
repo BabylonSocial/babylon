@@ -1,9 +1,93 @@
 {
-  "id": "124b8538-c688-4a9e-891d-4bfe73d95f66",
+  "id": "d0e29bfe-cf71-484a-8af2-c2889df6460d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.ActorState": {
+      "name": "ActorState",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tradingBalance": {
+          "name": "tradingBalance",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'10000'"
+        },
+        "reputationPoints": {
+          "name": "reputationPoints",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 10000
+        },
+        "hasPool": {
+          "name": "hasPool",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "ActorState_hasPool_idx": {
+          "name": "ActorState_hasPool_idx",
+          "columns": [
+            {
+              "expression": "hasPool",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ActorState_reputationPoints_idx": {
+          "name": "ActorState_reputationPoints_idx",
+          "columns": [
+            {
+              "expression": "reputationPoints",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.ActorFollow": {
       "name": "ActorFollow",
       "schema": "",
@@ -269,204 +353,6 @@
           "columns": [
             {
               "expression": "lastInteraction",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.Actor": {
-      "name": "Actor",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "domain": {
-          "name": "domain",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
-        "personality": {
-          "name": "personality",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tier": {
-          "name": "tier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "affiliations": {
-          "name": "affiliations",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
-        "postStyle": {
-          "name": "postStyle",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "postExample": {
-          "name": "postExample",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "initialLuck": {
-          "name": "initialLuck",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'medium'"
-        },
-        "initialMood": {
-          "name": "initialMood",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hasPool": {
-          "name": "hasPool",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "profileImageUrl": {
-          "name": "profileImageUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reputationPoints": {
-          "name": "reputationPoints",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 10000
-        },
-        "tradingBalance": {
-          "name": "tradingBalance",
-          "type": "numeric(18, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'10000'"
-        },
-        "isTest": {
-          "name": "isTest",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {
-        "Actor_hasPool_idx": {
-          "name": "Actor_hasPool_idx",
-          "columns": [
-            {
-              "expression": "hasPool",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "Actor_reputationPoints_idx": {
-          "name": "Actor_reputationPoints_idx",
-          "columns": [
-            {
-              "expression": "reputationPoints",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "Actor_role_idx": {
-          "name": "Actor_role_idx",
-          "columns": [
-            {
-              "expression": "role",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "Actor_tier_idx": {
-          "name": "Actor_tier_idx",
-          "columns": [
-            {
-              "expression": "tier",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -957,7 +843,9 @@
         "AgentCapability_agentRegistryId_unique": {
           "name": "AgentCapability_agentRegistryId_unique",
           "nullsNotDistinct": false,
-          "columns": ["agentRegistryId"]
+          "columns": [
+            "agentRegistryId"
+          ]
         }
       },
       "policies": {},
@@ -1772,7 +1660,9 @@
         "AgentPerformanceMetrics_userId_unique": {
           "name": "AgentPerformanceMetrics_userId_unique",
           "nullsNotDistinct": false,
-          "columns": ["userId"]
+          "columns": [
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -2250,22 +2140,30 @@
         "AgentRegistry_agentId_unique": {
           "name": "AgentRegistry_agentId_unique",
           "nullsNotDistinct": false,
-          "columns": ["agentId"]
+          "columns": [
+            "agentId"
+          ]
         },
         "AgentRegistry_userId_unique": {
           "name": "AgentRegistry_userId_unique",
           "nullsNotDistinct": false,
-          "columns": ["userId"]
+          "columns": [
+            "userId"
+          ]
         },
         "AgentRegistry_actorId_unique": {
           "name": "AgentRegistry_actorId_unique",
           "nullsNotDistinct": false,
-          "columns": ["actorId"]
+          "columns": [
+            "actorId"
+          ]
         },
         "AgentRegistry_runtimeInstanceId_unique": {
           "name": "AgentRegistry_runtimeInstanceId_unique",
           "nullsNotDistinct": false,
-          "columns": ["runtimeInstanceId"]
+          "columns": [
+            "runtimeInstanceId"
+          ]
         }
       },
       "policies": {},
@@ -2569,12 +2467,16 @@
         "ExternalAgentConnection_agentRegistryId_unique": {
           "name": "ExternalAgentConnection_agentRegistryId_unique",
           "nullsNotDistinct": false,
-          "columns": ["agentRegistryId"]
+          "columns": [
+            "agentRegistryId"
+          ]
         },
         "ExternalAgentConnection_externalId_unique": {
           "name": "ExternalAgentConnection_externalId_unique",
           "nullsNotDistinct": false,
-          "columns": ["externalId"]
+          "columns": [
+            "externalId"
+          ]
         }
       },
       "policies": {},
@@ -2688,6 +2590,18 @@
         },
         "oracleAddress": {
           "name": "oracleAddress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolutionProofUrl": {
+          "name": "resolutionProofUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolutionDescription": {
+          "name": "resolutionDescription",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2883,6 +2797,163 @@
           "columns": [
             {
               "expression": "ticker",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.PerpMarketSnapshot": {
+      "name": "PerpMarketSnapshot",
+      "schema": "",
+      "columns": {
+        "ticker": {
+          "name": "ticker",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organizationId": {
+          "name": "organizationId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currentPrice": {
+          "name": "currentPrice",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price24hAgo": {
+          "name": "price24hAgo",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "price24hAgoUpdatedAt": {
+          "name": "price24hAgoUpdatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metrics24hResetAt": {
+          "name": "metrics24hResetAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change24h": {
+          "name": "change24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "changePercent24h": {
+          "name": "changePercent24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "high24h": {
+          "name": "high24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "low24h": {
+          "name": "low24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "volume24h": {
+          "name": "volume24h",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "openInterest": {
+          "name": "openInterest",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "fundingRate": {
+          "name": "fundingRate",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "maxLeverage": {
+          "name": "maxLeverage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 100
+        },
+        "minOrderSize": {
+          "name": "minOrderSize",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 10
+        },
+        "markPrice": {
+          "name": "markPrice",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "indexPrice": {
+          "name": "indexPrice",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "PerpMarketSnapshot_orgId_idx": {
+          "name": "PerpMarketSnapshot_orgId_idx",
+          "columns": [
+            {
+              "expression": "organizationId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3623,12 +3694,16 @@
         "Question_questionNumber_unique": {
           "name": "Question_questionNumber_unique",
           "nullsNotDistinct": false,
-          "columns": ["questionNumber"]
+          "columns": [
+            "questionNumber"
+          ]
         },
         "Question_oracleSessionId_unique": {
           "name": "Question_oracleSessionId_unique",
           "nullsNotDistinct": false,
-          "columns": ["oracleSessionId"]
+          "columns": [
+            "oracleSessionId"
+          ]
         }
       },
       "policies": {},
@@ -3848,7 +3923,10 @@
         "ChatAdmin_chatId_userId_key": {
           "name": "ChatAdmin_chatId_userId_key",
           "nullsNotDistinct": false,
-          "columns": ["chatId", "userId"]
+          "columns": [
+            "chatId",
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -3969,7 +4047,10 @@
         "ChatInvite_chatId_invitedUserId_key": {
           "name": "ChatInvite_chatId_invitedUserId_key",
           "nullsNotDistinct": false,
-          "columns": ["chatId", "invitedUserId"]
+          "columns": [
+            "chatId",
+            "invitedUserId"
+          ]
         }
       },
       "policies": {},
@@ -4152,7 +4233,10 @@
         "ChatParticipant_chatId_userId_key": {
           "name": "ChatParticipant_chatId_userId_key",
           "nullsNotDistinct": false,
-          "columns": ["chatId", "userId"]
+          "columns": [
+            "chatId",
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -4448,7 +4532,9 @@
         "DMAcceptance_chatId_unique": {
           "name": "DMAcceptance_chatId_unique",
           "nullsNotDistinct": false,
-          "columns": ["chatId"]
+          "columns": [
+            "chatId"
+          ]
         }
       },
       "policies": {},
@@ -4595,7 +4681,10 @@
         "GroupChatMembership_userId_chatId_key": {
           "name": "GroupChatMembership_userId_chatId_key",
           "nullsNotDistinct": false,
-          "columns": ["userId", "chatId"]
+          "columns": [
+            "userId",
+            "chatId"
+          ]
         }
       },
       "policies": {},
@@ -4723,6 +4812,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "chatId": {
+          "name": "chatId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "message": {
           "name": "message",
           "type": "text",
@@ -4763,6 +4858,21 @@
         }
       },
       "indexes": {
+        "Notification_chatId_idx": {
+          "name": "Notification_chatId_idx",
+          "columns": [
+            {
+              "expression": "chatId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "Notification_groupId_idx": {
           "name": "Notification_groupId_idx",
           "columns": [
@@ -4965,7 +5075,10 @@
         "UserGroupAdmin_groupId_userId_key": {
           "name": "UserGroupAdmin_groupId_userId_key",
           "nullsNotDistinct": false,
-          "columns": ["groupId", "userId"]
+          "columns": [
+            "groupId",
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -5086,7 +5199,10 @@
         "UserGroupInvite_groupId_invitedUserId_key": {
           "name": "UserGroupInvite_groupId_invitedUserId_key",
           "nullsNotDistinct": false,
-          "columns": ["groupId", "invitedUserId"]
+          "columns": [
+            "groupId",
+            "invitedUserId"
+          ]
         }
       },
       "policies": {},
@@ -5167,7 +5283,10 @@
         "UserGroupMember_groupId_userId_key": {
           "name": "UserGroupMember_groupId_userId_key",
           "nullsNotDistinct": false,
-          "columns": ["groupId", "userId"]
+          "columns": [
+            "groupId",
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -5255,120 +5374,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.CharacterMapping": {
-      "name": "CharacterMapping",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "realName": {
-          "name": "realName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parodyName": {
-          "name": "parodyName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "aliases": {
-          "name": "aliases",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
-        "isActive": {
-          "name": "isActive",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "priority": {
-          "name": "priority",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "CharacterMapping_category_isActive_idx": {
-          "name": "CharacterMapping_category_isActive_idx",
-          "columns": [
-            {
-              "expression": "category",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "isActive",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "CharacterMapping_priority_idx": {
-          "name": "CharacterMapping_priority_idx",
-          "columns": [
-            {
-              "expression": "priority",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "CharacterMapping_realName_unique": {
-          "name": "CharacterMapping_realName_unique",
-          "nullsNotDistinct": false,
-          "columns": ["realName"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.GameConfig": {
       "name": "GameConfig",
       "schema": "",
@@ -5428,7 +5433,9 @@
         "GameConfig_key_unique": {
           "name": "GameConfig_key_unique",
           "nullsNotDistinct": false,
-          "columns": ["key"]
+          "columns": [
+            "key"
+          ]
         }
       },
       "policies": {},
@@ -5718,7 +5725,9 @@
         "OAuthState_state_unique": {
           "name": "OAuthState_state_unique",
           "nullsNotDistinct": false,
-          "columns": ["state"]
+          "columns": [
+            "state"
+          ]
         }
       },
       "policies": {},
@@ -5820,7 +5829,9 @@
         "OracleCommitment_questionId_unique": {
           "name": "OracleCommitment_questionId_unique",
           "nullsNotDistinct": false,
-          "columns": ["questionId"]
+          "columns": [
+            "questionId"
+          ]
         }
       },
       "policies": {},
@@ -5980,121 +5991,9 @@
         "OracleTransaction_txHash_unique": {
           "name": "OracleTransaction_txHash_unique",
           "nullsNotDistinct": false,
-          "columns": ["txHash"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.OrganizationMapping": {
-      "name": "OrganizationMapping",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "realName": {
-          "name": "realName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parodyName": {
-          "name": "parodyName",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category": {
-          "name": "category",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "aliases": {
-          "name": "aliases",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
-        "isActive": {
-          "name": "isActive",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "priority": {
-          "name": "priority",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "OrganizationMapping_category_isActive_idx": {
-          "name": "OrganizationMapping_category_isActive_idx",
           "columns": [
-            {
-              "expression": "category",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "isActive",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "OrganizationMapping_priority_idx": {
-          "name": "OrganizationMapping_priority_idx",
-          "columns": [
-            {
-              "expression": "priority",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "OrganizationMapping_realName_unique": {
-          "name": "OrganizationMapping_realName_unique",
-          "nullsNotDistinct": false,
-          "columns": ["realName"]
+            "txHash"
+          ]
         }
       },
       "policies": {},
@@ -6224,7 +6123,9 @@
         "ParodyHeadline_originalHeadlineId_unique": {
           "name": "ParodyHeadline_originalHeadlineId_unique",
           "nullsNotDistinct": false,
-          "columns": ["originalHeadlineId"]
+          "columns": [
+            "originalHeadlineId"
+          ]
         }
       },
       "policies": {},
@@ -6574,19 +6475,6 @@
           "notNull": true,
           "default": "'system'"
         },
-        "wandbModel": {
-          "name": "wandbModel",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "wandbEnabled": {
-          "name": "wandbEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "createdAt": {
           "name": "createdAt",
           "type": "timestamp",
@@ -6602,6 +6490,138 @@
         }
       },
       "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TickTokenStats": {
+      "name": "TickTokenStats",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tickId": {
+          "name": "tickId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tickStartedAt": {
+          "name": "tickStartedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tickCompletedAt": {
+          "name": "tickCompletedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tickDurationMs": {
+          "name": "tickDurationMs",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totalCalls": {
+          "name": "totalCalls",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totalInputTokens": {
+          "name": "totalInputTokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totalOutputTokens": {
+          "name": "totalOutputTokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "totalTokens": {
+          "name": "totalTokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byPromptType": {
+          "name": "byPromptType",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byModel": {
+          "name": "byModel",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "TickTokenStats_tickStartedAt_idx": {
+          "name": "TickTokenStats_tickStartedAt_idx",
+          "columns": [
+            {
+              "expression": "tickStartedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "TickTokenStats_tickId_idx": {
+          "name": "TickTokenStats_tickId_idx",
+          "columns": [
+            {
+              "expression": "tickId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "TickTokenStats_createdAt_idx": {
+          "name": "TickTokenStats_createdAt_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -6914,6 +6934,160 @@
           "columns": [
             {
               "expression": "lastUpdated",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.QuestionArcPlan": {
+      "name": "QuestionArcPlan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "questionId": {
+          "name": "questionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uncertaintyPeakDay": {
+          "name": "uncertaintyPeakDay",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clarityOnsetDay": {
+          "name": "clarityOnsetDay",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verificationDay": {
+          "name": "verificationDay",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "insiderActorIds": {
+          "name": "insiderActorIds",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'[]'::jsonb"
+        },
+        "deceiverActorIds": {
+          "name": "deceiverActorIds",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'[]'::jsonb"
+        },
+        "phaseRatios": {
+          "name": "phaseRatios",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "QuestionArcPlan_questionId_idx": {
+          "name": "QuestionArcPlan_questionId_idx",
+          "columns": [
+            {
+              "expression": "questionId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "QuestionArcPlan_questionId_Question_id_fk": {
+          "name": "QuestionArcPlan_questionId_Question_id_fk",
+          "tableFrom": "QuestionArcPlan",
+          "tableTo": "Question",
+          "columnsFrom": [
+            "questionId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.OrganizationState": {
+      "name": "OrganizationState",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "currentPrice": {
+          "name": "currentPrice",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "OrganizationState_currentPrice_idx": {
+          "name": "OrganizationState_currentPrice_idx",
+          "columns": [
+            {
+              "expression": "currentPrice",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7701,7 +7875,10 @@
         "PostTag_postId_tagId_key": {
           "name": "PostTag_postId_tagId_key",
           "nullsNotDistinct": false,
-          "columns": ["postId", "tagId"]
+          "columns": [
+            "postId",
+            "tagId"
+          ]
         }
       },
       "policies": {},
@@ -8127,12 +8304,20 @@
         "Reaction_commentId_userId_type_key": {
           "name": "Reaction_commentId_userId_type_key",
           "nullsNotDistinct": false,
-          "columns": ["commentId", "userId", "type"]
+          "columns": [
+            "commentId",
+            "userId",
+            "type"
+          ]
         },
         "Reaction_postId_userId_type_key": {
           "name": "Reaction_postId_userId_type_key",
           "nullsNotDistinct": false,
-          "columns": ["postId", "userId", "type"]
+          "columns": [
+            "postId",
+            "userId",
+            "type"
+          ]
         }
       },
       "policies": {},
@@ -8371,7 +8556,10 @@
         "Share_userId_postId_key": {
           "name": "Share_userId_postId_key",
           "nullsNotDistinct": false,
-          "columns": ["userId", "postId"]
+          "columns": [
+            "userId",
+            "postId"
+          ]
         }
       },
       "policies": {},
@@ -8443,7 +8631,9 @@
         "Tag_name_unique": {
           "name": "Tag_name_unique",
           "nullsNotDistinct": false,
-          "columns": ["name"]
+          "columns": [
+            "name"
+          ]
         }
       },
       "policies": {},
@@ -9137,17 +9327,23 @@
         "ModerationEscrow_paymentRequestId_unique": {
           "name": "ModerationEscrow_paymentRequestId_unique",
           "nullsNotDistinct": false,
-          "columns": ["paymentRequestId"]
+          "columns": [
+            "paymentRequestId"
+          ]
         },
         "ModerationEscrow_paymentTxHash_unique": {
           "name": "ModerationEscrow_paymentTxHash_unique",
           "nullsNotDistinct": false,
-          "columns": ["paymentTxHash"]
+          "columns": [
+            "paymentTxHash"
+          ]
         },
         "ModerationEscrow_refundTxHash_unique": {
           "name": "ModerationEscrow_refundTxHash_unique",
           "nullsNotDistinct": false,
-          "columns": ["refundTxHash"]
+          "columns": [
+            "refundTxHash"
+          ]
         }
       },
       "policies": {},
@@ -9307,7 +9503,9 @@
         "PointsTransaction_paymentRequestId_unique": {
           "name": "PointsTransaction_paymentRequestId_unique",
           "nullsNotDistinct": false,
-          "columns": ["paymentRequestId"]
+          "columns": [
+            "paymentRequestId"
+          ]
         }
       },
       "policies": {},
@@ -10078,7 +10276,9 @@
         "llm_call_logs_callId_unique": {
           "name": "llm_call_logs_callId_unique",
           "nullsNotDistinct": false,
-          "columns": ["callId"]
+          "columns": [
+            "callId"
+          ]
         }
       },
       "policies": {},
@@ -10354,7 +10554,9 @@
         "reward_judgments_trajectoryId_unique": {
           "name": "reward_judgments_trajectoryId_unique",
           "nullsNotDistinct": false,
-          "columns": ["trajectoryId"]
+          "columns": [
+            "trajectoryId"
+          ]
         }
       },
       "policies": {},
@@ -10571,7 +10773,9 @@
         "trained_models_modelId_unique": {
           "name": "trained_models_modelId_unique",
           "nullsNotDistinct": false,
-          "columns": ["modelId"]
+          "columns": [
+            "modelId"
+          ]
         }
       },
       "policies": {},
@@ -10719,7 +10923,9 @@
         "training_batches_batchId_unique": {
           "name": "training_batches_batchId_unique",
           "nullsNotDistinct": false,
-          "columns": ["batchId"]
+          "columns": [
+            "batchId"
+          ]
         }
       },
       "policies": {},
@@ -10747,6 +10953,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "archetype": {
+          "name": "archetype",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
         },
         "startTime": {
           "name": "startTime",
@@ -11051,6 +11263,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "trajectories_archetype_idx": {
+          "name": "trajectories_archetype_idx",
+          "columns": [
+            {
+              "expression": "archetype",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -11059,7 +11286,278 @@
         "trajectories_trajectoryId_unique": {
           "name": "trajectories_trajectoryId_unique",
           "nullsNotDistinct": false,
-          "columns": ["trajectoryId"]
+          "columns": [
+            "trajectoryId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.UserAgentConfig": {
+      "name": "UserAgentConfig",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "personality": {
+          "name": "personality",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "system": {
+          "name": "system",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tradingStrategy": {
+          "name": "tradingStrategy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "style": {
+          "name": "style",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "messageExamples": {
+          "name": "messageExamples",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personaPrompt": {
+          "name": "personaPrompt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "goals": {
+          "name": "goals",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "directives": {
+          "name": "directives",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "constraints": {
+          "name": "constraints",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planningHorizon": {
+          "name": "planningHorizon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'single'"
+        },
+        "riskTolerance": {
+          "name": "riskTolerance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'medium'"
+        },
+        "maxActionsPerTick": {
+          "name": "maxActionsPerTick",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3
+        },
+        "modelTier": {
+          "name": "modelTier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'free'"
+        },
+        "autonomousPosting": {
+          "name": "autonomousPosting",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "autonomousCommenting": {
+          "name": "autonomousCommenting",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "autonomousTrading": {
+          "name": "autonomousTrading",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "autonomousDMs": {
+          "name": "autonomousDMs",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "autonomousGroupChats": {
+          "name": "autonomousGroupChats",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "a2aEnabled": {
+          "name": "a2aEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'idle'"
+        },
+        "errorMessage": {
+          "name": "errorMessage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastTickAt": {
+          "name": "lastTickAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastChatAt": {
+          "name": "lastChatAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pointsBalance": {
+          "name": "pointsBalance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "totalDeposited": {
+          "name": "totalDeposited",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "totalWithdrawn": {
+          "name": "totalWithdrawn",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "totalPointsSpent": {
+          "name": "totalPointsSpent",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "UserAgentConfig_userId_idx": {
+          "name": "UserAgentConfig_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "UserAgentConfig_status_idx": {
+          "name": "UserAgentConfig_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "UserAgentConfig_autonomousTrading_idx": {
+          "name": "UserAgentConfig_autonomousTrading_idx",
+          "columns": [
+            {
+              "expression": "autonomousTrading",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "UserAgentConfig_userId_unique": {
+          "name": "UserAgentConfig_userId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -11134,7 +11632,10 @@
         "Favorite_userId_targetUserId_key": {
           "name": "Favorite_userId_targetUserId_key",
           "nullsNotDistinct": false,
-          "columns": ["userId", "targetUserId"]
+          "columns": [
+            "userId",
+            "targetUserId"
+          ]
         }
       },
       "policies": {},
@@ -11234,7 +11735,10 @@
         "FollowStatus_userId_npcId_key": {
           "name": "FollowStatus_userId_npcId_key",
           "nullsNotDistinct": false,
-          "columns": ["userId", "npcId"]
+          "columns": [
+            "userId",
+            "npcId"
+          ]
         }
       },
       "policies": {},
@@ -11309,7 +11813,10 @@
         "Follow_followerId_followingId_key": {
           "name": "Follow_followerId_followingId_key",
           "nullsNotDistinct": false,
-          "columns": ["followerId", "followingId"]
+          "columns": [
+            "followerId",
+            "followingId"
+          ]
         }
       },
       "policies": {},
@@ -11435,7 +11942,9 @@
         "OnboardingIntent_userId_unique": {
           "name": "OnboardingIntent_userId_unique",
           "nullsNotDistinct": false,
-          "columns": ["userId"]
+          "columns": [
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -11568,6 +12077,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "signupPointsAwarded": {
+          "name": "signupPointsAwarded",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "suspiciousReferralFlags": {
           "name": "suspiciousReferralFlags",
           "type": "json",
@@ -11656,6 +12172,66 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "Referral_referrerId_status_qualifiedAt_signupPointsAwarded_idx": {
+          "name": "Referral_referrerId_status_qualifiedAt_signupPointsAwarded_idx",
+          "columns": [
+            {
+              "expression": "referrerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "qualifiedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "signupPointsAwarded",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Referral_referrerId_signupPointsAwarded_completedAt_idx": {
+          "name": "Referral_referrerId_signupPointsAwarded_completedAt_idx",
+          "columns": [
+            {
+              "expression": "referrerId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "signupPointsAwarded",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "completedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -11664,7 +12240,10 @@
         "Referral_referralCode_referredUserId_key": {
           "name": "Referral_referralCode_referredUserId_key",
           "nullsNotDistinct": false,
-          "columns": ["referralCode", "referredUserId"]
+          "columns": [
+            "referralCode",
+            "referredUserId"
+          ]
         }
       },
       "policies": {},
@@ -11742,7 +12321,9 @@
         "TwitterOAuthToken_userId_unique": {
           "name": "TwitterOAuthToken_userId_unique",
           "nullsNotDistinct": false,
-          "columns": ["userId"]
+          "columns": [
+            "userId"
+          ]
         }
       },
       "policies": {},
@@ -11817,9 +12398,126 @@
         "UserActorFollow_userId_actorId_key": {
           "name": "UserActorFollow_userId_actorId_key",
           "nullsNotDistinct": false,
-          "columns": ["userId", "actorId"]
+          "columns": [
+            "userId",
+            "actorId"
+          ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.UserApiKey": {
+      "name": "UserApiKey",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keyHash": {
+          "name": "keyHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastUsedAt": {
+          "name": "lastUsedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revokedAt": {
+          "name": "revokedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "UserApiKey_userId_idx": {
+          "name": "UserApiKey_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "UserApiKey_keyHash_idx": {
+          "name": "UserApiKey_keyHash_idx",
+          "columns": [
+            {
+              "expression": "keyHash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "UserApiKey_userId_revokedAt_idx": {
+          "name": "UserApiKey_userId_revokedAt_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "revokedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -11913,7 +12611,10 @@
         "UserBlock_blockerId_blockedId_key": {
           "name": "UserBlock_blockerId_blockedId_key",
           "nullsNotDistinct": false,
-          "columns": ["blockerId", "blockedId"]
+          "columns": [
+            "blockerId",
+            "blockedId"
+          ]
         }
       },
       "policies": {},
@@ -12150,7 +12851,10 @@
         "UserMute_muterId_mutedId_key": {
           "name": "UserMute_muterId_mutedId_key",
           "nullsNotDistinct": false,
-          "columns": ["muterId", "mutedId"]
+          "columns": [
+            "muterId",
+            "mutedId"
+          ]
         }
       },
       "policies": {},
@@ -12904,152 +13608,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "agentCount": {
-          "name": "agentCount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "totalAgentPnL": {
-          "name": "totalAgentPnL",
-          "type": "numeric(18, 2)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
-        },
-        "agentErrorMessage": {
-          "name": "agentErrorMessage",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentLastChatAt": {
-          "name": "agentLastChatAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentLastTickAt": {
-          "name": "agentLastTickAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentMessageExamples": {
-          "name": "agentMessageExamples",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentModelTier": {
-          "name": "agentModelTier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'free'"
-        },
-        "agentPersonality": {
-          "name": "agentPersonality",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentPointsBalance": {
-          "name": "agentPointsBalance",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "agentStatus": {
-          "name": "agentStatus",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'idle'"
-        },
-        "agentStyle": {
-          "name": "agentStyle",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentSystem": {
-          "name": "agentSystem",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentTotalDeposited": {
-          "name": "agentTotalDeposited",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "agentTotalPointsSpent": {
-          "name": "agentTotalPointsSpent",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "agentTotalWithdrawn": {
-          "name": "agentTotalWithdrawn",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "agentTradingStrategy": {
-          "name": "agentTradingStrategy",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "autonomousCommenting": {
-          "name": "autonomousCommenting",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "autonomousDMs": {
-          "name": "autonomousDMs",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "autonomousGroupChats": {
-          "name": "autonomousGroupChats",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "autonomousPosting": {
-          "name": "autonomousPosting",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "autonomousTrading": {
-          "name": "autonomousTrading",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "a2aEnabled": {
-          "name": "a2aEnabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "isAgent": {
           "name": "isAgent",
           "type": "boolean",
@@ -13062,84 +13620,9 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "agentGoals": {
-          "name": "agentGoals",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentDirectives": {
-          "name": "agentDirectives",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentConstraints": {
-          "name": "agentConstraints",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentPersonaPrompt": {
-          "name": "agentPersonaPrompt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "agentPlanningHorizon": {
-          "name": "agentPlanningHorizon",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'single'"
-        },
-        "agentRiskTolerance": {
-          "name": "agentRiskTolerance",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'medium'"
-        },
-        "agentMaxActionsPerTick": {
-          "name": "agentMaxActionsPerTick",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 3
         }
       },
       "indexes": {
-        "User_agentCount_idx": {
-          "name": "User_agentCount_idx",
-          "columns": [
-            {
-              "expression": "agentCount",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "User_autonomousTrading_idx": {
-          "name": "User_autonomousTrading_idx",
-          "columns": [
-            {
-              "expression": "autonomousTrading",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "User_displayName_idx": {
           "name": "User_displayName_idx",
           "columns": [
@@ -13353,21 +13836,6 @@
           "method": "btree",
           "with": {}
         },
-        "User_totalAgentPnL_idx": {
-          "name": "User_totalAgentPnL_idx",
-          "columns": [
-            {
-              "expression": "totalAgentPnL",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "User_username_idx": {
           "name": "User_username_idx",
           "columns": [
@@ -13465,42 +13933,58 @@
         "User_walletAddress_unique": {
           "name": "User_walletAddress_unique",
           "nullsNotDistinct": false,
-          "columns": ["walletAddress"]
+          "columns": [
+            "walletAddress"
+          ]
         },
         "User_username_unique": {
           "name": "User_username_unique",
           "nullsNotDistinct": false,
-          "columns": ["username"]
+          "columns": [
+            "username"
+          ]
         },
         "User_nftTokenId_unique": {
           "name": "User_nftTokenId_unique",
           "nullsNotDistinct": false,
-          "columns": ["nftTokenId"]
+          "columns": [
+            "nftTokenId"
+          ]
         },
         "User_referralCode_unique": {
           "name": "User_referralCode_unique",
           "nullsNotDistinct": false,
-          "columns": ["referralCode"]
+          "columns": [
+            "referralCode"
+          ]
         },
         "User_farcasterFid_unique": {
           "name": "User_farcasterFid_unique",
           "nullsNotDistinct": false,
-          "columns": ["farcasterFid"]
+          "columns": [
+            "farcasterFid"
+          ]
         },
         "User_privyId_unique": {
           "name": "User_privyId_unique",
           "nullsNotDistinct": false,
-          "columns": ["privyId"]
+          "columns": [
+            "privyId"
+          ]
         },
         "User_twitterId_unique": {
           "name": "User_twitterId_unique",
           "nullsNotDistinct": false,
-          "columns": ["twitterId"]
+          "columns": [
+            "twitterId"
+          ]
         },
         "User_discordId_unique": {
           "name": "User_discordId_unique",
           "nullsNotDistinct": false,
-          "columns": ["discordId"]
+          "columns": [
+            "discordId"
+          ]
         }
       },
       "policies": {},
@@ -13512,12 +13996,22 @@
     "public.AgentStatus": {
       "name": "AgentStatus",
       "schema": "public",
-      "values": ["REGISTERED", "INITIALIZED", "ACTIVE", "PAUSED", "TERMINATED"]
+      "values": [
+        "REGISTERED",
+        "INITIALIZED",
+        "ACTIVE",
+        "PAUSED",
+        "TERMINATED"
+      ]
     },
     "public.AgentType": {
       "name": "AgentType",
       "schema": "public",
-      "values": ["USER_CONTROLLED", "NPC", "EXTERNAL"]
+      "values": [
+        "USER_CONTROLLED",
+        "NPC",
+        "EXTERNAL"
+      ]
     },
     "public.OnboardingStatus": {
       "name": "OnboardingStatus",
@@ -13533,7 +14027,11 @@
     "public.RealtimeOutboxStatus": {
       "name": "RealtimeOutboxStatus",
       "schema": "public",
-      "values": ["pending", "sent", "failed"]
+      "values": [
+        "pending",
+        "sent",
+        "failed"
+      ]
     }
   },
   "schemas": {},
