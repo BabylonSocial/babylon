@@ -468,7 +468,9 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
     this.emitEvent(
       'outcome:revealed',
       { outcome: this.config.outcome },
-      `The truth is revealed: The outcome is ${this.config.outcome ? 'SUCCESS' : 'FAILURE'}`
+      `The truth is revealed: The outcome is ${
+        this.config.outcome ? 'SUCCESS' : 'FAILURE'
+      }`
     );
 
     this.emitEvent('world:ended', {
@@ -857,6 +859,11 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
       ? 'hints at'
       : 'speculates about';
 
+    const recentEventsStr =
+      events.length > 0
+        ? events.map((e) => e.description).join('; ')
+        : 'Quiet period in the markets.';
+
     const prompt = renderPrompt(newsReport, {
       day: day.toString(),
       question: this.generateQuestion(),
@@ -864,7 +871,7 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
       journalistName: journalist.name,
       journalistRole: journalist.role,
       journalistReliability: journalist.reliability.toString(),
-      recentEvents: events.map((e) => e.description).join('; '),
+      recentEvents: recentEventsStr, // Use patched variable
       reputationContext,
       truthContext,
     });
@@ -914,14 +921,20 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
       ? 'Leans positive'
       : 'Raises concerns';
 
+    // Handle empty events list
+    const recentEventsStr =
+      events.length > 0
+        ? events
+            .slice(-3)
+            .map((e) => e.description)
+            .join('; ')
+        : 'No major public events yet, but tension is building.';
+
     const prompt = renderPrompt(rumor, {
       day: day.toString(),
       question: this.generateQuestion(),
       outcome: this.config.outcome ? 'YES' : 'NO',
-      recentEvents: events
-        .slice(-3)
-        .map((e) => e.description)
-        .join('; '),
+      recentEvents: recentEventsStr, // Use patched variable
       outcomeHint,
     });
 
@@ -961,10 +974,13 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
       question: this.generateQuestion(),
       outcome: this.config.outcome ? 'YES' : 'NO',
       participants: participantsStr,
-      recentEvents: events
-        .slice(-2)
-        .map((e) => e.description)
-        .join('; '),
+      recentEvents:
+        events.length > 0
+          ? events
+              .slice(-2)
+              .map((e) => e.description)
+              .join('; ')
+          : 'The current state of the market.',
     });
 
     const rawResponse = await this.llm.generateJSON<
@@ -973,14 +989,19 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
 
     // Handle XML structure
     const response =
-      'response' in rawResponse && rawResponse.response
+      rawResponse && 'response' in rawResponse && rawResponse.response
         ? rawResponse.response
         : (rawResponse as { conversation: string });
 
+    // SAFEGUARD: Ensure we have a string before processing
+    const textToProcess =
+      typeof response?.conversation === 'string'
+        ? response.conversation
+        : 'NPCs discuss the situation.';
+
     // Apply character mapping to replace any real names with fictional equivalents
-    const processed = await characterMappingService.transformText(
-      response.conversation
-    );
+    const processed =
+      await characterMappingService.transformText(textToProcess);
     return processed.transformedText;
   }
 
@@ -989,7 +1010,9 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
     events: WorldEvent[]
   ): Promise<string> {
     if (!this.llm) {
-      return `${expert.name} publishes analysis: ${this.config.outcome ? 'Indicators positive' : 'Warning signs evident'}`;
+      return `${expert.name} publishes analysis: ${
+        this.config.outcome ? 'Indicators positive' : 'Warning signs evident'
+      }`;
     }
 
     const confidenceContext = expert.knowsTruth
@@ -1005,10 +1028,13 @@ export class GameWorld extends EventEmitter implements TypedGameWorldEmitter {
       expertRole: expert.role,
       knowsTruth: expert.knowsTruth.toString(),
       reliability: expert.reliability.toString(),
-      recentEvents: events
-        .slice(-5)
-        .map((e) => e.description)
-        .join('; '),
+      recentEvents:
+        events.length > 0
+          ? events
+              .slice(-5)
+              .map((e) => e.description)
+              .join('; ')
+          : 'Underlying market indicators.',
       confidenceContext,
       reliabilityContext,
     });

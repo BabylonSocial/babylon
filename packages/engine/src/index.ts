@@ -83,6 +83,7 @@ export {
   OrganizationBehavior,
   type OrganizationType,
 } from './GameGenerator';
+export { GameLoop } from './GameLoop';
 // Game Tick (canonical tick executor)
 export {
   type ActiveMarket,
@@ -114,7 +115,6 @@ export {
   type GameTickResult as ExecuteGameTickResult,
   resolveQuestionPayouts,
 } from './game-tick';
-export { GameLoop } from './GameLoop'
 export {
   cleanMarkdownCodeBlocks,
   extractJsonFromText,

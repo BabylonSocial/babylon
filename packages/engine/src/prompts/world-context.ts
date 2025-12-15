@@ -26,6 +26,7 @@ import {
 } from '@babylon/db';
 import { loadActorsData } from '../actors-loader';
 import { StaticDataRegistry } from '../services/static-data-registry';
+import { isSimulationMode } from '../storage-bridge';
 import type { ActorData } from '../types/shared';
 import { shuffleArray } from '../utils/randomization';
 import { worldFactsService } from '../world-facts-service';
@@ -126,6 +127,11 @@ export function generateWorldActors(maxActors?: number): string {
  * @returns Formatted string describing active markets and their prices/probabilities
  */
 export async function generateCurrentMarkets(): Promise<string> {
+  // Simulation Mode Bypass
+  if (isSimulationMode()) {
+    return 'Active Markets: BitcAIn $120,000 (+5%), EtherAIum $4,000 (+2%), TeslAI $245 (-1%), OpenAGI (Prediction) 65% YES';
+  }
+
   // Get active prediction markets
   const predictionMarkets = await db
     .select()
@@ -201,6 +207,11 @@ export async function generateCurrentMarkets(): Promise<string> {
  * @returns Formatted string listing active predictions and their resolution dates
  */
 export async function generateActivePredictions(): Promise<string> {
+  // Simulation Mode Bypass
+  if (isSimulationMode()) {
+    return 'Active Questions: Will BitcAIn hit $150k? (resolves in 2d) | Will TeslAI release Model 2? (resolves in 5d) | Will Fed cut rates? (resolves in 1d)';
+  }
+
   // Get active questions from the Question table
   const activeQuestions = await db
     .select()
@@ -239,6 +250,10 @@ export async function generateActivePredictions(): Promise<string> {
  * @returns Formatted string listing recent trading activity
  */
 export async function generateRecentTrades(): Promise<string> {
+  if (isSimulationMode()) {
+    return 'Recent Trades: AIlon Musk bought YES on BitcAIn $150k | Sam AIltman sold NO on Fed rates | Nancy PelosAI bought LONG on NVIDAI';
+  }
+
   // Get recent NPC trades with actor names from static registry
   const rawNpcTrades = await db
     .select({

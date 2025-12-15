@@ -84,6 +84,7 @@ import {
 } from './prompts';
 import type { MarketContextService } from './services/market-context-service';
 import { StaticDataRegistry } from './services/static-data-registry';
+import { isSimulationMode } from './storage-bridge';
 import type { JsonValue } from './types/common';
 import type { NPCMarketContext } from './types/market-context';
 import type { TradingDecision } from './types/market-decisions';
@@ -103,6 +104,9 @@ interface TokenConfig {
   maxContextTokens: number;
   maxOutputTokens: number;
   tokensPerNPC: number;
+  // new
+  customApiUrl?: string;
+  customModelName?: string;
 }
 
 /**
@@ -190,16 +194,34 @@ export class MarketDecisionEngine {
     options: {
       model?: string;
       maxOutputTokens?: number;
+      useLocalModel?: boolean;
+      localModelUrl?: string;
     } = {}
   ) {
     // Use provider-appropriate model, or let LLM client use its default
     const provider = llm.getProvider();
     let model: string | undefined;
 
-    if (options.model) {
-      // User explicitly provided a model - use it
+    // 1. Check for Local Model / RL Training Override
+    if (options.useLocalModel) {
+      // Default to the adapter name if no specific model provided
+      model = options.model || 'babylon-adapter-v1';
+
+      logger.info(
+        'MarketDecisionEngine switched to LOCAL MODEL for RL Benchmarking',
+        {
+          model,
+          localModelUrl: options.localModelUrl || 'http://localhost:8000/v1',
+        },
+        'MarketDecisionEngine'
+      );
+    }
+    // 2. Check for explicit model override
+    else if (options.model) {
       model = options.model;
-    } else if (provider === 'groq') {
+    }
+    // 3. Provider-specific defaults
+    else if (provider === 'groq') {
       // Use qwen3-32b for Groq - fast and reliable
       model = 'qwen/qwen3-32b';
     } else {
@@ -260,6 +282,7 @@ export class MarketDecisionEngine {
         maxContextTokens: this.tokenConfig.maxContextTokens,
         maxOutputTokens,
         isOpenAIModel,
+        useLocalModel: options.useLocalModel,
       },
       'MarketDecisionEngine'
     );
@@ -347,7 +370,7 @@ export class MarketDecisionEngine {
     // Cap batch size to avoid hitting output token limits
     // Each NPC decision can generate ~800-1000 tokens of output
     // With 32k max output tokens, limit to 20 NPCs per batch for safety
-    const MAX_NPCS_FOR_OUTPUT = 20;
+    const MAX_NPCS_FOR_OUTPUT = isSimulationMode() ? 5 : 20;
     maxNPCsPerBatch = Math.min(maxNPCsPerBatch, MAX_NPCS_FOR_OUTPUT);
 
     // Reduce batch size for OpenAI models to account for combined input+output limits
@@ -589,7 +612,9 @@ export class MarketDecisionEngine {
       // On retry after string response, make prompt stricter
       const retryPrompt =
         retryCount > 0
-          ? `⚠️⚠️⚠️ CRITICAL FORMAT REQUIREMENT - RETRY ATTEMPT ${retryCount + 1} ⚠️⚠️⚠️
+          ? `⚠️⚠️⚠️ CRITICAL FORMAT REQUIREMENT - RETRY ATTEMPT ${
+              retryCount + 1
+            } ⚠️⚠️⚠️
 
 You MUST respond with ONLY valid XML. NO text, NO explanations, NO reasoning, NO markdown.
 Your response MUST start with <decisions> and end with </decisions>.
@@ -677,7 +702,9 @@ ${prompt}`
           'response' in rawResponse;
 
         logger.warn(
-          `LLM returned invalid object structure${isColumnar ? ' (columnar format detected)' : ''}, retrying...`,
+          `LLM returned invalid object structure${
+            isColumnar ? ' (columnar format detected)' : ''
+          }, retrying...`,
           {
             attempt: retryCount + 1,
             keys: rawResponse ? Object.keys(rawResponse) : [],
@@ -859,7 +886,9 @@ ${prompt}`
 
         // Core info on one line
         lines.push(
-          `[${i + 1}] ID=${ctx.npcId} NAME="${ctx.npcName}" BAL=${ctx.availableBalance} MAX=${max} TIER=${ctx.tier} STYLE=${ctx.personality}`
+          `[${i + 1}] ID=${ctx.npcId} NAME="${ctx.npcName}" BAL=${
+            ctx.availableBalance
+          } MAX=${max} TIER=${ctx.tier} STYLE=${ctx.personality}`
         );
 
         // Relationships (compact: ally:Name(0.8), rival:Name(-0.7))
@@ -919,7 +948,9 @@ ${prompt}`
         if (ctx.perpMarkets.length > 0) {
           const perps = ctx.perpMarkets.slice(0, 5).map((m) => {
             const sign = m.changePercent24h >= 0 ? '+' : '';
-            return `${m.ticker}:${m.currentPrice.toFixed(0)}(${sign}${m.changePercent24h.toFixed(1)}%)`;
+            return `${m.ticker}:${m.currentPrice.toFixed(
+              0
+            )}(${sign}${m.changePercent24h.toFixed(1)}%)`;
           });
           lines.push(`PERPS: ${perps.join(', ')}`);
         }
@@ -929,7 +960,9 @@ ${prompt}`
           const preds = ctx.predictionMarkets.slice(0, 4).map((m) => {
             const text =
               m.text.length > 40 ? m.text.substring(0, 40) + '...' : m.text;
-            return `Q${m.id}:"${text}" Y${m.yesPrice.toFixed(0)}/N${m.noPrice.toFixed(0)} ${m.daysUntilResolution}d`;
+            return `Q${m.id}:"${text}" Y${m.yesPrice.toFixed(
+              0
+            )}/N${m.noPrice.toFixed(0)} ${m.daysUntilResolution}d`;
           });
           lines.push(`PREDS: ${preds.join(' | ')}`);
         }
@@ -938,7 +971,9 @@ ${prompt}`
         if (ctx.currentPositions.length > 0) {
           const positions = ctx.currentPositions.map((p) => {
             const symbol = p.ticker || `Q${p.marketId}`;
-            return `${p.id}|${p.marketType}|${symbol}|${p.side}|pnl=${p.unrealizedPnL.toFixed(0)}`;
+            return `${p.id}|${p.marketType}|${symbol}|${
+              p.side
+            }|pnl=${p.unrealizedPnL.toFixed(0)}`;
           });
           lines.push(`POSITIONS: ${positions.join(', ')}`);
         }
@@ -1343,7 +1378,9 @@ ${prompt}`
       if (!context) {
         rejectionReasons['no_context'] =
           (rejectionReasons['no_context'] || 0) + 1;
-        const errorMsg = `Decision for unknown NPC: ${decision.npcId || 'missing'} (name: ${decision.npcName || 'missing'})`;
+        const errorMsg = `Decision for unknown NPC: ${
+          decision.npcId || 'missing'
+        } (name: ${decision.npcName || 'missing'})`;
         logger.warn(
           `${errorMsg}. Tried npcId, name fallback, and fuzzy matching - none worked. Skipping decision.`,
           {
@@ -1497,7 +1534,9 @@ ${prompt}`
 
       // Validate amount doesn't exceed balance or max trade amount
       if (decision.amount > context.availableBalance) {
-        const errorMsg = `LLM suggested amount exceeds balance for ${decision.npcName}: $${decision.amount.toLocaleString()} > $${context.availableBalance.toLocaleString()} (balance)`;
+        const errorMsg = `LLM suggested amount exceeds balance for ${
+          decision.npcName
+        }: $${decision.amount.toLocaleString()} > $${context.availableBalance.toLocaleString()} (balance)`;
         logger.warn(
           `${errorMsg} - REJECTING`,
           {
@@ -1515,7 +1554,9 @@ ${prompt}`
         // In tests, NPCs may have $0 balance in database - just skip these decisions
         if (process.env.NODE_ENV !== 'production' && !isTestEnv) {
           throw new Error(
-            `[DEV] ${errorMsg}. Max trade amount: $${maxTradeAmount.toLocaleString()}. Decision: ${JSON.stringify(decision)}`
+            `[DEV] ${errorMsg}. Max trade amount: $${maxTradeAmount.toLocaleString()}. Decision: ${JSON.stringify(
+              decision
+            )}`
           );
         }
         // REJECT the decision instead of scaling - this forces LLM to respect constraints
@@ -1525,7 +1566,9 @@ ${prompt}`
       // Also warn if exceeding 30% max (but don't reject - some NPCs might want to use more)
       if (decision.amount > maxTradeAmount) {
         logger.warn(
-          `LLM suggested amount exceeds 30% max for ${decision.npcName}: $${decision.amount.toLocaleString()} > $${maxTradeAmount.toLocaleString()} (30% of $${context.availableBalance.toLocaleString()})`,
+          `LLM suggested amount exceeds 30% max for ${
+            decision.npcName
+          }: $${decision.amount.toLocaleString()} > $${maxTradeAmount.toLocaleString()} (30% of $${context.availableBalance.toLocaleString()})`,
           {
             npcId: decision.npcId,
             npcName: decision.npcName,
@@ -1543,7 +1586,9 @@ ${prompt}`
       if (!decision.marketType) {
         rejectionReasons['missing_market_type'] =
           (rejectionReasons['missing_market_type'] || 0) + 1;
-        const errorMsg = `Trading decision missing marketType for ${decision.npcName || decision.npcId || 'unknown'}`;
+        const errorMsg = `Trading decision missing marketType for ${
+          decision.npcName || decision.npcId || 'unknown'
+        }`;
         logger.warn(
           errorMsg,
           {
@@ -1567,7 +1612,11 @@ ${prompt}`
         rejectionReasons['invalid_market_type'] =
           (rejectionReasons['invalid_market_type'] || 0) + 1;
         const isPool = marketTypeStr === 'pool';
-        const errorMsg = `Invalid marketType '${marketTypeStr}' for ${decision.npcName || decision.npcId || 'unknown'} - ${isPool ? 'pools market type was removed, ' : ''}must be 'perp' or 'prediction'`;
+        const errorMsg = `Invalid marketType '${marketTypeStr}' for ${
+          decision.npcName || decision.npcId || 'unknown'
+        } - ${
+          isPool ? 'pools market type was removed, ' : ''
+        }must be 'perp' or 'prediction'`;
         logger.warn(
           errorMsg,
           {
@@ -1640,7 +1689,9 @@ ${prompt}`
           // FAIL FAST in development (but not tests): ticker doesn't exist
           if (process.env.NODE_ENV !== 'production' && !isTestEnv) {
             throw new Error(
-              `[DEV] ${errorMsg}. Ticker mapping failed. Decision: ${JSON.stringify(decision)}`
+              `[DEV] ${errorMsg}. Ticker mapping failed. Decision: ${JSON.stringify(
+                decision
+              )}`
             );
           }
           continue;
@@ -1912,6 +1963,14 @@ ${prompt}`
    * Especially important for comparative questions like "Will X outperform Y?"
    */
   private async formatActiveQuestions(): Promise<string> {
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      return `Active Questions:
+- "Will BitcAIn hit $150k by EOM?" (resolves in 14 days)
+- "Will TeslAI announce Model 2?" (resolves in 5 days)
+- "Will Fed cut rates in October?" (resolves in 2 days)`;
+    }
+
     const questionsList = await db
       .select()
       .from(questions)
@@ -1941,6 +2000,14 @@ ${prompt}`
    * This provides high-level supplementary context for the batch.
    */
   private async formatRecentEvents(): Promise<string> {
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      return `Recent developments (last 24h):
+- AIlon Musk: "TeslAI is going to Mars next week"
+- Sam AIltman: "AGI achieved internally"
+- Vitalik ButerAIn: "Gas fees are too damn high"`;
+    }
+
     // Get recent posts from the last 24 hours
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 

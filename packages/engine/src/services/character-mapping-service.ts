@@ -138,6 +138,20 @@ export class CharacterMappingService {
   async transformText(text: string): Promise<TextReplacementResult> {
     this.loadMappings();
 
+    if (typeof text !== 'string') {
+      logger.warn(
+        `CharacterMappingService received non-string input: ${typeof text}`,
+        { input: text },
+        'CharacterMappingService'
+      );
+      return {
+        transformedText: String(text || ''),
+        characterMappings: {},
+        organizationMappings: {},
+        replacementCount: 0,
+      };
+    }
+
     let transformedText = text;
     const characterMappingsResult: Record<string, string> = {};
     const organizationMappingsResult: Record<string, string> = {};

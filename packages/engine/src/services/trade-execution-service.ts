@@ -26,6 +26,7 @@ import {
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { FEE_CONFIG } from '../config/fees';
+import { isSimulationMode } from '../storage-bridge';
 import type {
   ExecutedTrade,
   TradingDecision,
@@ -95,6 +96,40 @@ export class TradeExecutionService {
     decisions: TradingDecision[]
   ): Promise<TradingExecutionResult> {
     const startTime = Date.now();
+
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      const executedTrades = decisions
+        .filter((d) => d.action !== 'hold')
+        .map((d) => ({
+          npcId: d.npcId,
+          npcName: d.npcName,
+          poolId: 'sim-pool',
+          marketType: d.marketType || 'perp',
+          ticker: d.ticker,
+          marketId: d.marketId,
+          action: d.action,
+          side: 'LONG',
+          amount: d.amount,
+          size: d.amount,
+          executionPrice: 100, // dummy price
+          confidence: d.confidence,
+          reasoning: d.reasoning,
+          positionId: 'sim-pos-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        }));
+
+      return {
+        totalDecisions: decisions.length,
+        successfulTrades: executedTrades.length,
+        failedTrades: 0,
+        holdDecisions: decisions.length - executedTrades.length,
+        totalVolumePerp: 0,
+        totalVolumePrediction: 0,
+        errors: [],
+        executedTrades: executedTrades as any,
+      };
+    }
 
     const result: TradingExecutionResult = {
       totalDecisions: decisions.length,

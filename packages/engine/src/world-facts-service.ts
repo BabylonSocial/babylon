@@ -11,6 +11,7 @@ import type { WorldFact } from '@babylon/db';
 import { and, db, desc, eq, worldFacts } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { createParodyHeadlineGenerator } from './services/parody-headline-generator';
+import { isSimulationMode } from './storage-bridge';
 
 export interface WorldFactsContext {
   crypto: string;
@@ -32,6 +33,39 @@ export class WorldFactsService {
    * Limits to the 100 most recent facts
    */
   async getAllFacts(): Promise<WorldFact[]> {
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      return [
+        {
+          id: 'sim-fact-1',
+          category: 'general',
+          key: 'market_state',
+          label: 'Market State',
+          value:
+            'The crypto market is experiencing high volatility due to regulatory rumors.',
+          source: 'simulation',
+          priority: 1,
+          isActive: true,
+          lastUpdated: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: 'sim-fact-2',
+          category: 'politics',
+          key: 'election_season',
+          label: 'Election Season',
+          value: 'Tensions are rising as the election approaches.',
+          source: 'simulation',
+          priority: 1,
+          isActive: true,
+          lastUpdated: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+    }
+
     const facts = await db
       .select()
       .from(worldFacts)
@@ -56,6 +90,11 @@ export class WorldFactsService {
    * Get recent world facts
    */
   async getRecentFacts(limit = 100): Promise<WorldFact[]> {
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      return this.getAllFacts(); // Reuse the mock above
+    }
+
     return db
       .select()
       .from(worldFacts)

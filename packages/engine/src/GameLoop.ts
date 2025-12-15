@@ -10,6 +10,7 @@ import type { RelationshipEvolutionEngine } from './RelationshipEvolutionEngine'
 import { StaticDataRegistry } from './services/static-data-registry';
 import { TradeExecutionService } from './services/trade-execution-service';
 import { WalletService } from './services/wallet-service';
+import { isSimulationMode } from './storage-bridge';
 import type { TrendingTopicsEngine } from './TrendingTopicsEngine';
 import type { Actor, ActorTier, FeedPost } from './types/shared';
 
@@ -112,7 +113,9 @@ export class GameLoop {
         );
       } catch (e) {
         logger.warn(
-          `Trade execution batch failed: ${e instanceof Error ? e.message : String(e)}`,
+          `Trade execution batch failed: ${
+            e instanceof Error ? e.message : String(e)
+          }`,
           undefined,
           'GameLoop'
         );
@@ -160,7 +163,57 @@ export class GameLoop {
         minFeeAmount: FEE_CONFIG.MIN_FEE_AMOUNT,
       },
     });
-    const marketState = await perpService.getMarketsSnapshot();
+
+    let marketState;
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      marketState = [
+        {
+          ticker: 'BTCAI',
+          organizationId: 'btc',
+          name: 'BitcAIn',
+          currentPrice: 120000,
+          change24h: 6240,
+          changePercent24h: 5.2,
+          high24h: 121000,
+          low24h: 118000,
+          volume24h: 1000000,
+          openInterest: 500000,
+          fundingRate: {
+            rate: 0.001,
+            nextFundingTime: new Date().toISOString(),
+            predictedRate: 0.001,
+          },
+          maxLeverage: 20,
+          minOrderSize: 10,
+          markPrice: 120000,
+          indexPrice: 120000,
+        },
+        {
+          ticker: 'ETHAI',
+          organizationId: 'eth',
+          name: 'EtherAIum',
+          currentPrice: 4000,
+          change24h: 84,
+          changePercent24h: 2.1,
+          high24h: 4100,
+          low24h: 3900,
+          volume24h: 500000,
+          openInterest: 200000,
+          fundingRate: {
+            rate: 0.001,
+            nextFundingTime: new Date().toISOString(),
+            predictedRate: 0.001,
+          },
+          maxLeverage: 20,
+          minOrderSize: 10,
+          markPrice: 4000,
+          indexPrice: 4000,
+        },
+      ];
+    } else {
+      marketState = await perpService.getMarketsSnapshot();
+    }
 
     // Calculate significant moves for narrative context
     const significantMoves = marketState
@@ -175,7 +228,9 @@ export class GameLoop {
       });
     } catch (e) {
       logger.warn(
-        `Failed to generate world events: ${e instanceof Error ? e.message : String(e)}`,
+        `Failed to generate world events: ${
+          e instanceof Error ? e.message : String(e)
+        }`,
         { day, hour },
         'GameLoop'
       );
@@ -245,7 +300,9 @@ export class GameLoop {
         await this.relationships.analyzeAndUpdateRelationships();
       } catch (e) {
         logger.warn(
-          `Failed to analyze relationships: ${e instanceof Error ? e.message : String(e)}`,
+          `Failed to analyze relationships: ${
+            e instanceof Error ? e.message : String(e)
+          }`,
           undefined,
           'GameLoop'
         );

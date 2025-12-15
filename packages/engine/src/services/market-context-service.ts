@@ -31,6 +31,7 @@ import {
   worldEvents,
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { isSimulationMode } from '../storage-bridge';
 import type {
   EventContext,
   FeedPostContext,
@@ -67,6 +68,106 @@ export class MarketContextService {
    */
   async buildContextForAllNPCs(): Promise<Map<string, NPCMarketContext>> {
     const startTime = Date.now();
+
+    // Simulation Mode Bypass
+    if (isSimulationMode()) {
+      const staticActors = StaticDataRegistry.getAllActors();
+
+      // Filter out test actors
+      const npcs = staticActors
+        .filter((actor) => !actor.name.includes('Group Test') && !actor.isTest)
+        .map((actor) => ({
+          id: actor.id,
+          name: actor.name,
+          description: actor.description,
+          domain: actor.domain,
+          personality: actor.personality,
+          tier: actor.tier,
+          affiliations: actor.affiliations,
+          postStyle: actor.postStyle,
+          postExample: actor.postExample,
+          tradingBalance: '100000', // Mock balance
+          reputationPoints: 10000,
+          hasPool: true,
+        }));
+
+      // In simulation mode, we skip DB queries for messages/relationships/positions
+      // and provide empty/mock data instead
+      const contexts = new Map<string, NPCMarketContext>();
+
+      // Get basic shared context (mocked)
+      const marketSnapshots = {
+        perps: [
+          {
+            ticker: 'BTCAI',
+            currentPrice: 120000,
+            change24h: 6240,
+            changePercent24h: 5.2,
+            name: 'BitcAIn',
+            organizationId: 'btc',
+            high24h: 121000,
+            low24h: 118000,
+            volume24h: 1000000,
+            openInterest: 500000,
+          },
+          {
+            ticker: 'ETHAI',
+            currentPrice: 4000,
+            change24h: 84,
+            changePercent24h: 2.1,
+            name: 'EtherAIum',
+            organizationId: 'eth',
+            high24h: 4100,
+            low24h: 3900,
+            volume24h: 500000,
+            openInterest: 200000,
+          },
+          {
+            ticker: 'TSLAI',
+            currentPrice: 245,
+            change24h: -3.7,
+            changePercent24h: -1.5,
+            name: 'TeslAI',
+            organizationId: 'tsla',
+            high24h: 250,
+            low24h: 240,
+            volume24h: 200000,
+            openInterest: 100000,
+          },
+        ],
+        predictions: [
+          {
+            id: 'q1',
+            text: 'Will BitcAIn hit $150k?',
+            yesPrice: 65,
+            noPrice: 35,
+            totalVolume: 50000,
+            resolutionDate: new Date(Date.now() + 86400000).toISOString(),
+            daysUntilResolution: 2,
+          },
+        ],
+        timestamp: new Date().toISOString(),
+      };
+
+      for (const npc of npcs) {
+        contexts.set(npc.id, {
+          npcId: npc.id,
+          npcName: npc.name,
+          personality: npc.personality || 'neutral trader',
+          tier: npc.tier || 'B_TIER',
+          availableBalance: 100000,
+          relationships: [], // Empty for simulation
+          recentPosts: [], // Empty for simulation
+          groupChatMessages: [], // Empty for simulation
+          recentEvents: [], // Empty for simulation
+          perpMarkets: marketSnapshots.perps,
+          predictionMarkets: marketSnapshots.predictions,
+          currentPositions: [], // Empty for simulation start
+        });
+      }
+
+      return contexts;
+    }
 
     // Fetch all NPCs from static registry and state table
     // Filter out test actors (Group Test Alice, Bob, Charlie)
