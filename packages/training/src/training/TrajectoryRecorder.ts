@@ -28,6 +28,9 @@ export type {
   Action,
 };
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 /**
  * Active trajectory being recorded.
  */
@@ -232,8 +235,8 @@ export class TrajectoryRecorder {
     const errorCount = traj.steps.filter((s) => !s.action.success).length;
     const finalStatus = errorCount > 0 ? 'completed_with_errors' : 'completed';
 
-    // Save trajectory
-    await db.insert(trajectories).values({
+    // Prepare trajectory data object
+    const trajectoryData = {
       id: await generateSnowflakeId(),
       trajectoryId,
       agentId: traj.agentId,
@@ -273,45 +276,88 @@ export class TrajectoryRecorder {
       isEvaluation: false,
       usedInTraining: false,
       updatedAt: new Date(),
-    });
+    };
 
-    // Save LLM calls
-    for (const step of traj.steps) {
-      for (const llmCall of step.llmCalls) {
-        await db.insert(llmCallLogs).values({
-          id: await generateSnowflakeId(),
-          trajectoryId,
-          stepId: `${trajectoryId}-step-${step.stepNumber}`,
-          callId: `${trajectoryId}-call-${step.stepNumber}-${step.llmCalls.indexOf(llmCall)}`,
-          timestamp: new Date(step.timestamp),
-          latencyMs: llmCall.latencyMs,
-          model: llmCall.model,
-          purpose: llmCall.purpose,
-          actionType: llmCall.actionType,
-          systemPrompt: llmCall.systemPrompt,
-          userPrompt: llmCall.userPrompt,
-          messagesJson: JSON.stringify([
-            { role: 'system', content: llmCall.systemPrompt },
-            { role: 'user', content: llmCall.userPrompt },
-          ]),
-          response: llmCall.response,
-          reasoning: llmCall.reasoning,
-          temperature: llmCall.temperature,
-          maxTokens: llmCall.maxTokens,
-          metadata: JSON.stringify({ modelVersion: llmCall.modelVersion }),
-        });
+    try {
+      // Try DB insert first (production path)
+      await db.insert(trajectories).values(trajectoryData);
+
+      // Save LLM calls to DB
+      for (const step of traj.steps) {
+        for (const llmCall of step.llmCalls) {
+          await db.insert(llmCallLogs).values({
+            id: await generateSnowflakeId(),
+            trajectoryId,
+            stepId: `${trajectoryId}-step-${step.stepNumber}`,
+            callId: `${trajectoryId}-call-${
+              step.stepNumber
+            }-${step.llmCalls.indexOf(llmCall)}`,
+            timestamp: new Date(step.timestamp),
+            latencyMs: llmCall.latencyMs,
+            model: llmCall.model,
+            purpose: llmCall.purpose,
+            actionType: llmCall.actionType,
+            systemPrompt: llmCall.systemPrompt,
+            userPrompt: llmCall.userPrompt,
+            messagesJson: JSON.stringify([
+              { role: 'system', content: llmCall.systemPrompt },
+              { role: 'user', content: llmCall.userPrompt },
+            ]),
+            response: llmCall.response,
+            reasoning: llmCall.reasoning,
+            temperature: llmCall.temperature,
+            maxTokens: llmCall.maxTokens,
+            metadata: JSON.stringify({ modelVersion: llmCall.modelVersion }),
+          });
+        }
+      }
+
+      logger.info('Trajectory saved to database', {
+        trajectoryId,
+        archetype: traj.archetype,
+        steps: traj.steps.length,
+        reward: totalReward,
+        duration: durationMs,
+      });
+    } catch (error: any) {
+      // If DB insert fails because we are in JSON/Simulation mode, save to disk
+      // The error message typically contains "not supported in JSON mode"
+      if (
+        error.message?.includes('not supported in JSON mode') ||
+        error.message?.includes('simulation mode')
+      ) {
+        const outputDir = './training-data-output/trajectories';
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        // Prepare full data for JSON file including steps and logs
+        const fullData = {
+          trajectory: trajectoryData,
+          llmCalls: traj.steps.flatMap((step) =>
+            step.llmCalls.map((call, idx) => ({
+              stepNumber: step.stepNumber,
+              callIndex: idx,
+              ...call,
+            }))
+          ),
+        };
+
+        const filePath = path.join(outputDir, `${trajectoryId}.json`);
+        fs.writeFileSync(filePath, JSON.stringify(fullData, null, 2));
+
+        logger.info(
+          'Saved trajectory to JSON (Simulation Mode)',
+          { trajectoryId, path: filePath },
+          'TrajectoryRecorder'
+        );
+      } else {
+        // Re-throw if it's a real database error
+        throw error;
       }
     }
 
     this.activeTrajectories.delete(trajectoryId);
-
-    logger.info('Trajectory saved to database', {
-      trajectoryId,
-      archetype: traj.archetype,
-      steps: traj.steps.length,
-      reward: totalReward,
-      duration: durationMs,
-    });
   }
 
   /**
