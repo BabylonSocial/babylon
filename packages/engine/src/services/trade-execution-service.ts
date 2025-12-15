@@ -11,8 +11,8 @@ import { PerpDbAdapter, PerpMarketService } from "@babylon/core/markets/perps";
 import {
   PredictionDbAdapter as CorePredictionDbAdapter,
   PredictionMarketService as CorePredictionMarketService,
-} from '@babylon/core/markets/prediction';
-import type { WalletPort } from '@babylon/core/markets/shared';
+} from "@babylon/core/markets/prediction";
+import type { WalletPort } from "@babylon/core/markets/shared";
 import {
   actorState,
   db,
@@ -277,7 +277,7 @@ export class TradeExecutionService {
 
         // Broadcast events are handled by the service's internal broadcast mechanism
         // The payload is logged for debugging purposes
-        logger.debug('Prediction broadcast event', {
+        logger.debug("Prediction broadcast event", {
           type: payload.type,
           marketId: payload.marketId,
         });
