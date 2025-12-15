@@ -70,3 +70,7 @@ apps/web/debug/
 packages/experimental/honest-demo-output/
 _docs/
 debug/
+
+packages/engine/training-data-output
+packages/training/data/scored_trajectories.csv
+simulation-output/state.json
