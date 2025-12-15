@@ -114,6 +114,7 @@ export {
   type GameTickResult as ExecuteGameTickResult,
   resolveQuestionPayouts,
 } from './game-tick';
+export { GameLoop } from './GameLoop'
 export {
   cleanMarkdownCodeBlocks,
   extractJsonFromText,
