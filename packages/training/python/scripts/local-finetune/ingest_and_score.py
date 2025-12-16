@@ -8,9 +8,9 @@ from typing import Dict, Any, List
 
 # Configuration
 POTENTIAL_DIRS = [
-    "../../../training-data-output/trajectories",
-    "../../engine/training-data-output/trajectories",
-    "./training-data-output/trajectories"
+    "../../../../training-data-output/trajectories",
+    "../../../engine/training-data-output/trajectories",
+    "./../training-data-output/trajectories"
 ]
 OUTPUT_FILE = "../data/scored_trajectories.csv"
 
