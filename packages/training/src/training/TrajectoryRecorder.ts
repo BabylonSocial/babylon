@@ -7,18 +7,18 @@
  * @packageDocumentation
  */
 
-import { db, llmCallLogs, trajectories } from "@babylon/db";
-import type { JsonValue } from "@babylon/shared";
-import { logger } from "../utils/logger";
-import { generateSnowflakeId } from "../utils/snowflake";
+import { db, llmCallLogs, trajectories } from '@babylon/db';
+import type { JsonValue } from '@babylon/shared';
+import { logger } from '../utils/logger';
+import { generateSnowflakeId } from '../utils/snowflake';
 import type {
   Action,
   EnvironmentState,
   LLMCall,
   ProviderAccess,
   TrajectoryStep,
-} from "./types";
-import { getCurrentWindowId } from "./window-utils";
+} from './types';
+import { getCurrentWindowId } from './window-utils';
 
 export type {
   TrajectoryStep,
@@ -28,9 +28,9 @@ export type {
   Action,
 };
 
-import * as fs from "fs";
-import * as path from "path";
-import { isSimulationMode } from "@babylon/db"; // keep this at db not engine to avoid circular dep
+import { isSimulationMode } from '@babylon/db'; // keep this at db not engine to avoid circular dep
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Active trajectory being recorded.
@@ -103,7 +103,7 @@ export class TrajectoryRecorder {
       steps: [],
     });
 
-    logger.info("Started trajectory recording", {
+    logger.info('Started trajectory recording', {
       trajectoryId,
       agentId: options.agentId,
       archetype: options.archetype,
@@ -225,16 +225,16 @@ export class TrajectoryRecorder {
     // Calculate metrics
     const tradesExecuted = traj.steps.filter(
       (s) =>
-        s.action.actionType.includes("BUY") ||
-        s.action.actionType.includes("SELL")
+        s.action.actionType.includes('BUY') ||
+        s.action.actionType.includes('SELL')
     ).length;
 
     const postsCreated = traj.steps.filter((s) =>
-      s.action.actionType.includes("POST")
+      s.action.actionType.includes('POST')
     ).length;
 
     const errorCount = traj.steps.filter((s) => !s.action.success).length;
-    const finalStatus = errorCount > 0 ? "completed_with_errors" : "completed";
+    const finalStatus = errorCount > 0 ? 'completed_with_errors' : 'completed';
 
     // 1. Prepare the standard data object (Used for both JSON and DB)
     const trajectoryData = {
@@ -281,7 +281,7 @@ export class TrajectoryRecorder {
 
     // Simulation Mode Bypass
     if (isSimulationMode()) {
-      const outputDir = "./training-data-output/trajectories";
+      const outputDir = './training-data-output/trajectories';
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
@@ -301,9 +301,9 @@ export class TrajectoryRecorder {
       fs.writeFileSync(filePath, JSON.stringify(fullData, null, 2));
 
       logger.info(
-        "Saved trajectory to JSON (Simulation Mode)",
+        'Saved trajectory to JSON (Simulation Mode)',
         { trajectoryId, path: filePath },
-        "TrajectoryRecorder"
+        'TrajectoryRecorder'
       );
 
       this.activeTrajectories.delete(trajectoryId);
@@ -331,8 +331,8 @@ export class TrajectoryRecorder {
             systemPrompt: llmCall.systemPrompt,
             userPrompt: llmCall.userPrompt,
             messagesJson: JSON.stringify([
-              { role: "system", content: llmCall.systemPrompt },
-              { role: "user", content: llmCall.userPrompt },
+              { role: 'system', content: llmCall.systemPrompt },
+              { role: 'user', content: llmCall.userPrompt },
             ]),
             response: llmCall.response,
             reasoning: llmCall.reasoning,
@@ -343,7 +343,7 @@ export class TrajectoryRecorder {
         }
       }
 
-      logger.info("Trajectory saved to database", {
+      logger.info('Trajectory saved to database', {
         trajectoryId,
         archetype: traj.archetype,
         steps: traj.steps.length,
@@ -351,7 +351,7 @@ export class TrajectoryRecorder {
         duration: durationMs,
       });
     } catch (error: any) {
-      logger.error("Failed to save trajectory to DB", { error: error.message });
+      logger.error('Failed to save trajectory to DB', { error: error.message });
       throw error;
     }
 
