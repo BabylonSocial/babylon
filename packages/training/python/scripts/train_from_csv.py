@@ -117,6 +117,7 @@ def train_local(
     final_path = os.path.join(output_dir, "adapter")
     logger.info(f"Saving model adapter to {final_path}")
     trainer.save_model(final_path)
+    tokenizer.save_pretrained(final_path) 
     print(f"\n✅ Training Complete. Adapter saved at: {final_path}")
 
 if __name__ == "__main__":
