@@ -13,8 +13,6 @@ export {
   truncateToTokenLimit,
   truncateToTokenLimitSync,
 } from '@babylon/api';
-// Article Generator
-export { type Article, ArticleGenerator } from './ArticleGenerator';
 // Prediction Pricing
 export {
   calculateExpectedPayout,
@@ -22,6 +20,8 @@ export {
   type ShareCalculation,
   type ShareCalculationWithFees,
 } from '@babylon/core/markets/prediction';
+// Article Generator
+export { type Article, ArticleGenerator } from './ArticleGenerator';
 // Actors Data Loader
 export {
   clearDataCache,
