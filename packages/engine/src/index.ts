@@ -13,13 +13,6 @@ export {
   truncateToTokenLimit,
   truncateToTokenLimitSync,
 } from '@babylon/api';
-// Prediction Pricing
-export {
-  calculateExpectedPayout,
-  PredictionPricing,
-  type ShareCalculation,
-  type ShareCalculationWithFees,
-} from '@babylon/core/markets/prediction';
 // Article Generator
 export { type Article, ArticleGenerator } from './ArticleGenerator';
 // Prediction Pricing
