@@ -7,7 +7,18 @@ import sys
 BASE_MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
 ADAPTER_PATH = "./trained_models/babylon-v1/adapter"
 
+def get_device():
+    if torch.cuda.is_available(): return "cuda"
+    if torch.backends.mps.is_available(): return "mps"
+    return "cpu"
+
 def main():
+    device = get_device()
+    print(f"Running on: {device}")
+    
+    if device != "cuda":
+        model.to(device)
+
     print(f"Loading base model: {BASE_MODEL_ID}...")
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
     
@@ -55,7 +66,7 @@ def main():
         ]
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         
-        inputs = tokenizer(text, return_tensors="pt").to("cuda")
+        inputs = tokenizer(text, return_tensors="pt").to(device)
         
         print("\n🤔 Thinking...")
         with torch.no_grad():

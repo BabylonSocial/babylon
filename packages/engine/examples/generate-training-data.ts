@@ -39,7 +39,7 @@ async function main() {
 
   // 4. Initialize the Market Engines
   const rawMarketEngine = new MarketDecisionEngine(llmClient, contextService, {
-    model: 'claude-haiku-4-5-20251001', // Explicitly use the fast/smart model
+    model: 'groq/compound',
     maxOutputTokens: 4000,
   });
 
