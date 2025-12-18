@@ -31,15 +31,14 @@ Small model recommendations for consumer hardware:
     GTX 4090 (24GB):   Qwen/Qwen2.5-3B-Instruct
 """
 
-
-import sys
 import os
+import sys
 from pathlib import Path
 
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-current_file = Path(__file__).resolve()
-project_root = current_file.parent.parent
-sys.path.insert(0, str(project_root))
+
 
 import argparse
 import asyncio
@@ -47,14 +46,13 @@ import json
 import logging
 from datetime import datetime, timezone
 from typing import Literal, List
-
 from dotenv import load_dotenv
 
 from src.models import BabylonTrajectory
 from src.data_bridge.reader import JsonTrajectoryReader, PostgresTrajectoryReader, validate_llm_calls
 
 # Load environment
-env_path = project_root.parent.parent / ".env"
+env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
 if env_path.exists():
     load_dotenv(env_path)
 
@@ -129,11 +127,17 @@ async def load_postgres_training_data(
                         steps = json.loads(traj_row.steps_json)
                         # Convert TrajectoryRow object to a dict for Pydantic validation
                         traj_data = {
-                            "id": traj_row.trajectory_id, "trajectory_id": traj_row.trajectory_id,
-                            "agent_id": traj_row.agent_id, "window_id": traj_row.window_id, "steps": steps,
-                            "total_reward": traj_row.total_reward, "episode_length": traj_row.episode_length,
-                            "final_status": traj_row.final_status, "final_pnl": traj_row.final_pnl,
+                            "id": traj_row.trajectory_id,
+                            "trajectory_id": traj_row.trajectory_id,
+                            "agent_id": traj_row.agent_id,
+                            "window_id": traj_row.window_id,
+                            "steps": steps,
+                            "total_reward": traj_row.total_reward,
+                            "episode_length": traj_row.episode_length,
+                            "final_status": traj_row.final_status,
+                            "final_pnl": traj_row.final_pnl,
                             "trades_executed": traj_row.trades_executed,
+                            "archetype": traj_row.archetype,
                         }
                         traj_model = BabylonTrajectory.model_validate(
                             traj_data)
@@ -270,7 +274,7 @@ def train_mlx(
             f.write(json.dumps(s) + "\n")
 
     adapter_path = os.path.join(output_dir, "adapters")
-    import mlx_lm  # type: ignore
+    import mlx_lm # type: ignore
     cmd = [
         sys.executable, "-m", "mlx_lm", "lora", "--model", model_name, "--train",
         "--data", data_dir, "--adapter-path", adapter_path, "--batch-size", str(
@@ -383,7 +387,7 @@ Analyze this market update and explain your trading decision."""
 
     try:
         if backend == "mlx":
-            from mlx_lm import load, generate  # type: ignore
+            from mlx_lm import load, generate # type: ignore
             model, tokenizer = load(base_model, adapter_path=model_path)
             messages = [{"role": "user", "content": test_prompt}]
             prompt = tokenizer.apply_chat_template(
