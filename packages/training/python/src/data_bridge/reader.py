@@ -12,7 +12,11 @@ from typing import Optional, List, Dict
 from pathlib import Path
 import logging
 
-import psycopg2
+# Handle optional psycopg2 import for JSON-only workflows.
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +49,11 @@ def get_connection():
 
     Raises:
         ValueError: If DATABASE_URL not set
+        ImportError: If psycopg2 is not installed
     """
+    if psycopg2 is None:
+        raise ImportError(
+            "psycopg2 is not installed. Please install it with 'pip install psycopg2-binary'")
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise ValueError("DATABASE_URL environment variable required")
@@ -88,15 +96,11 @@ def validate_llm_calls(steps: list, min_steps_with_llm: int = 3) -> tuple[bool, 
 
             call_issues = []
             if len(system_prompt) < 20:
-                call_issues.append(
-                    f"system_prompt too short ({len(system_prompt)} chars)")
+                call_issues.append("system_prompt too short")
             if len(user_prompt) < 20:
-                call_issues.append(
-                    f"user_prompt too short ({len(user_prompt)} chars)")
-
+                call_issues.append("user_prompt too short")
             if len(response) < 20:
-                call_issues.append(
-                    f"response too short ({len(response)} chars)")
+                call_issues.append("response too short")
 
             if not call_issues:
                 valid_calls_in_step += 1
@@ -118,6 +122,9 @@ class PostgresTrajectoryReader:
     """Reads Babylon trajectories from a PostgreSQL database."""
 
     def __init__(self, database_url: str):
+        if psycopg2 is None:
+            raise ImportError(
+                "psycopg2 is not installed for PostgresTrajectoryReader. Please install it with 'pip install psycopg2-binary'")
         if not database_url:
             raise ValueError(
                 "DATABASE_URL must be provided for PostgresTrajectoryReader")
@@ -125,10 +132,16 @@ class PostgresTrajectoryReader:
         self.conn = None
 
     async def __aenter__(self):
+        """Connect to the database upon entering the async context."""
+        # Check to satisfy Pylance's static analysis
+        if psycopg2 is None:
+            raise ImportError(
+                "psycopg2 is not installed, cannot connect to database.")
         self.conn = psycopg2.connect(self.db_url)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Close the database connection upon exiting the context."""
         if self.conn:
             self.conn.close()
 
@@ -157,7 +170,7 @@ class PostgresTrajectoryReader:
         with self.conn.cursor() as cur:
             query = """
                 SELECT "trajectoryId", "agentId", "windowId", "stepsJson", "metricsJson", "metadataJson",
-                       "totalReward", "episodeLength", "finalStatus", "finalPnL", "tradesExecuted", 
+                       "totalReward", "episodeLength", "finalStatus", "finalPnL", "tradesExecuted",
                        "aiJudgeReward", "archetype"
                 FROM trajectories WHERE "windowId" = %s AND "isTrainingData" = true AND "episodeLength" >= %s
             """
@@ -216,14 +229,11 @@ class JsonTrajectoryReader:
             try:
                 with file_path.open('r', encoding='utf-8') as f:
                     data = json.load(f)
-
                 trajectory_data = data.get('trajectory', data)
                 window_id = trajectory_data.get("windowId", "default_window")
-
                 if window_id not in self._trajectories_by_window:
                     self._trajectories_by_window[window_id] = []
                 self._trajectories_by_window[window_id].append(trajectory_data)
-
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.warning(f"Skipping invalid JSON file {file_path}: {e}")
 
@@ -299,8 +309,8 @@ def get_trajectories_by_window(
         trajectory = TrajectoryRow(
             trajectory_id=row[0], agent_id=row[1], window_id=row[2], steps_json=row[3],
             metrics_json=row[4], metadata_json=row[5], total_reward=float(
-                row[6]) if row[6] else 0.0,
-            episode_length=int(row[7]) if row[7] else 0, final_status=row[8] or "unknown",
+                row[6] or 0.0),
+            episode_length=int(row[7] or 0), final_status=row[8] or "unknown",
             final_pnl=float(row[9]) if row[9] else None, trades_executed=int(row[10]) if row[10] else None,
             ai_judge_reward=float(row[11]) if row[11] else None, archetype=row[12],
         )
@@ -370,6 +380,10 @@ def get_trajectory_stats() -> dict:
     row = cur.fetchone()
     cur.close()
     conn.close()
+
+    if row is None:
+        return {"total": 0, "scored": 0, "avg_score": 0.0, "min_score": 0.0, "max_score": 0.0, "archetypes": 0}
+
     return {
         "total": row[0] or 0, "scored": row[1] or 0,
         "avg_score": float(row[2]) if row[2] else 0.0,

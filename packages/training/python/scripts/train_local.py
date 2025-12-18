@@ -68,7 +68,7 @@ def detect_backend() -> Literal["mlx", "cuda", "cpu"]:
     """Auto-detect the best available backend."""
     # Check for MLX (Apple Silicon)
     try:
-        import mlx.core
+        import mlx.core  # type: ignore
         logger.info("MLX backend available (Apple Silicon)")
         return "mlx"
     except ImportError:
@@ -265,6 +265,7 @@ def train_mlx(
             f.write(json.dumps(s) + "\n")
 
     adapter_path = os.path.join(output_dir, "adapters")
+    import mlx_lm  # type: ignore
     cmd = [
         sys.executable, "-m", "mlx_lm", "lora", "--model", model_name, "--train",
         "--data", data_dir, "--adapter-path", adapter_path, "--batch-size", str(
@@ -377,7 +378,7 @@ Analyze this market update and explain your trading decision."""
 
     try:
         if backend == "mlx":
-            from mlx_lm import load, generate
+            from mlx_lm import load, generate  # type: ignore
             model, tokenizer = load(base_model, adapter_path=model_path)
             messages = [{"role": "user", "content": test_prompt}]
             prompt = tokenizer.apply_chat_template(

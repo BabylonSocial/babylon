@@ -9,12 +9,12 @@ from datetime import datetime
 from pydantic.alias_generators import to_camel
 
 # Type alias for JSON-serializable values
-# Using object as value type is safer than Any - it requires explicit casting
 JsonDict = Dict[str, object]
 
 # Type alias for chat messages with known structure
 ChatMessage = Dict[str, str]  # {"role": str, "content": str}
 
+# Base config for camelCase conversion, to be used by all models
 camel_case_config = ConfigDict(
     alias_generator=to_camel,
     populate_by_name=True,
@@ -24,7 +24,9 @@ camel_case_config = ConfigDict(
 class EnvironmentState(BaseModel):
     """Environment state at a given point"""
     model_config = camel_case_config
+
     agent_balance: float
+    # Explicit alias for the 'agentPnL' field from the JSON data
     agent_pnl: float = Field(..., alias='agentPnL')
     open_positions: int
     active_markets: int = 0
@@ -32,7 +34,13 @@ class EnvironmentState(BaseModel):
 
 class ProviderAccess(BaseModel):
     """Data accessed from a provider"""
-    model_config = ConfigDict(extra="allow", **camel_case_config)
+    # Combines camelCase conversion with allowing extra fields
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="allow"
+    )
+
     provider_name: str
     data: JsonDict
     purpose: str
@@ -44,6 +52,7 @@ class LLMCall(BaseModel):
     Matches the TypeScript LLMCall interface in plugin-trajectory-logger/types.ts
     """
     model_config = camel_case_config
+
     model: str
     model_version: str | None = None
     system_prompt: str
@@ -61,7 +70,13 @@ class LLMCall(BaseModel):
 
 class Action(BaseModel):
     """Action taken by agent"""
-    model_config = ConfigDict(extra="allow", **camel_case_config)
+    # Combines camelCase conversion with allowing extra fields
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="allow"
+    )
+
     action_type: str
     parameters: JsonDict
     success: bool
@@ -73,6 +88,7 @@ class Action(BaseModel):
 class TrajectoryStep(BaseModel):
     """Single step in a trajectory"""
     model_config = camel_case_config
+
     step_number: int
     timestamp: int
     environment_state: EnvironmentState
@@ -84,14 +100,18 @@ class TrajectoryStep(BaseModel):
 
 class BabylonTrajectory(BaseModel):
     """Complete trajectory from database"""
-    model_config = ConfigDict(frozen=False, **camel_case_config)
+    # Combines camelCase conversion with mutability
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        frozen=False
+    )
 
-    # Required fields
     trajectory_id: str
     agent_id: str
 
     id: str = ""
-    window_id: str = "default"  # Auto-generated if not provided
+    window_id: str = "default"
     start_time: datetime | None = None
     end_time: datetime | None = None
     duration_ms: int = 0
