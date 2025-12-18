@@ -6,6 +6,7 @@ Strong, validated types - no Any, no unknown casts
 from typing import Dict, List, Literal
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+from pydantic.alias_generators import to_camel
 
 # Type alias for JSON-serializable values
 # Using object as value type is safer than Any - it requires explicit casting
@@ -14,19 +15,23 @@ JsonDict = Dict[str, object]
 # Type alias for chat messages with known structure
 ChatMessage = Dict[str, str]  # {"role": str, "content": str}
 
+camel_case_config = ConfigDict(
+    alias_generator=to_camel,
+    populate_by_name=True,
+)
 
 class EnvironmentState(BaseModel):
     """Environment state at a given point"""
+    model_config = camel_case_config
     agent_balance: float
-    agent_pnl: float
+    agent_pnl: float = Field(..., alias='agentPnL') 
     open_positions: int
     active_markets: int = 0
 
 
 class ProviderAccess(BaseModel):
     """Data accessed from a provider"""
-    model_config = ConfigDict(extra="allow")
-    
+    model_config = ConfigDict(extra="allow", **camel_case_config)
     provider_name: str
     data: JsonDict
     purpose: str
@@ -35,28 +40,27 @@ class ProviderAccess(BaseModel):
 class LLMCall(BaseModel):
     """
     Single LLM call record.
-    
     Matches the TypeScript LLMCall interface in plugin-trajectory-logger/types.ts
     """
+    model_config = camel_case_config
     model: str
-    model_version: str | None = None  # RL model version if using trained model
+    model_version: str | None = None
     system_prompt: str
     user_prompt: str
     response: str
-    reasoning: str | None = None  # Chain-of-thought if applicable
+    reasoning: str | None = None
     temperature: float
     max_tokens: int
     latency_ms: int | None = None
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     purpose: Literal['action', 'reasoning', 'evaluation', 'response', 'other']
-    action_type: str | None = None  # e.g., 'post', 'trade', 'comment'
+    action_type: str | None = None
 
 
 class Action(BaseModel):
     """Action taken by agent"""
-    model_config = ConfigDict(extra="allow")
-    
+    model_config = ConfigDict(extra="allow", **camel_case_config)
     action_type: str
     parameters: JsonDict
     success: bool
@@ -67,46 +71,47 @@ class Action(BaseModel):
 
 class TrajectoryStep(BaseModel):
     """Single step in a trajectory"""
+    model_config = camel_case_config
     step_number: int
     timestamp: int
     environment_state: EnvironmentState
-    provider_accesses: List[ProviderAccess] = []  # Optional, default empty
-    llm_calls: List[LLMCall] = []  # Optional, default empty
-    action: Action | None = None  # Optional, agent may choose to wait
-    reward: float = 0.0  # Default reward
+    provider_accesses: List[ProviderAccess] = Field(default_factory=list)
+    llm_calls: List[LLMCall] = Field(default_factory=list)
+    action: Action | None = None
+    reward: float = 0.0
 
 
 class BabylonTrajectory(BaseModel):
     """Complete trajectory from database"""
-    model_config = ConfigDict(frozen=False)  # Allow modifications
+    model_config = ConfigDict(frozen=False, **camel_case_config)
     
     # Required fields
     trajectory_id: str
     agent_id: str
     
-    # Optional with defaults
-    id: str = ""  # Auto-generated if not provided
-    window_id: str = "default"
+    id: str = ""
+    window_id: str = "default" # Auto-generated if not provided
     start_time: datetime | None = None
     end_time: datetime | None = None
     duration_ms: int = 0
     scenario_id: str | None = None
     episode_id: str | None = None
-    steps: List[TrajectoryStep] = []
+    steps: List[TrajectoryStep] = Field(default_factory=list)
     total_reward: float = 0.0
     final_pnl: float = 0.0
     final_balance: float | None = None
     trades_executed: int = 0
-    successful_trades: int = 0  # Added for tracking
-    failed_trades: int = 0  # Added for tracking
+    successful_trades: int = 0
+    failed_trades: int = 0
     posts_created: int = 0
-    provider_accesses: int = 0  # Added for tracking
+    provider_accesses: int = 0
     episode_length: int = 0
     final_status: str = "completed"
 
 
 class StockOutcome(BaseModel):
     """Market outcome for a stock"""
+    model_config = camel_case_config
     ticker: str
     start_price: float
     end_price: float
@@ -117,6 +122,7 @@ class StockOutcome(BaseModel):
 
 class PredictionOutcome(BaseModel):
     """Outcome for a prediction market"""
+    model_config = camel_case_config
     market_id: str
     question: str
     outcome: Literal['YES', 'NO', 'UNRESOLVED']
@@ -125,6 +131,7 @@ class PredictionOutcome(BaseModel):
 
 class MarketOutcomes(BaseModel):
     """All market outcomes for a window"""
+    model_config = camel_case_config
     window_id: str
     window_start: datetime
     window_end: datetime
@@ -136,6 +143,7 @@ class MarketOutcomes(BaseModel):
 
 class WindowStatistics(BaseModel):
     """Statistics for a training window"""
+    model_config = camel_case_config
     window_id: str
     agent_count: int
     trajectory_count: int
@@ -149,6 +157,7 @@ class WindowStatistics(BaseModel):
 
 class TrainingBatchSummary(BaseModel):
     """Summary of a training batch"""
+    model_config = camel_case_config
     windows: int
     total_trajectories: int
     avg_trajectories_per_window: float
@@ -167,6 +176,7 @@ class TrainingBatchSummary(BaseModel):
 
 class AtroposScoredItem(BaseModel):
     """Single scored item for Atropos training"""
+    model_config = camel_case_config
     tokens: List[int]
     masks: List[int]
     score: float
@@ -176,6 +186,7 @@ class AtroposScoredItem(BaseModel):
 
 class AtroposScoredGroup(BaseModel):
     """Group of scored items for Atropos GRPO training"""
+    model_config = camel_case_config
     tokens: List[List[int]]
     masks: List[List[int]]
     scores: List[float]
@@ -190,6 +201,7 @@ class AtroposScoredGroup(BaseModel):
 
 class TrajectoryGroup(BaseModel):
     """Group of trajectories for relative comparison"""
+    model_config = camel_case_config
     group_key: str
     window_id: str
     scenario_id: str | None = None
@@ -211,6 +223,7 @@ class TrajectoryGroup(BaseModel):
 
 class JudgeScore(BaseModel):
     """Score from LLM judge for a trajectory"""
+    model_config = camel_case_config
     trajectory_id: str
     score: float = Field(ge=0.0, le=1.0)
     explanation: str
@@ -219,6 +232,7 @@ class JudgeScore(BaseModel):
 
 class JudgeResponse(BaseModel):
     """Response from LLM judge for a group of trajectories"""
+    model_config = camel_case_config
     reasoning: str
     scores: List[JudgeScore]
     
@@ -232,6 +246,7 @@ class JudgeResponse(BaseModel):
 
 class TrainingMetrics(BaseModel):
     """Metrics from a training step"""
+    model_config = camel_case_config
     step: int
     loss: float
     grad_norm: float
@@ -240,6 +255,3 @@ class TrainingMetrics(BaseModel):
     neg_logp: float = 0.0
     num_samples: int = 0
     timestamp: datetime = Field(default_factory=datetime.now)
-
-
-

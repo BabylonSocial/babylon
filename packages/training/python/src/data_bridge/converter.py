@@ -312,3 +312,20 @@ TIME WINDOW: {trajectory.window_id}
             inference_logprobs=logprobs_list,
             messages=messages_list,
         )
+
+
+def calculate_dropout_rate(
+    current_trajectories: int,
+    target_trajectories: int,
+    max_dropout: float = 0.3
+) -> float:
+    """
+    Calculate the dropout rate required to reduce the number of trajectories
+    from the current count to the target count.
+    """
+    if current_trajectories <= target_trajectories:
+        return 0.0
+    
+    rate = 1.0 - (float(target_trajectories) / current_trajectories)
+    
+    return min(rate, max_dropout)
