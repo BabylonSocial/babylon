@@ -77,3 +77,4 @@ simulation-output/state.json
 packages/training/trained_models
 packages/training/benchmark-results
 packages/training/benchmarks
+packages/training/training-data-output
