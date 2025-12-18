@@ -80,29 +80,36 @@ def validate_llm_calls(steps: list, min_steps_with_llm: int = 3) -> tuple[bool, 
 
         valid_calls_in_step = 0
         for call_idx, call in enumerate(llm_calls):
-            system_prompt = call.get("systemPrompt") or call.get("system_prompt") or ""
-            user_prompt = call.get("userPrompt") or call.get("user_prompt") or ""
+            system_prompt = call.get("systemPrompt") or call.get(
+                "system_prompt") or ""
+            user_prompt = call.get("userPrompt") or call.get(
+                "user_prompt") or ""
             response = call.get("response") or ""
-            
+
             call_issues = []
             if len(system_prompt) < 20:
-                call_issues.append(f"system_prompt too short ({len(system_prompt)} chars)")
+                call_issues.append(
+                    f"system_prompt too short ({len(system_prompt)} chars)")
             if len(user_prompt) < 20:
-                call_issues.append(f"user_prompt too short ({len(user_prompt)} chars)")
-            
+                call_issues.append(
+                    f"user_prompt too short ({len(user_prompt)} chars)")
+
             if len(response) < 20:
-                call_issues.append(f"response too short ({len(response)} chars)")
+                call_issues.append(
+                    f"response too short ({len(response)} chars)")
 
             if not call_issues:
                 valid_calls_in_step += 1
             else:
-                issues.append(f"Step {i}, Call {call_idx}: " + ", ".join(call_issues))
+                issues.append(
+                    f"Step {i}, Call {call_idx}: " + ", ".join(call_issues))
 
         if valid_calls_in_step > 0:
             steps_with_llm += 1
 
     if steps_with_llm < min_steps_with_llm:
-        issues.append(f"Only {steps_with_llm}/{len(steps)} steps have valid LLM calls (need at least {min_steps_with_llm})")
+        issues.append(
+            f"Only {steps_with_llm}/{len(steps)} steps have valid LLM calls (need at least {min_steps_with_llm})")
 
     return len(issues) == 0, issues
 
@@ -112,27 +119,30 @@ class PostgresTrajectoryReader:
 
     def __init__(self, database_url: str):
         if not database_url:
-            raise ValueError("DATABASE_URL must be provided for PostgresTrajectoryReader")
+            raise ValueError(
+                "DATABASE_URL must be provided for PostgresTrajectoryReader")
         self.db_url = database_url
         self.conn = None
 
     async def __aenter__(self):
         self.conn = psycopg2.connect(self.db_url)
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.conn:
             self.conn.close()
 
     async def get_window_ids(self, limit: int = 100, only_scored: bool = True, lookback_hours: int = 168, min_agents: int = 1) -> list[str]:
-        if not self.conn: raise ConnectionError("Database not connected.")
+        if not self.conn:
+            raise ConnectionError("Database not connected.")
         with self.conn.cursor() as cur:
             query = """
                 SELECT DISTINCT "windowId" FROM trajectories
                 WHERE "isTrainingData" = true AND "createdAt" > NOW() - INTERVAL '%s hours'
             """
             params = [lookback_hours]
-            if only_scored: query += ' AND "aiJudgeReward" IS NOT NULL'
+            if only_scored:
+                query += ' AND "aiJudgeReward" IS NOT NULL'
             query += ' ORDER BY "windowId" DESC LIMIT %s'
             params.append(limit)
             cur.execute(query, tuple(params))
@@ -142,7 +152,8 @@ class PostgresTrajectoryReader:
         self, window_id: str, min_score: Optional[float] = None,
         validate: bool = True, min_actions: int = 1
     ) -> list[TrajectoryRow]:
-        if not self.conn: raise ConnectionError("Database not connected.")
+        if not self.conn:
+            raise ConnectionError("Database not connected.")
         with self.conn.cursor() as cur:
             query = """
                 SELECT "trajectoryId", "agentId", "windowId", "stepsJson", "metricsJson", "metadataJson",
@@ -156,12 +167,13 @@ class PostgresTrajectoryReader:
                 params.append(min_score)
             cur.execute(query, tuple(params))
             rows = cur.fetchall()
-        
+
         results = []
         for row in rows:
             trajectory = TrajectoryRow(
                 trajectory_id=row[0], agent_id=row[1], window_id=row[2], steps_json=row[3],
-                metrics_json=row[4], metadata_json=row[5], total_reward=float(row[6] or 0.0),
+                metrics_json=row[4], metadata_json=row[5], total_reward=float(
+                    row[6] or 0.0),
                 episode_length=int(row[7] or 0), final_status=row[8] or "unknown",
                 final_pnl=float(row[9]) if row[9] else None, trades_executed=int(row[10]) if row[10] else None,
                 ai_judge_reward=float(row[11]) if row[11] else None, archetype=row[12],
@@ -171,10 +183,12 @@ class PostgresTrajectoryReader:
                     steps = json.loads(trajectory.steps_json)
                     is_valid, issues = validate_llm_calls(steps)
                     if not is_valid:
-                        logger.debug(f"Skipping DB trajectory {trajectory.trajectory_id}: {issues}")
+                        logger.debug(
+                            f"Skipping DB trajectory {trajectory.trajectory_id}: {issues}")
                         continue
                 except (json.JSONDecodeError, TypeError):
-                    logger.warning(f"Could not parse steps_json for trajectory {trajectory.trajectory_id}")
+                    logger.warning(
+                        f"Could not parse steps_json for trajectory {trajectory.trajectory_id}")
                     continue
             results.append(trajectory)
         return results
@@ -186,12 +200,14 @@ class JsonTrajectoryReader:
     def __init__(self, directory_path: str):
         self._directory = Path(directory_path)
         self._trajectories_by_window: Dict[str, List[Dict]] = {}
-        
+
         if not self._directory.is_dir():
-            raise FileNotFoundError(f"Source directory not found: {self._directory.resolve()}")
+            raise FileNotFoundError(
+                f"Source directory not found: {self._directory.resolve()}")
 
         self._scan_files()
-        logger.info(f"Found {len(self._trajectories_by_window)} windows in {self._directory}")
+        logger.info(
+            f"Found {len(self._trajectories_by_window)} windows in {self._directory}")
 
     def _scan_files(self):
         file_count = 0
@@ -203,16 +219,17 @@ class JsonTrajectoryReader:
 
                 trajectory_data = data.get('trajectory', data)
                 window_id = trajectory_data.get("windowId", "default_window")
-                
+
                 if window_id not in self._trajectories_by_window:
                     self._trajectories_by_window[window_id] = []
                 self._trajectories_by_window[window_id].append(trajectory_data)
 
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.warning(f"Skipping invalid JSON file {file_path}: {e}")
-        
+
         if file_count == 0:
-            logger.warning(f"No JSON files found in directory: {self._directory}")
+            logger.warning(
+                f"No JSON files found in directory: {self._directory}")
 
     def get_window_ids(self) -> List[str]:
         return list(self._trajectories_by_window.keys())
@@ -243,6 +260,7 @@ def get_window_ids(limit: int = 100, only_scored: bool = True) -> list[str]:
     cur.close()
     conn.close()
     return [row[0] for row in rows if row[0]]
+
 
 def get_trajectories_by_window(
     window_id: str,
@@ -280,7 +298,8 @@ def get_trajectories_by_window(
     for row in rows:
         trajectory = TrajectoryRow(
             trajectory_id=row[0], agent_id=row[1], window_id=row[2], steps_json=row[3],
-            metrics_json=row[4], metadata_json=row[5], total_reward=float(row[6]) if row[6] else 0.0,
+            metrics_json=row[4], metadata_json=row[5], total_reward=float(
+                row[6]) if row[6] else 0.0,
             episode_length=int(row[7]) if row[7] else 0, final_status=row[8] or "unknown",
             final_pnl=float(row[9]) if row[9] else None, trades_executed=int(row[10]) if row[10] else None,
             ai_judge_reward=float(row[11]) if row[11] else None, archetype=row[12],
@@ -292,6 +311,7 @@ def get_trajectories_by_window(
                 continue
         results.append(trajectory)
     return results
+
 
 def get_all_training_trajectories(
     limit: int = 1000,
@@ -337,6 +357,7 @@ def get_all_training_trajectories(
         final_pnl=float(r[9]) if r[9] else None, trades_executed=int(r[10]) if r[10] else None,
         ai_judge_reward=float(r[11]) if r[11] else None, archetype=r[12],
     ) for r in rows]
+
 
 def get_trajectory_stats() -> dict:
     conn = get_connection()

@@ -20,11 +20,12 @@ camel_case_config = ConfigDict(
     populate_by_name=True,
 )
 
+
 class EnvironmentState(BaseModel):
     """Environment state at a given point"""
     model_config = camel_case_config
     agent_balance: float
-    agent_pnl: float = Field(..., alias='agentPnL') 
+    agent_pnl: float = Field(..., alias='agentPnL')
     open_positions: int
     active_markets: int = 0
 
@@ -84,13 +85,13 @@ class TrajectoryStep(BaseModel):
 class BabylonTrajectory(BaseModel):
     """Complete trajectory from database"""
     model_config = ConfigDict(frozen=False, **camel_case_config)
-    
+
     # Required fields
     trajectory_id: str
     agent_id: str
-    
+
     id: str = ""
-    window_id: str = "default" # Auto-generated if not provided
+    window_id: str = "default"  # Auto-generated if not provided
     start_time: datetime | None = None
     end_time: datetime | None = None
     duration_ms: int = 0
@@ -193,7 +194,7 @@ class AtroposScoredGroup(BaseModel):
     inference_logprobs: List[List[float]] = Field(default_factory=list)
     messages: List[List[ChatMessage]] = Field(default_factory=list)
     env_id: int | None = None
-    
+
     @property
     def group_size(self) -> int:
         return len(self.tokens)
@@ -206,11 +207,11 @@ class TrajectoryGroup(BaseModel):
     window_id: str
     scenario_id: str | None = None
     trajectories: List[BabylonTrajectory]
-    
+
     @property
     def size(self) -> int:
         return len(self.trajectories)
-    
+
     def get_pnl_stats(self) -> dict:
         """Get P&L statistics for the group"""
         pnls = [t.final_pnl for t in self.trajectories]
@@ -235,7 +236,7 @@ class JudgeResponse(BaseModel):
     model_config = camel_case_config
     reasoning: str
     scores: List[JudgeScore]
-    
+
     def get_score_for(self, trajectory_id: str) -> float | None:
         """Get score for a specific trajectory"""
         for score in self.scores:

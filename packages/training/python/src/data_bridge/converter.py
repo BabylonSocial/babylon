@@ -85,7 +85,8 @@ class BabylonToAtroposConverter:
         include_messages: bool = True,
     ):
         if not 0.0 <= dropout_rate <= 0.5:
-            raise ValueError(f"dropout_rate must be 0.0-0.5, got {dropout_rate}")
+            raise ValueError(
+                f"dropout_rate must be 0.0-0.5, got {dropout_rate}")
         self.dropout_rate = dropout_rate
         self.max_steps = max_steps
         self.include_messages = include_messages
@@ -121,7 +122,8 @@ class BabylonToAtroposConverter:
         messages.append(AtroposMessage(role="system", content=system_msg))
 
         # Convert steps to messages
-        steps = babylon_traj.steps[-self.max_steps :] if len(babylon_traj.steps) > self.max_steps else babylon_traj.steps
+        steps = babylon_traj.steps[-self.max_steps:] if len(
+            babylon_traj.steps) > self.max_steps else babylon_traj.steps
 
         for step in steps:
             if step.llm_calls:
@@ -129,8 +131,10 @@ class BabylonToAtroposConverter:
                     if not llm_call.user_prompt or not llm_call.response:
                         continue
 
-                    messages.append(AtroposMessage(role="user", content=llm_call.user_prompt))
-                    messages.append(AtroposMessage(role="assistant", content=llm_call.response))
+                    messages.append(AtroposMessage(
+                        role="user", content=llm_call.user_prompt))
+                    messages.append(AtroposMessage(
+                        role="assistant", content=llm_call.response))
             else:
                 # Fallback: build from environment state
                 env_state = step.environment_state
@@ -140,17 +144,20 @@ class BabylonToAtroposConverter:
                     f"- P&L: ${env_state.agent_pnl:.2f}\n"
                     f"- Open Positions: {env_state.open_positions}"
                 )
-                messages.append(AtroposMessage(role="user", content=user_content))
+                messages.append(AtroposMessage(
+                    role="user", content=user_content))
 
                 action = step.action
                 if action:
                     assistant_content = f"Action: {action.action_type}"
                     if action.parameters:
                         assistant_content += f"\nParameters: {json.dumps(action.parameters)}"
-                    messages.append(AtroposMessage(role="assistant", content=assistant_content))
+                    messages.append(AtroposMessage(
+                        role="assistant", content=assistant_content))
 
         if len(messages) < 3:
-            raise ValueError(f"Trajectory {babylon_traj.trajectory_id} has only {len(messages)} messages (need 3+)")
+            raise ValueError(
+                f"Trajectory {babylon_traj.trajectory_id} has only {len(messages)} messages (need 3+)")
 
         # Tokenize and create masks if tokenizer provided
         tokens: List[int] = []
@@ -158,7 +165,8 @@ class BabylonToAtroposConverter:
 
         if tokenizer is not None:
             messages_dict = [m.to_dict() for m in messages]
-            tokenized = tokenizer.apply_chat_template(messages_dict, tokenize=True, return_dict=True)
+            tokenized = tokenizer.apply_chat_template(
+                messages_dict, tokenize=True, return_dict=True)
             tokens = tokenized.get("input_ids", [])
             masks = self._create_masks(tokens, messages, tokenizer)
 
@@ -202,13 +210,15 @@ class BabylonToAtroposConverter:
 
         # Simple approach: tokenize each message and find assistant segments
         current_pos = 0
-        has_bos = hasattr(tokenizer, "bos_token_id") and tokenizer.bos_token_id is not None
+        has_bos = hasattr(
+            tokenizer, "bos_token_id") and tokenizer.bos_token_id is not None
 
         if has_bos:
             current_pos = 1
 
         for msg in messages:
-            msg_tokens = tokenizer.apply_chat_template([msg.to_dict()], tokenize=True, add_generation_prompt=False)
+            msg_tokens = tokenizer.apply_chat_template(
+                [msg.to_dict()], tokenize=True, add_generation_prompt=False)
             msg_len = len(msg_tokens)
 
             if has_bos and msg_len > 0:
@@ -273,7 +283,8 @@ TIME WINDOW: {trajectory.window_id}
             ValueError: If fewer than 2 trajectories
         """
         if len(trajectories) < 2:
-            raise ValueError(f"Need 2+ trajectories for GRPO, got {len(trajectories)}")
+            raise ValueError(
+                f"Need 2+ trajectories for GRPO, got {len(trajectories)}")
 
         # Sample if too many
         if len(trajectories) > max_per_group:
@@ -287,23 +298,27 @@ TIME WINDOW: {trajectory.window_id}
         # Convert all
         atropos_trajectories: List[AtroposTrajectory] = []
         for traj in sampled:
-            converted = self.convert_trajectory(traj, market_outcomes, tokenizer)
+            converted = self.convert_trajectory(
+                traj, market_outcomes, tokenizer)
             if converted:
                 atropos_trajectories.append(converted)
 
         if len(atropos_trajectories) < 2:
-            raise ValueError(f"Only {len(atropos_trajectories)} trajectories after conversion (need 2+)")
+            raise ValueError(
+                f"Only {len(atropos_trajectories)} trajectories after conversion (need 2+)")
 
         # Build result
         tokens_list = [t.tokens for t in atropos_trajectories]
         masks_list = [t.masks for t in atropos_trajectories]
         logprobs_list = [t.logprobs for t in atropos_trajectories]
 
-        scores_list = scores[: len(atropos_trajectories)] if scores else [0.0] * len(atropos_trajectories)
+        scores_list = scores[: len(atropos_trajectories)] if scores else [
+            0.0] * len(atropos_trajectories)
 
         messages_list: List[List[dict[str, str]]] = []
         if self.include_messages:
-            messages_list = [t.to_messages_list() for t in atropos_trajectories]
+            messages_list = [t.to_messages_list()
+                             for t in atropos_trajectories]
 
         return ScoredGroupResult(
             tokens=tokens_list,
@@ -325,7 +340,7 @@ def calculate_dropout_rate(
     """
     if current_trajectories <= target_trajectories:
         return 0.0
-    
+
     rate = 1.0 - (float(target_trajectories) / current_trajectories)
-    
+
     return min(rate, max_dropout)
