@@ -7,8 +7,9 @@
  * - Social metrics
  * - Comparison tables
  * - Performance scorecards
+ * - Head-to-Head Baseline vs Challenger reports
  *
- * Outputs HTML reports and JSON data for further analysis.
+ * Outputs HTML reports, JSON data, and ASCII terminal charts for analysis.
  */
 
 import { promises as fs } from 'fs';
@@ -77,7 +78,7 @@ export class MetricsVisualizer {
   }
 
   /**
-   * Generate comparison visualization for multiple runs
+   * Generate comparison visualization for multiple runs (Batch Mode)
    */
   static async visualizeComparison(
     comparison: BenchmarkComparisonResult,
@@ -108,6 +109,157 @@ export class MetricsVisualizer {
 
     logger.info('Comparison visualizations generated');
   }
+
+  /**
+   * Generate Head-to-Head Comparison Report (Baseline vs Challenger)
+   * Includes ASCII chart for terminal output and JSON/Text reports.
+   */
+  static async generateComparisonReport(
+    baseline: SimulationResult,
+    challenger: SimulationResult,
+    outputDir: string
+  ): Promise<void> {
+    logger.info('Generating head-to-head comparison report...');
+    await fs.mkdir(outputDir, { recursive: true });
+
+    // 1. Generate ASCII Chart and print to terminal
+    const asciiReport = this.generateAsciiComparison(baseline, challenger);
+    console.log(asciiReport);
+
+    // 2. Save JSON Report with full data
+    const jsonReport = {
+      timestamp: new Date().toISOString(),
+      benchmarkId: baseline.benchmarkId,
+      baseline: {
+        agentId: baseline.agentId,
+        pnl: baseline.metrics.totalPnl,
+        accuracy: baseline.metrics.predictionMetrics.accuracy,
+        winRate: baseline.metrics.perpMetrics.winRate,
+        optimality: baseline.metrics.optimalityScore,
+      },
+      challenger: {
+        agentId: challenger.agentId,
+        pnl: challenger.metrics.totalPnl,
+        accuracy: challenger.metrics.predictionMetrics.accuracy,
+        winRate: challenger.metrics.perpMetrics.winRate,
+        optimality: challenger.metrics.optimalityScore,
+      },
+      delta: {
+        pnl: challenger.metrics.totalPnl - baseline.metrics.totalPnl,
+        accuracy:
+          challenger.metrics.predictionMetrics.accuracy -
+          baseline.metrics.predictionMetrics.accuracy,
+        winRate:
+          challenger.metrics.perpMetrics.winRate -
+          baseline.metrics.perpMetrics.winRate,
+      },
+      pnlHistory: this.mergePnlHistory(baseline, challenger),
+    };
+
+    await fs.writeFile(
+      path.join(outputDir, 'comparison.json'),
+      JSON.stringify(jsonReport, null, 2)
+    );
+
+    // 3. Save Text Report (ASCII chart)
+    await fs.writeFile(path.join(outputDir, 'report.txt'), asciiReport);
+
+    logger.info(`Comparison report saved to ${outputDir}`);
+  }
+
+  /**
+   * Generate ASCII Comparison Chart for Terminal
+   */
+  private static generateAsciiComparison(
+    baseline: SimulationResult,
+    challenger: SimulationResult
+  ): string {
+    const pnlDelta = challenger.metrics.totalPnl - baseline.metrics.totalPnl;
+    const winner = pnlDelta >= 0 ? 'Challenger (LLM)' : 'Baseline';
+
+    let output = `
+=== 🥊 HEAD-TO-HEAD RESULTS ===
+Benchmark: ${baseline.benchmarkId}
+Baseline: ${baseline.agentId} | Challenger: ${challenger.agentId}
+
+💰 Cumulative PnL:
+Tick  | Baseline               | Challenger             | Delta
+----------------------------------------------------------------------
+`;
+
+    // Sample points (every 10th tick or so to fit terminal vertically)
+    const history = this.mergePnlHistory(baseline, challenger);
+    const step = Math.max(1, Math.floor(history.length / 10));
+
+    for (let i = 0; i < history.length; i += step) {
+      const point = history[i];
+      if (!point) continue; // Skip if point is somehow undefined
+
+      const basePnl = point.baseline.toFixed(0);
+      const chalPnl = point.challenger.toFixed(0);
+      const deltaVal = point.challenger - point.baseline;
+      const deltaStr = deltaVal.toFixed(0);
+      const sign = deltaVal >= 0 ? '+' : '';
+
+      // Format columns nicely
+      output += `${point.tick.toString().padEnd(5)} | $${basePnl.padEnd(
+        21
+      )} | $${chalPnl.padEnd(21)} | ${sign}$${deltaStr}\n`;
+    }
+
+    // Final result row
+    const finalBase = baseline.metrics.totalPnl.toFixed(2);
+    const finalChal = challenger.metrics.totalPnl.toFixed(2);
+    const finalDelta = pnlDelta.toFixed(2);
+    const finalSign = pnlDelta >= 0 ? '+' : '';
+
+    output += `
+----------------------------------------------------------------------
+FINAL | $${finalBase.padEnd(21)} | $${finalChal.padEnd(
+      21
+    )} | ${finalSign}$${finalDelta}
+
+🏆 WINNER: ${winner}
+🚀 Alpha Generated: ${finalSign}$${finalDelta}
+`;
+
+    return output;
+  }
+
+  /**
+   * Merge PnL histories from two runs into a single timeline
+   */
+  private static mergePnlHistory(
+    baseline: SimulationResult,
+    challenger: SimulationResult
+  ): Array<{ tick: number; baseline: number; challenger: number }> {
+    const merged = [];
+    const maxTicks = Math.max(
+      baseline.pnlHistory?.length || 0,
+      challenger.pnlHistory?.length || 0
+    );
+
+    for (let i = 0; i < maxTicks; i++) {
+      // Use optional chaining and default to final PnL if history is missing or shorter
+      // pnlHistory[i] might be undefined if one run is shorter than the other
+      const baseTick = baseline.pnlHistory?.[i];
+      const chalTick = challenger.pnlHistory?.[i];
+
+      const basePnl = baseTick ? baseTick.pnl : baseline.metrics.totalPnl;
+      const chalPnl = chalTick ? chalTick.pnl : challenger.metrics.totalPnl;
+
+      merged.push({
+        tick: i,
+        baseline: basePnl,
+        challenger: chalPnl,
+      });
+    }
+    return merged;
+  }
+
+  // =========================================================================
+  // Existing Single-Run and Batch Visualizations
+  // =========================================================================
 
   /**
    * Generate metrics summary card
