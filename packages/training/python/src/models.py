@@ -128,6 +128,7 @@ class BabylonTrajectory(BaseModel):
     provider_accesses: int = 0
     episode_length: int = 0
     final_status: str = "completed"
+    archetype: str | None = None
 
 
 class StockOutcome(BaseModel):
