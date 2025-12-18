@@ -86,7 +86,7 @@ import type { MarketContextService } from './services/market-context-service';
 import { StaticDataRegistry } from './services/static-data-registry';
 import { isSimulationMode } from './storage-bridge';
 import type { JsonValue } from './types/common';
-import type { NPCMarketContext } from './types/market-context';
+import type { NPCMarketContext, NPCPosition } from './types/market-context';
 import type { TradingDecision } from './types/market-decisions';
 
 /**
@@ -104,7 +104,6 @@ interface TokenConfig {
   maxContextTokens: number;
   maxOutputTokens: number;
   tokensPerNPC: number;
-  // new
   customApiUrl?: string;
   customModelName?: string;
 }
@@ -453,6 +452,149 @@ export class MarketDecisionEngine {
   }
 
   /**
+   * Calculate Portfolio Exposure %
+   * (Total Position Value) / (Cash + Total Position Value)
+   */
+  private calculateExposure(balance: number, positions: NPCPosition[]): number {
+    const totalPositionValue = positions.reduce(
+      (sum, p) => sum + p.size + p.unrealizedPnL,
+      0
+    );
+    const totalEquity = balance + totalPositionValue;
+
+    if (totalEquity <= 0) return 0; // Avoid division by zero/negative equity
+    return Math.min(100, Math.max(0, (totalPositionValue / totalEquity) * 100));
+  }
+
+  /**
+   * Map generic personality traits to a Trading Archetype
+   */
+  private mapPersonalityToArchetype(personality: string): string {
+    const p = personality.toLowerCase();
+    if (
+      p.includes('risk') ||
+      p.includes('aggressive') ||
+      p.includes('degen') ||
+      p.includes('speculator')
+    ) {
+      return 'DEGEN_TRADER';
+    }
+    if (
+      p.includes('cautious') ||
+      p.includes('conservative') ||
+      p.includes('manager')
+    ) {
+      return 'RISK_MANAGER';
+    }
+    if (p.includes('analytical') || p.includes('quant') || p.includes('math')) {
+      return 'QUANT_TRADER';
+    }
+    if (p.includes('insider') || p.includes('connected')) {
+      return 'INSIDER';
+    }
+    return 'SYSTEMATIC_TRADER'; // Default
+  }
+
+  /**
+   * Format Market Data as a structured ASCII Table
+   */
+  private formatMarketTable(contexts: NPCMarketContext[]): string {
+    // Assume all contexts see the same market, so take the first one
+    if (!contexts[0]) return 'No Market Data Available';
+
+    const perps = contexts[0].perpMarkets || [];
+    const predictions = contexts[0].predictionMarkets || [];
+
+    let table =
+      '| Ticker/ID | Type | Price | 24h Change | Volume/Liq |\n|---|---|---|---|---|\n';
+
+    // Add Perps
+    for (const p of perps) {
+      const sign = p.changePercent24h >= 0 ? '+' : '';
+      table += `| ${p.ticker} | PERP | $${p.currentPrice.toFixed(2)} | ${sign}${p.changePercent24h.toFixed(2)}% | Vol: $${(p.volume24h / 1000).toFixed(1)}k |\n`;
+    }
+
+    // Add Predictions
+    for (const p of predictions) {
+      // Assuming binary YES/NO prices sum to ~100
+      table += `| ${p.id} | PRED | Yes: ${p.yesPrice.toFixed(0)}¢ | No: ${p.noPrice.toFixed(0)}¢ | Vol: $${(p.totalVolume / 1000).toFixed(1)}k |\n`;
+    }
+
+    return table;
+  }
+
+  /**
+   * Format NPCs list into "Trader Dashboard" blocks
+   */
+  private formatNPCsList(contexts: NPCMarketContext[]): string {
+    return contexts
+      .map((ctx, i) => {
+        const archetype = this.mapPersonalityToArchetype(ctx.personality);
+        const exposure = this.calculateExposure(
+          ctx.availableBalance,
+          ctx.currentPositions
+        );
+
+        // Calculate Total PnL for display
+        const totalPnL = ctx.currentPositions.reduce(
+          (sum, p) => sum + p.unrealizedPnL,
+          0
+        );
+        const pnlSign = totalPnL >= 0 ? '+' : '';
+
+        // Format Top Positions (Max 3)
+        const topPositions = ctx.currentPositions
+          .sort((a, b) => Math.abs(b.unrealizedPnL) - Math.abs(a.unrealizedPnL))
+          .slice(0, 3)
+          .map((p) => {
+            const symbol =
+              p.marketType === 'perp' ? p.ticker : `Q${p.marketId}`;
+            const posSign = p.unrealizedPnL >= 0 ? '+' : '';
+            return `${symbol} ${p.side} ($${p.size.toFixed(0)}, PnL: ${posSign}$${p.unrealizedPnL.toFixed(0)}) [ID:${p.id}]`;
+          })
+          .join(', ');
+
+        // RESTORED: Relationships (Network) - Compact format
+        const relationships =
+          ctx.relationships && ctx.relationships.length > 0
+            ? ctx.relationships
+                .filter((r) => Math.abs(r.sentiment) > 0.4) // Only show strong relationships
+                .slice(0, 4)
+                .map(
+                  (r) => `${r.sentiment > 0 ? 'Ally' : 'Rival'}:${r.actorName}`
+                )
+                .join(', ')
+            : 'None';
+
+        // Identity & Bias
+        const recentTopics = ctx.recentPosts
+          .slice(0, 3) // Last 3 posts
+          .map((p) => p.content.substring(0, 20) + '...')
+          .join(' | ');
+
+        // Format Private Intel (Group Chats)
+        // Only show the last 2 messages to keep context tight
+        const privateIntel =
+          ctx.groupChatMessages.length > 0
+            ? ctx.groupChatMessages
+                .slice(0, 2)
+                .map((m) => `"${m.fromName}: ${m.message}"`)
+                .join(' | ')
+            : 'None';
+
+        return `[${i + 1}] TRADER DASHBOARD
+ID: ${ctx.npcId} | Name: ${ctx.npcName}
+Archetype: ${archetype} | Cash: $${ctx.availableBalance.toLocaleString()}
+Total PnL: ${pnlSign}$${totalPnL.toFixed(0)} | Exposure: ${exposure.toFixed(1)}%
+Network: ${relationships}
+Positions: ${topPositions || 'None'}
+Current Focus: ${recentTopics || 'Market General'}
+🔒 PRIVATE INTEL: ${privateIntel}`;
+      })
+      .join('\n----------------------------------------\n');
+  }
+
+  /**
    * Generate decisions for an array of contexts using LLM with token validation
    */
   private async generateDecisionsForContexts(
@@ -460,8 +602,11 @@ export class MarketDecisionEngine {
   ): Promise<TradingDecision[]> {
     if (contexts.length === 0) return [];
 
-    // Format NPCs data as string (existing prompts use pre-formatted strings)
+    // Format NPCs data as structured dashboard
     let npcsList = this.formatNPCsList(contexts);
+
+    // Format Market Data Table
+    const marketTable = this.formatMarketTable(contexts);
 
     // Get world context with caching (avoids redundant queries in same tick)
     const worldContext = await this.getCachedWorldContext();
@@ -473,9 +618,19 @@ export class MarketDecisionEngine {
     const recentEventsText = await this.getCachedRecentEvents();
 
     // Build valid IDs/tickers for the prompt
+    // Note: Removed redundant fields (validNpcIds, validTickers) as they are now in the dashboards
     const validNpcIds = contexts.map((ctx) => ctx.npcId).join(', ');
+
+    // Collect all tickers for validation/safety
+    const allTickers = new Set<string>();
+    contexts.forEach((ctx) => {
+      ctx.perpMarkets.forEach((m) => allTickers.add(m.ticker));
+    });
+
     const validTickers =
-      contexts[0]?.perpMarkets.map((m) => m.ticker).join(', ') || 'none';
+      allTickers.size > 0
+        ? Array.from(allTickers).join(', ')
+        : 'BTCAI, ETHAI, SOLAI, TSLA, META';
 
     // Get shuffled examples for entropy
     const examples = getShuffledExamplesText();
@@ -483,13 +638,15 @@ export class MarketDecisionEngine {
     // Build the full prompt
     let prompt = renderPrompt(npcMarketDecisions, {
       examples,
-      npcCount: contexts.length.toString(),
+      marketTable,
       npcsList,
       validNpcIds,
       validTickers,
       realityGrounding: worldContext.realityGrounding,
       activeQuestions: activeQuestionsText,
       recentEvents: recentEventsText,
+      // Add rich narrative context if available
+      richGameContext: (worldContext as any).richGameContext || '',
     });
 
     // Count tokens and enforce limit
@@ -524,11 +681,13 @@ export class MarketDecisionEngine {
         examples,
         npcCount: contexts.length.toString(),
         npcsList: '',
+        marketTable,
         validNpcIds,
         validTickers,
         realityGrounding: worldContext.realityGrounding,
         activeQuestions: activeQuestionsText,
         recentEvents: recentEventsText,
+        richGameContext: (worldContext as any).richGameContext || '',
       });
       const prefixTokens = countTokensSync(promptPrefix);
       const bufferTokens = Math.floor(this.tokenConfig.maxContextTokens * 0.1); // 10% buffer
@@ -544,11 +703,13 @@ export class MarketDecisionEngine {
         examples,
         npcCount: contexts.length.toString(),
         npcsList,
+        marketTable,
         validNpcIds,
         validTickers,
         realityGrounding: worldContext.realityGrounding,
         activeQuestions: activeQuestionsText,
         recentEvents: recentEventsText,
+        richGameContext: (worldContext as any).richGameContext || '',
       });
 
       promptTokens = countTokensSync(prompt);
@@ -582,7 +743,7 @@ export class MarketDecisionEngine {
       model?: string;
       format: 'xml';
     } = {
-      temperature: 0.7,
+      temperature: 0.5, // Lower temperature for trading decisions
       maxTokens: maxOutputTokens,
       format: 'xml', // Use XML for robustness
     };
@@ -630,7 +791,7 @@ ${prompt}`
 
       // Reduce temperature on retry for more deterministic output
       const temperature =
-        retryCount > 0 ? Math.max(0.3, 0.7 - retryCount * 0.1) : 0.7;
+        retryCount > 0 ? Math.max(0.3, 0.5 - retryCount * 0.1) : 0.5;
 
       // Configure LLM options for this attempt
       const llmOptions = {
@@ -866,126 +1027,6 @@ ${prompt}`
   }
 
   /**
-   * Format NPCs data as a compact string for the prompt
-   * Uses token-efficient format: key=value pairs instead of verbose tables
-   */
-  private formatNPCsList(contexts: NPCMarketContext[]): string {
-    // Compact balance summary (one line per NPC)
-    let output = 'BALANCES (id|bal|max):\n';
-    contexts.forEach((ctx) => {
-      const max = Math.floor(ctx.availableBalance * 0.3);
-      output += `${ctx.npcId}|${ctx.availableBalance}|${max}\n`;
-    });
-    output += '\n';
-
-    // NPCs in compact format
-    output += contexts
-      .map((ctx, i) => {
-        const max = Math.floor(ctx.availableBalance * 0.3);
-        const lines: string[] = [];
-
-        // Core info on one line
-        lines.push(
-          `[${i + 1}] ID=${ctx.npcId} NAME="${ctx.npcName}" BAL=${
-            ctx.availableBalance
-          } MAX=${max} TIER=${ctx.tier} STYLE=${ctx.personality}`
-        );
-
-        // Relationships (compact: ally:Name(0.8), rival:Name(-0.7))
-        if (ctx.relationships && ctx.relationships.length > 0) {
-          const rels = ctx.relationships
-            .sort((a, b) => b.strength - a.strength)
-            .slice(0, 5)
-            .map((r) => {
-              const type =
-                r.sentiment > 0.5
-                  ? 'ally'
-                  : r.sentiment < -0.5
-                    ? 'rival'
-                    : 'neutral';
-              return `${type}:${r.actorName}(${r.sentiment.toFixed(1)})`;
-            });
-          lines.push(`RELS: ${rels.join(', ')}`);
-        }
-
-        // Posts (compact: @author:"truncated content")
-        if (ctx.recentPosts.length > 0) {
-          const posts = ctx.recentPosts.slice(0, 6).map((p) => {
-            const content =
-              p.content.length > 80
-                ? p.content.substring(0, 80) + '...'
-                : p.content;
-            return `@${p.authorName}:"${content}"`;
-          });
-          lines.push(`POSTS: ${posts.join(' | ')}`);
-        }
-
-        // Group chat (insider info, compact)
-        if (ctx.groupChatMessages.length > 0) {
-          const msgs = ctx.groupChatMessages.slice(0, 3).map((m) => {
-            const msg =
-              m.message.length > 60
-                ? m.message.substring(0, 60) + '...'
-                : m.message;
-            return `${m.fromName}:"${msg}"`;
-          });
-          lines.push(`INSIDER: ${msgs.join(' | ')}`);
-        }
-
-        // Events (compact)
-        if (ctx.recentEvents.length > 0) {
-          const events = ctx.recentEvents.slice(0, 4).map((e) => {
-            const desc =
-              e.description.length > 50
-                ? e.description.substring(0, 50) + '...'
-                : e.description;
-            return e.relatedQuestion ? `${desc}[Q${e.relatedQuestion}]` : desc;
-          });
-          lines.push(`EVENTS: ${events.join(' | ')}`);
-        }
-
-        // Perp markets (compact: TICK:100.00(+2.1%))
-        if (ctx.perpMarkets.length > 0) {
-          const perps = ctx.perpMarkets.slice(0, 5).map((m) => {
-            const sign = m.changePercent24h >= 0 ? '+' : '';
-            return `${m.ticker}:${m.currentPrice.toFixed(
-              0
-            )}(${sign}${m.changePercent24h.toFixed(1)}%)`;
-          });
-          lines.push(`PERPS: ${perps.join(', ')}`);
-        }
-
-        // Prediction markets (compact: Q123:"question" Y60/N40 5d)
-        if (ctx.predictionMarkets.length > 0) {
-          const preds = ctx.predictionMarkets.slice(0, 4).map((m) => {
-            const text =
-              m.text.length > 40 ? m.text.substring(0, 40) + '...' : m.text;
-            return `Q${m.id}:"${text}" Y${m.yesPrice.toFixed(
-              0
-            )}/N${m.noPrice.toFixed(0)} ${m.daysUntilResolution}d`;
-          });
-          lines.push(`PREDS: ${preds.join(' | ')}`);
-        }
-
-        // Positions (compact: id|type|ticker|side|pnl)
-        if (ctx.currentPositions.length > 0) {
-          const positions = ctx.currentPositions.map((p) => {
-            const symbol = p.ticker || `Q${p.marketId}`;
-            return `${p.id}|${p.marketType}|${symbol}|${
-              p.side
-            }|pnl=${p.unrealizedPnL.toFixed(0)}`;
-          });
-          lines.push(`POSITIONS: ${positions.join(', ')}`);
-        }
-
-        return lines.join('\n');
-      })
-      .join('\n\n');
-
-    return output;
-  }
-
-  /**
    * Validate decisions against constraints
    */
   private async validateDecisions(
@@ -1109,6 +1150,15 @@ ${prompt}`
     // LLM might generate "OPENAI", "OpenAI", "openai", etc. when actual ticker is "OPNAI"
     // ALL KEYS ARE LOWERCASE for case-insensitive matching
     const originalTickerToActualTickerMap = new Map<string, string>();
+
+    // Manual overrides for common LLM hallucinations
+    originalTickerToActualTickerMap.set('ai', 'OPENAGI');
+    originalTickerToActualTickerMap.set('genai', 'OPENAGI');
+    originalTickerToActualTickerMap.set('crypto', 'BTCAI');
+    originalTickerToActualTickerMap.set('bitcoin', 'BTCAI');
+    originalTickerToActualTickerMap.set('btc', 'BTCAI');
+    originalTickerToActualTickerMap.set('ethereum', 'ETHAI');
+    originalTickerToActualTickerMap.set('eth', 'ETHAI');
 
     // Get companies from static registry
     const orgs = StaticDataRegistry.getAllOrganizations()
@@ -1512,6 +1562,23 @@ ${prompt}`
           amount: 0,
           timestamp: new Date().toISOString(),
         });
+        continue;
+      }
+
+      // Check for valid action type before amount validation
+      const validActions = [
+        'open_long',
+        'open_short',
+        'buy_yes',
+        'buy_no',
+        'close_position',
+        'hold',
+      ];
+      if (!validActions.includes(decision.action)) {
+        const errorMsg = `Invalid action '${decision.action}' for ${decision.npcName}`;
+        logger.warn(errorMsg, {}, 'MarketDecisionEngine');
+        rejectionReasons['invalid_action'] =
+          (rejectionReasons['invalid_action'] || 0) + 1;
         continue;
       }
 

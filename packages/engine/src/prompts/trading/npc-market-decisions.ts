@@ -2,11 +2,10 @@
  * NPC Market Decisions Prompt
  *
  * Batch generation of trading decisions for multiple NPCs based on:
- * - Feed posts they've seen
- * - Group chat messages (insider info)
- * - Recent events
- * - Current market conditions
- * - Their personality and tier
+ * - Structured Market Data (Price Action, Volume)
+ * - Trader Dashboard (PnL, Exposure, Cash)
+ * - Private Intel (Group Chat vs Public Feed)
+ * - Archetype-based strategy (DEGEN vs RISK_MANAGER)
  */
 
 import { shuffleArray } from '../../utils/randomization';
@@ -33,83 +32,73 @@ interface TradingExample {
 
 const TRADING_EXAMPLES: TradingExample[] = [
   {
-    title: 'NPC decides to HOLD',
+    title: 'Risk Management (High Exposure)',
     npcId: 'npc-a',
     npcName: 'NPC_A',
-    reasoning: 'No clear trading opportunities based on available information',
+    reasoning:
+      'Exposure is 65% which exceeds my risk limit. Closing profitable BTC position to rebalance cash.',
+    action: 'close_position',
+    marketType: 'perp',
+    ticker: 'BTC',
+    marketId: 'null',
+    positionId: 'pos-123',
+    amount: 0,
+    confidence: 0.9,
+  },
+  {
+    title: 'Insider Trading (Private Intel)',
+    npcId: 'npc-b',
+    npcName: 'NPC_B',
+    reasoning:
+      'Private intel in Alpha Group indicates upcoming regulatory crackdown. Shorting COIN despite bullish public sentiment.',
+    action: 'open_short',
+    marketType: 'perp',
+    ticker: 'COIN',
+    marketId: 'null',
+    positionId: 'null',
+    amount: 15000,
+    confidence: 0.85,
+  },
+  {
+    title: 'Momentum Trading (Price Action)',
+    npcId: 'npc-c',
+    npcName: 'NPC_C',
+    reasoning:
+      'SOL volume up 40% with price breakout. Adding to long position to ride momentum.',
+    action: 'open_long',
+    marketType: 'perp',
+    ticker: 'SOL',
+    marketId: 'null',
+    positionId: 'null',
+    amount: 5000,
+    confidence: 0.7,
+  },
+  {
+    title: 'Prediction Market Arbitrage',
+    npcId: 'npc-d',
+    npcName: 'NPC_D',
+    reasoning:
+      'Yes price is 35% but true probability based on recent news is >60%. EV+ trade.',
+    action: 'buy_yes',
+    marketType: 'prediction',
+    ticker: 'null',
+    marketId: '123456789',
+    positionId: 'null',
+    amount: 2000,
+    confidence: 0.8,
+  },
+  {
+    title: 'Conservative Hold',
+    npcId: 'npc-e',
+    npcName: 'NPC_E',
+    reasoning:
+      'Market volatility is too high and I have no edge currently. Preserving capital.',
     action: 'hold',
     marketType: 'null',
     ticker: 'null',
     marketId: 'null',
     positionId: 'null',
     amount: 0,
-    confidence: 0.5,
-  },
-  {
-    title: 'NPC opens a LONG position (Perp)',
-    npcId: 'npc-b',
-    npcName: 'NPC_B',
-    reasoning:
-      'Positive insider info suggests COMPANY_A will announce positive news',
-    action: 'open_long',
-    marketType: 'perp',
-    ticker: 'TICKER_A',
-    marketId: 'null',
-    positionId: 'null',
-    amount: 5000,
-    confidence: 0.75,
-  },
-  {
-    title: 'NPC buys YES (Prediction)',
-    npcId: 'npc-c',
-    npcName: 'NPC_C',
-    reasoning: 'Recent events favor outcome occurring based on product launch',
-    action: 'buy_yes',
-    marketType: 'prediction',
-    ticker: 'null',
-    marketId: '123456789',
-    positionId: 'null',
-    amount: 3000,
-    confidence: 0.65,
-  },
-  {
-    title: 'NPC closes position',
-    npcId: 'npc-d',
-    npcName: 'NPC_D',
-    reasoning: 'Taking profits on TICKER_B position after gain',
-    action: 'close_position',
-    marketType: 'perp',
-    ticker: 'TICKER_B',
-    marketId: 'null',
-    positionId: 'uuid-1234-5678',
-    amount: 0,
-    confidence: 0.8,
-  },
-  {
-    title: 'NPC opens a SHORT position (Perp)',
-    npcId: 'npc-e',
-    npcName: 'NPC_E',
-    reasoning:
-      'Negative sentiment from feed posts suggests COMPANY_B will miss targets',
-    action: 'open_short',
-    marketType: 'perp',
-    ticker: 'TICKER_B',
-    marketId: 'null',
-    positionId: 'null',
-    amount: 4000,
-    confidence: 0.7,
-  },
-  {
-    title: 'NPC buys NO (Prediction)',
-    npcId: 'npc-f',
-    npcName: 'NPC_F',
-    reasoning: 'Group chat insider info indicates event unlikely to occur',
-    action: 'buy_no',
-    marketType: 'prediction',
-    ticker: 'null',
-    marketId: '987654321',
-    positionId: 'null',
-    amount: 2500,
     confidence: 0.6,
   },
 ];
@@ -168,79 +157,54 @@ export function getShuffledExamplesText(): string {
  * ```ts
  * const prompt = renderPrompt(npcMarketDecisions, {
  *   examples: getShuffledExamplesText(),
- *   npcCount: 10,
- *   realityGrounding: '...',
- *   activeQuestions: '...',
- *   npcContexts: '...'
+ *   marketTable: '...',
+ *   npcsList: '...',
+ *   richGameContext: '...'
  * });
  * ```
  */
 export const npcMarketDecisions = definePrompt({
   id: 'npc-market-decisions',
-  version: '6.0.0',
+  version: '7.0.0',
   category: 'trading',
-  description: 'Generate trading decisions with full character context',
-  temperature: 0.8,
+  description: 'Generate trading decisions with structured financial context',
+  temperature: 0.5, // Lower temperature for more analytical reasoning
   maxTokens: 25000,
 
   template: `{{realityGrounding}}
 
-=== ALL TRADERS IN WORLD ===
-{{characterRoster}}
+=== MARKET DATA (Prices, Change, Volume) ===
+{{marketTable}}
 
-=== DETAILED NPC PROFILES (For personality-based trading) ===
-{{detailedCharacterProfiles}}
-
-=== NPC RELATIONSHIPS (Allies trade together, rivals opposite) ===
-{{relationshipContext}}
+=== TRADER DASHBOARDS ===
+{{npcsList}}
 
 === COMPLETE NARRATIVE CONTEXT ===
 {{richGameContext}}
 
-=== RESOLVED QUESTIONS (Established outcomes) ===
-{{resolvedQuestionsContext}}
-
-=== PREVIOUS TRADING ACTIVITY ===
-{{previousTrades}}
-
-=== ONGOING NARRATIVES ===
-{{ongoingNarrativesContext}}
-
-EXAMPLES:
+=== EXAMPLES (Financial Reasoning) ===
 {{examples}}
 
-RULES:
-- Output ONLY XML: <decisions>..{{npcCount}}x <decision>..</decisions>
-- Use EXACT npcId from list (valid: {{validNpcIds}})
-- Use EXACT ticker from list (valid: {{validTickers}})
-- amount <= MAX shown in BALANCES table (or REJECTED)
-- Perp actions (open_long/open_short): marketType=perp, ticker required
-- Prediction actions (buy_yes/buy_no): marketType=prediction, marketId required
-- close_position: positionId required (exact UUID), amount=0
-- hold: all fields null, amount=0
+=== RULES ===
+1. **Output ONLY XML**: <decisions>... <decision>...</decisions>
+2. **Analyze Numbers**: Look at PnL, Exposure %, and Cash.
+   - If Exposure > 70%, reduce risk (close/reduce positions).
+   - If Cash is high, look for opportunities.
+   - If PnL is negative, consider cutting losses.
+3. **Information Hierarchy**:
+   - **🔒 PRIVATE INTEL**: High value. If an insider says "sell", trust them over public sentiment.
+   - **PUBLIC FEED**: High noise. Use for contrarian signals or momentum confirmation.
+4. **Archetype Behavior**:
+   - **DEGEN_TRADER**: High risk, chases pumps, ignores exposure limits.
+   - **RISK_MANAGER**: Conservative, cuts losses early, keeps exposure < 40%.
+   - **QUANT_TRADER**: Looks at numbers/arbitrage, ignores vibes.
+   - **INSIDER**: Trades on private info before news breaks.
+5. **Format**:
+   - Use EXACT npcId from dashboard.
+   - Use EXACT ticker/marketId from Market Data table.
+   - For 'close_position', provide the exact positionId from "Top Pos".
 
-DECISION FACTORS:
-- Posts/insider info/events inform trades
-- Rivals(sentiment<-0.5)=trade opposite, Allies(>0.5)=trade same
-- Aggressive=larger trades, Conservative=smaller/hold
-- RESOLVED QUESTIONS inform ongoing market dynamics
-- ONGOING NARRATIVES suggest future movements
-
-NARRATIVE-INFORMED TRADING:
-- If a question just resolved, NPCs may reposition based on outcome
-- Ongoing storylines suggest which assets might move
-- Previous trades show NPC positions (don't double down unrealistically)
-
-FIELDS: npcId, npcName, action, marketType(perp|prediction|null), ticker, marketId, positionId, amount, confidence(0-1), reasoning, narrativeConnection
-
-QUESTIONS:
-{{activeQuestions}}
-
-EVENTS:
-{{recentEvents}}
-
-TRADERS:
-{{npcsList}}
-
-Generate {{npcCount}} decisions as XML (each decision must include narrativeConnection explaining why):`,
+=== GENERATE DECISIONS ===
+Generate trading decisions for the traders listed above based on their dashboard data and market context.
+`,
 });

@@ -52,6 +52,13 @@ export function renderPrompt(
   const {
     allowEmpty = false,
     optionalVars = [
+      // Trading vars (New - PR #2)
+      'marketTable',
+      'npcsList',
+      'validNpcIds',
+      'validTickers',
+      'previousTrades',
+
       // Standard context vars
       'trendContext',
       'previousPostsContext',
