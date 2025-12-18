@@ -17,9 +17,64 @@ logger.info = console.log;
 logger.warn = console.warn;
 logger.error = console.error;
 
+type ModelProvider = 'groq' | 'openai' | 'anthropic';
+
+interface ModelConfig {
+  provider: ModelProvider;
+  model: string;
+  maxOutputTokens: number;
+}
+
+function detectAvailableProvider(): ModelProvider {
+  if (process.env.GROQ_API_KEY) {
+    console.log('📡 Detected GROQ_API_KEY');
+    return 'groq';
+  }
+  if (process.env.OPENAI_API_KEY) {
+    console.log('📡 Detected OPENAI_API_KEY');
+    return 'openai';
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    console.log('📡 Detected ANTHROPIC_API_KEY');
+    return 'anthropic';
+  }
+  throw new Error(
+    'No API keys found. Set GROQ_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY'
+  );
+}
+
+function getModelConfig(provider: ModelProvider): ModelConfig {
+  const configs: Record<ModelProvider, ModelConfig> = {
+    groq: {
+      provider: 'groq',
+      model: 'qwen/qwen3-32b',
+      maxOutputTokens: 4000,
+    },
+    openai: {
+      provider: 'openai',
+      model: 'gpt-5-mini-2025-08-07',
+      maxOutputTokens: 4000,
+    },
+    anthropic: {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-5-20250929',
+      maxOutputTokens: 4000,
+    },
+  };
+
+  return configs[provider];
+}
+
 async function main() {
   console.log('🚀 Starting RL Data Generation Pipeline...');
   console.log('===========================================');
+
+  // Detect available provider
+  const provider = detectAvailableProvider();
+  const modelConfig = getModelConfig(provider);
+
+  console.log(`✅ Provider: ${provider.toUpperCase()}`);
+  console.log(`✅ Model: ${modelConfig.model}`);
 
   // 1. Initialize JSON DB Mode (Bypass Postgres)
   await initializeSimulationMode('./training-data-output');
@@ -37,10 +92,10 @@ async function main() {
   const contextService = new MarketContextService();
   const relationships = new RelationshipEvolutionEngine(llmClient);
 
-  // 4. Initialize the Market Engines
+  // 4. Initialize the Market Engines with dynamic config
   const rawMarketEngine = new MarketDecisionEngine(llmClient, contextService, {
-    model: 'groq/compound',
-    maxOutputTokens: 4000,
+    model: modelConfig.model,
+    maxOutputTokens: modelConfig.maxOutputTokens,
   });
 
   // The 'Trajectory' engine wraps it to record the (Observation -> Thought -> Action) loop
@@ -52,7 +107,6 @@ async function main() {
 
   // 5. Setup Game World & Loop
   const world = new GameWorld({ outcome: true, numNPCs: 10 }, llmClient);
-
   const loop = new GameLoop(
     world,
     feed,
