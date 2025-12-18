@@ -74,3 +74,4 @@ debug/
 packages/engine/training-data-output
 packages/training/data/scored_trajectories.csv
 simulation-output/state.json
+packages/training/trained_models
