@@ -31,25 +31,30 @@ Small model recommendations for consumer hardware:
     GTX 4090 (24GB):   Qwen/Qwen2.5-3B-Instruct
 """
 
-from src.models import BabylonTrajectory
-from src.data_bridge.reader import JsonTrajectoryReader, PostgresTrajectoryReader, validate_llm_calls
-from dotenv import load_dotenv
+
+import sys
+import os
+from pathlib import Path
+
+
+current_file = Path(__file__).resolve()
+project_root = current_file.parent.parent
+sys.path.insert(0, str(project_root))
+
 import argparse
 import asyncio
 import json
 import logging
-import os
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Literal, List
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from dotenv import load_dotenv
 
+from src.models import BabylonTrajectory
+from src.data_bridge.reader import JsonTrajectoryReader, PostgresTrajectoryReader, validate_llm_calls
 
 # Load environment
-env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
+env_path = project_root.parent.parent / ".env"
 if env_path.exists():
     load_dotenv(env_path)
 
