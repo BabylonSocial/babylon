@@ -3,6 +3,7 @@ Babylon to Atropos Converter
 
 Converts Babylon trajectories to Atropos ScoredDataGroup format for GRPO training.
 Uses pre-computed mask metadata from TypeScript when available.
+Integrates 'The Judge' (Reward Functions) to score trajectories during conversion.
 """
 
 import json
@@ -11,7 +12,10 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 from ..models import AtroposScoredGroup as PydanticScoredGroup
-from ..models import BabylonTrajectory, MarketOutcomes
+from ..models import BabylonTrajectory, MarketOutcomes, Action
+
+from ..training.quality_utils import calculate_detailed_tick_quality
+from ..training.rewards import TrajectoryRewardInputs, composite_reward, calculate_risk_reward
 
 
 @dataclass
@@ -99,6 +103,7 @@ class BabylonToAtroposConverter:
     ) -> Optional[AtroposTrajectory]:
         """
         Convert a Babylon trajectory to Atropos format.
+        Calculates rewards using 'The Judge' logic.
 
         Args:
             babylon_traj: Source trajectory
@@ -125,7 +130,13 @@ class BabylonToAtroposConverter:
         steps = babylon_traj.steps[-self.max_steps:] if len(
             babylon_traj.steps) > self.max_steps else babylon_traj.steps
 
+        total_format_score = 0.0
+        total_reasoning_score = 0.0
+        risky_actions_count = 0
+        valid_ticks_for_scoring = 0
+
         for step in steps:
+            # 1. Message Generation
             if step.llm_calls:
                 for llm_call in step.llm_calls:
                     if not llm_call.user_prompt or not llm_call.response:
@@ -155,9 +166,68 @@ class BabylonToAtroposConverter:
                     messages.append(AtroposMessage(
                         role="assistant", content=assistant_content))
 
+            # 2. Quality & Risk Scoring
+            if step.llm_calls:  # Only score ticks with LLM interaction
+                valid_ticks_for_scoring += 1
+
+                # A. Detailed Quality (Format + Reasoning)
+                fmt_score, rsn_score = calculate_detailed_tick_quality(
+                    step.llm_calls,
+                    step.action,
+                    None,  # No explicit feedback dict in standard steps yet
+                    babylon_traj.archetype
+                )
+                total_format_score += fmt_score
+                total_reasoning_score += rsn_score
+
+                # B. Risk Calculation
+                # Use open_positions as a rough proxy for exposure if active_markets is available
+                # Assuming ~10% exposure per position for simulation logic
+                exposure_proxy = min(
+                    1.0, step.environment_state.open_positions * 0.1)
+
+                act_type = step.action.action_type if step.action else "wait"
+                risk_penalty = calculate_risk_reward(exposure_proxy, act_type)
+                if risk_penalty < 0:
+                    risky_actions_count += 1
+
         if len(messages) < 3:
+            # We assume at least System + User + Assistant
             raise ValueError(
                 f"Trajectory {babylon_traj.trajectory_id} has only {len(messages)} messages (need 3+)")
+
+        # Calculate averages
+        avg_format = total_format_score / max(1, valid_ticks_for_scoring)
+        avg_reasoning = total_reasoning_score / max(1, valid_ticks_for_scoring)
+
+        # Get Financials
+        start_bal = 10000.0
+        end_bal = 10000.0
+
+        # Try to get precise start/end from steps if available
+        if babylon_traj.steps:
+            start_bal = babylon_traj.steps[0].environment_state.agent_balance
+            end_bal = babylon_traj.steps[-1].environment_state.agent_balance
+        elif babylon_traj.final_balance is not None:
+            # Fallback if step data is partial but trajectory header is populated
+            end_bal = babylon_traj.final_balance
+            # Infer start from PnL
+            start_bal = end_bal - babylon_traj.final_pnl
+
+        reward_inputs = TrajectoryRewardInputs(
+            final_pnl=babylon_traj.final_pnl,
+            starting_balance=start_bal,
+            end_balance=end_bal,
+            format_score=avg_format,
+            reasoning_score=avg_reasoning,
+            risky_actions_count=risky_actions_count,
+
+            # Legacy stats
+            num_steps=len(babylon_traj.steps),
+            trades_executed=babylon_traj.trades_executed or 0
+        )
+
+        final_score = composite_reward(reward_inputs)
 
         # Tokenize and create masks if tokenizer provided
         tokens: List[int] = []
@@ -175,7 +245,7 @@ class BabylonToAtroposConverter:
             tokens=tokens,
             masks=masks,
             logprobs=[],
-            score=0.0,
+            score=final_score,
             metadata={
                 "trajectory_id": babylon_traj.trajectory_id,
                 "agent_id": babylon_traj.agent_id,
@@ -183,6 +253,10 @@ class BabylonToAtroposConverter:
                 "final_pnl": babylon_traj.final_pnl,
                 "episode_length": babylon_traj.episode_length,
                 "trades_executed": babylon_traj.trades_executed or 0,
+                # Store breakdown for debugging/logging
+                "format_score": avg_format,
+                "reasoning_score": avg_reasoning,
+                "risk_penalties": risky_actions_count
             },
         )
 
@@ -290,6 +364,8 @@ TIME WINDOW: {trajectory.window_id}
         if len(trajectories) > max_per_group:
             indices = random.sample(range(len(trajectories)), max_per_group)
             sampled = [trajectories[i] for i in indices]
+            # Note: We ignore incoming 'scores' list if we are calculating them internally via The Judge
+            # However, if scores were passed in, we filter them to match sample
             if scores:
                 scores = [scores[i] for i in indices]
         else:
@@ -312,8 +388,8 @@ TIME WINDOW: {trajectory.window_id}
         masks_list = [t.masks for t in atropos_trajectories]
         logprobs_list = [t.logprobs for t in atropos_trajectories]
 
-        scores_list = scores[: len(atropos_trajectories)] if scores else [
-            0.0] * len(atropos_trajectories)
+        # Use the internally calculated scores from The Judge
+        scores_list = [t.score for t in atropos_trajectories]
 
         messages_list: List[List[dict[str, str]]] = []
         if self.include_messages:
@@ -337,10 +413,19 @@ def calculate_dropout_rate(
     """
     Calculate the dropout rate required to reduce the number of trajectories
     from the current count to the target count.
+
+    Args:
+        current_trajectories: The number of trajectories currently available.
+        target_trajectories: The desired number of trajectories.
+        max_dropout: The maximum allowable dropout rate (0.0 to 1.0).
+
+    Returns:
+        The calculated dropout rate, capped by max_dropout.
     """
     if current_trajectories <= target_trajectories:
         return 0.0
 
+    # Dropout rate = 1 - (target / current)
     rate = 1.0 - (float(target_trajectories) / current_trajectories)
 
     return min(rate, max_dropout)
