@@ -20,48 +20,86 @@ import math
 class TrajectoryRewardInputs:
     """Inputs for computing rewards."""
 
+    # Financial Metrics
     final_pnl: float = 0.0
     starting_balance: float = 10000.0
+    end_balance: float = 10000.0
+    pnl_variance: float = 0.0
+    max_drawdown: float = 0.0
+
+    # Risk Metrics
+    max_exposure: float = 0.0
+    risky_actions_count: int = 0
+
+    # Quality Scores (from quality_utils)
+    format_score: float = 0.0
+    reasoning_score: float = 0.0
+
+    # Operational Metrics
     num_steps: int = 0
     trades_executed: int = 0
     successful_trades: int = 0
     total_actions: int = 0
     successful_actions: int = 0
-    max_drawdown: float = 0.0
-    pnl_variance: float = 0.0
+
+
+def calculate_pnl_reward(start_balance: float, end_balance: float) -> float:
+    """
+    Calculate PnL Reward.
+
+    Logic:
+    - Bankruptcy (<= 0): -10.0 Hard Penalty
+    - Positive PnL: +1.0 (Scaled by % return, capped)
+    - Negative PnL: -1.0 (Scaled by % loss, capped)
+    """
+    if end_balance <= 0:
+        return -10.0
+
+    if start_balance <= 0:
+        return 0.0
+
+    pnl = end_balance - start_balance
+    return_pct = pnl / start_balance
+
+    # Scale: 10% return = 1.0 reward
+    scaled_reward = return_pct * 10.0
+
+    return max(-1.0, min(1.0, scaled_reward))
+
+
+def calculate_risk_reward(exposure: float, action_type: str) -> float:
+    """
+    Calculate Risk Management Reward.
+
+    Returns:
+        Penalty (-0.5) if buying when exposure > 80%, else 0.0
+    """
+    if not action_type:
+        return 0.0
+
+    act = action_type.lower()
+    is_buying = any(x in act for x in ['buy', 'long', 'open'])
+
+    if exposure > 0.80 and is_buying:
+        return -0.5
+
+    return 0.0
 
 
 def pnl_reward(inputs: TrajectoryRewardInputs) -> float:
     """
-    Compute PnL-based reward.
-
-    Uses percentage return relative to starting balance, scaled to [-1, 1].
-
-    Args:
-        inputs: Trajectory reward inputs
-
-    Returns:
-        Reward in range [-1, 1]
+    Compute PnL-based reward (Legacy wrapper).
     """
     if inputs.starting_balance <= 0:
         return 0.0
 
     return_pct = inputs.final_pnl / inputs.starting_balance
-    # Clip to [-1, 1] with 100% representing full score
     return max(-1.0, min(1.0, return_pct))
 
 
 def risk_adjusted_reward(inputs: TrajectoryRewardInputs) -> float:
     """
     Compute risk-adjusted reward (Sharpe-like).
-
-    Penalizes high variance and drawdown.
-
-    Args:
-        inputs: Trajectory reward inputs
-
-    Returns:
-        Reward in range [-1, 1]
     """
     base = pnl_reward(inputs)
 
@@ -79,14 +117,6 @@ def risk_adjusted_reward(inputs: TrajectoryRewardInputs) -> float:
 def efficiency_reward(inputs: TrajectoryRewardInputs) -> float:
     """
     Compute efficiency reward (reward per action).
-
-    Rewards achieving results with fewer actions.
-
-    Args:
-        inputs: Trajectory reward inputs
-
-    Returns:
-        Reward in range [-1, 1]
     """
     base = pnl_reward(inputs)
 
@@ -100,12 +130,6 @@ def efficiency_reward(inputs: TrajectoryRewardInputs) -> float:
 def action_quality_reward(inputs: TrajectoryRewardInputs) -> float:
     """
     Compute action quality reward based on success rate.
-
-    Args:
-        inputs: Trajectory reward inputs
-
-    Returns:
-        Reward in range [0, 1]
     """
     if inputs.total_actions == 0:
         return 0.5
@@ -116,34 +140,79 @@ def action_quality_reward(inputs: TrajectoryRewardInputs) -> float:
 
 def composite_reward(
     inputs: TrajectoryRewardInputs,
-    pnl_weight: float = 0.4,
-    risk_weight: float = 0.3,
-    efficiency_weight: float = 0.15,
-    quality_weight: float = 0.15,
+    pnl_weight: float = 0.5,
+    format_weight: float = 0.3,
+    reasoning_weight: float = 0.2,
+    # Legacy weights
+    risk_weight: float = 0.0,
+    efficiency_weight: float = 0.0,
+    quality_weight: float = 0.0,
 ) -> float:
     """
     Compute weighted composite reward.
 
-    Args:
-        inputs: Trajectory reward inputs
-        pnl_weight: Weight for PnL component
-        risk_weight: Weight for risk-adjusted component
-        efficiency_weight: Weight for efficiency component
-        quality_weight: Weight for action quality component
+    If 'format_score' or 'reasoning_score' are present, uses the new weighting:
+    - PnL: 50%
+    - Format: 30%
+    - Reasoning: 20%
 
-    Returns:
-        Composite reward in range [-1, 1]
+    Otherwise falls back to legacy weighting.
     """
-    total_weight = pnl_weight + risk_weight + efficiency_weight + quality_weight
 
+    # 1. Calculate PnL Score
+    if inputs.end_balance != inputs.starting_balance:
+        pnl_score = calculate_pnl_reward(
+            inputs.starting_balance, inputs.end_balance)
+    else:
+        # Fallback if specific balances aren't tracked separately
+        end_bal = inputs.starting_balance + inputs.final_pnl
+        pnl_score = calculate_pnl_reward(inputs.starting_balance, end_bal)
+
+    # Bankruptcy override
+    if pnl_score <= -5.0:
+        return pnl_score
+
+    # 2. Risk Penalty
+    if inputs.risky_actions_count > 0:
+        pnl_score -= (inputs.risky_actions_count * 0.5)
+
+    # 3. Scoring System
+    if inputs.format_score != 0 or inputs.reasoning_score != 0:
+        total_weight = pnl_weight + format_weight + reasoning_weight
+        if total_weight == 0:
+            return 0.0
+
+        composite = (
+            (pnl_score * pnl_weight) +
+            (inputs.format_score * format_weight) +
+            (inputs.reasoning_score * reasoning_weight)
+        ) / total_weight
+
+        return max(-1.0, min(1.0, composite))
+
+    # 4. Legacy Scoring System (Fallback)
+    # If using legacy, we need non-zero weights
+    if risk_weight == 0 and efficiency_weight == 0 and quality_weight == 0:
+        # Defaults for legacy system
+        l_pnl = 0.4
+        l_risk = 0.3
+        l_eff = 0.15
+        l_qual = 0.15
+    else:
+        l_pnl = pnl_weight
+        l_risk = risk_weight
+        l_eff = efficiency_weight
+        l_qual = quality_weight
+
+    total_weight = l_pnl + l_risk + l_eff + l_qual
     if total_weight == 0:
         return 0.0
 
     composite = (
-        pnl_weight * pnl_reward(inputs)
-        + risk_weight * risk_adjusted_reward(inputs)
-        + efficiency_weight * efficiency_reward(inputs)
-        + quality_weight * action_quality_reward(inputs)
+        l_pnl * pnl_reward(inputs)
+        + l_risk * risk_adjusted_reward(inputs)
+        + l_eff * efficiency_reward(inputs)
+        + l_qual * action_quality_reward(inputs)
     ) / total_weight
 
     return max(-1.0, min(1.0, composite))
@@ -207,7 +276,6 @@ def pairwise_preferences_to_scores(
     if n_items < 2 or not preferences:
         return [0.5] * n_items
 
-    # Simple win-rate estimation
     wins = [0] * n_items
     comparisons = [0] * n_items
 
