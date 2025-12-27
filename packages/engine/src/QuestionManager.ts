@@ -86,6 +86,7 @@ import {
   worldImpactAssessment,
 } from './prompts';
 import { MarketContextService } from './services/market-context-service';
+import { MarketMetricsService } from './services/market-metrics-service';
 import { saveArcPlan } from './services/narrative-state-service';
 import { ensureMarketOnChain } from './services/onchain-market-service';
 import { QuestionArcPlanner } from './services/question-arc-planner';
@@ -856,6 +857,7 @@ ${s.involvedOrganizations?.length ? `Organizations: ${s.involvedOrganizations.jo
       actorsList,
       organizationsList,
       trendingTagsList,
+      marketMetrics,
     ] = await Promise.all([
       worldFactsService.generatePromptContext(),
       generateWorldContext({
@@ -948,6 +950,8 @@ ${s.involvedOrganizations?.length ? `Organizations: ${s.involvedOrganizations.jo
         .leftJoin(tags, eq(trendingTags.tagId, tags.id))
         .orderBy(desc(trendingTags.score))
         .limit(10),
+      // Get market metrics for metrics-based question generation (BAB-5)
+      MarketMetricsService.gatherMetrics(24),
     ]);
 
     // Load example questions from TypeScript export
@@ -1012,6 +1016,9 @@ ${s.involvedOrganizations?.length ? `Organizations: ${s.involvedOrganizations.jo
             .join(', ')}`
         : '';
 
+    // Market metrics context (BAB-5: metrics-based question generation)
+    const marketMetricsContext = marketMetrics.promptContext;
+
     // Build compact prompt
     const contextParts = [
       worldFactsContext,
@@ -1022,6 +1029,7 @@ ${s.involvedOrganizations?.length ? `Organizations: ${s.involvedOrganizations.jo
       actorsContext,
       orgsContext,
       trendingContext,
+      marketMetricsContext, // BAB-5: metrics-based question generation
       worldContext.currentMarkets
         ? `MARKETS: ${worldContext.currentMarkets}`
         : '',

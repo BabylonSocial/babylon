@@ -17,7 +17,11 @@ import {
   PredictionMarketService,
 } from '@babylon/core/markets/prediction';
 import { asSystem, db } from '@babylon/db';
-import { QuestionManager } from '@babylon/engine';
+import {
+  EventMarketLinkerService,
+  MarketMetricsService,
+  QuestionManager,
+} from '@babylon/engine';
 import { generateSnowflakeId } from '@babylon/shared';
 
 describe('Market-Engine Integration (BAB-5)', () => {
@@ -264,7 +268,9 @@ describe('Market-Engine Integration (BAB-5)', () => {
 
       // Validate initial market state
       expect(market.id).toBe(questionId);
-      expect(market.question).toBe('BAB-5 Test: Market initial state validation');
+      expect(market.question).toBe(
+        'BAB-5 Test: Market initial state validation'
+      );
       expect(market.yesShares).toBeGreaterThan(0);
       expect(market.noShares).toBeGreaterThan(0);
       expect(market.liquidity).toBe(15000);
@@ -700,5 +706,183 @@ describe('Market-Engine Integration (BAB-5)', () => {
       expect(QuestionManager.prototype.resolveQuestion).toBeDefined();
     });
   });
-});
 
+  // =========================================================================
+  // Phase 2: MarketMetricsService Tests (BAB-5)
+  // =========================================================================
+
+  describe('2.0 - MarketMetricsService', () => {
+    test('should gather metrics without errors', async () => {
+      const metrics = await MarketMetricsService.gatherMetrics(24);
+
+      // Should return valid structure
+      expect(metrics).toBeDefined();
+      expect(metrics.volatilePredictions).toBeInstanceOf(Array);
+      expect(metrics.activePredictions).toBeInstanceOf(Array);
+      expect(metrics.trendingPerps).toBeInstanceOf(Array);
+      expect(metrics.extremeProbabilities).toBeInstanceOf(Array);
+      expect(metrics.summary).toBeDefined();
+      expect(metrics.promptContext).toBeDefined();
+    });
+
+    test('should return valid volatility values (0-1)', async () => {
+      const metrics = await MarketMetricsService.gatherMetrics(24);
+
+      for (const market of metrics.volatilePredictions) {
+        expect(market.volatility).toBeGreaterThanOrEqual(0);
+        expect(market.volatility).toBeLessThanOrEqual(1);
+      }
+
+      for (const perp of metrics.trendingPerps) {
+        expect(perp.volatility).toBeGreaterThanOrEqual(0);
+        expect(perp.volatility).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test('should return valid probability values (0-1)', async () => {
+      const metrics = await MarketMetricsService.gatherMetrics(24);
+
+      for (const market of metrics.volatilePredictions) {
+        expect(market.currentProbability).toBeGreaterThanOrEqual(0);
+        expect(market.currentProbability).toBeLessThanOrEqual(1);
+      }
+
+      for (const market of metrics.activePredictions) {
+        expect(market.currentProbability).toBeGreaterThanOrEqual(0);
+        expect(market.currentProbability).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test('should format prompt context correctly', async () => {
+      const metrics = await MarketMetricsService.gatherMetrics(24);
+
+      // promptContext should be a string
+      expect(typeof metrics.promptContext).toBe('string');
+
+      // Should contain header if there's data
+      if (
+        metrics.volatilePredictions.length > 0 ||
+        metrics.activePredictions.length > 0 ||
+        metrics.trendingPerps.length > 0
+      ) {
+        expect(metrics.promptContext).toContain('MARKET METRICS');
+      }
+    });
+
+    test('should return valid summary statistics', async () => {
+      const metrics = await MarketMetricsService.gatherMetrics(24);
+
+      expect(metrics.summary.avgPredictionVolatility).toBeGreaterThanOrEqual(0);
+      expect(metrics.summary.avgPredictionVolatility).toBeLessThanOrEqual(1);
+      expect(metrics.summary.avgPerpVolatility).toBeGreaterThanOrEqual(0);
+      expect(metrics.summary.avgPerpVolatility).toBeLessThanOrEqual(1);
+      expect(metrics.summary.totalActivePositions).toBeGreaterThanOrEqual(0);
+      expect(metrics.summary.totalLiquidity).toBeGreaterThanOrEqual(0);
+      expect(metrics.summary.marketHealthScore).toBeGreaterThanOrEqual(0);
+      expect(metrics.summary.marketHealthScore).toBeLessThanOrEqual(1);
+    });
+
+    test('should limit results to top 5 per category', async () => {
+      const metrics = await MarketMetricsService.gatherMetrics(24);
+
+      expect(metrics.volatilePredictions.length).toBeLessThanOrEqual(5);
+      expect(metrics.activePredictions.length).toBeLessThanOrEqual(5);
+      expect(metrics.trendingPerps.length).toBeLessThanOrEqual(5);
+      expect(metrics.extremeProbabilities.length).toBeLessThanOrEqual(5);
+    });
+  });
+
+  // =========================================================================
+  // Phase 2: EventMarketLinkerService Tests (BAB-5)
+  // =========================================================================
+
+  describe('2.1 - EventMarketLinkerService', () => {
+    test('should get market event summaries without errors', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+
+      // Should return array
+      expect(summaries).toBeInstanceOf(Array);
+
+      // Each summary should have required fields
+      for (const summary of summaries) {
+        expect(summary.marketId).toBeDefined();
+        expect(summary.questionNumber).toBeDefined();
+        expect(summary.questionText).toBeDefined();
+        expect(typeof summary.currentProbability).toBe('number');
+        expect(summary.recentImpacts).toBeInstanceOf(Array);
+        expect(['YES', 'NO', 'NEUTRAL']).toContain(summary.netDirection);
+        expect(typeof summary.aggregatedImpact).toBe('number');
+        expect(typeof summary.tradingRelevant).toBe('boolean');
+      }
+    });
+
+    test('should return valid aggregated impact values (-1 to 1)', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+
+      for (const summary of summaries) {
+        expect(summary.aggregatedImpact).toBeGreaterThanOrEqual(-1);
+        expect(summary.aggregatedImpact).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test('should return valid probability values (0-1)', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+
+      for (const summary of summaries) {
+        expect(summary.currentProbability).toBeGreaterThanOrEqual(0);
+        expect(summary.currentProbability).toBeLessThanOrEqual(1);
+      }
+    });
+
+    test('should format trading context correctly', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+      const context = EventMarketLinkerService.formatForTradingContext(summaries);
+
+      // Should be a string
+      expect(typeof context).toBe('string');
+
+      // If there are trading-relevant summaries, should contain header
+      const tradingRelevant = summaries.filter((s) => s.tradingRelevant);
+      if (tradingRelevant.length > 0) {
+        expect(context).toContain('EVENT-MARKET SIGNALS');
+      }
+    });
+
+    test('should sort summaries by absolute aggregated impact', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+
+      if (summaries.length >= 2) {
+        for (let i = 0; i < summaries.length - 1; i++) {
+          const currentImpact = Math.abs(summaries[i]!.aggregatedImpact);
+          const nextImpact = Math.abs(summaries[i + 1]!.aggregatedImpact);
+          expect(currentImpact).toBeGreaterThanOrEqual(nextImpact);
+        }
+      }
+    });
+
+    test('should mark high-impact summaries as trading relevant', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+
+      for (const summary of summaries) {
+        // Trading relevant threshold is 0.03
+        if (Math.abs(summary.aggregatedImpact) > 0.03) {
+          expect(summary.tradingRelevant).toBe(true);
+        }
+      }
+    });
+
+    test('should have valid impact directions in recentImpacts', async () => {
+      const summaries = await EventMarketLinkerService.getMarketEventSummaries(24);
+
+      for (const summary of summaries) {
+        for (const impact of summary.recentImpacts) {
+          expect(['YES', 'NO', 'NEUTRAL']).toContain(impact.direction);
+          expect(['weak', 'moderate', 'strong']).toContain(impact.impactStrength);
+          expect(impact.suggestedPriceImpact).toBeGreaterThanOrEqual(0);
+          expect(impact.confidence).toBeGreaterThanOrEqual(0);
+          expect(impact.confidence).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+  });
+});

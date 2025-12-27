@@ -253,6 +253,8 @@ QUESTIONS:
 EVENTS:
 {{recentEvents}}
 
+{{eventMarketSignals}}
+
 TRADERS:
 {{npcsList}}
 

@@ -38,6 +38,8 @@ export {
   type EventArcValidationResult,
   EventArcValidator,
 } from './event-arc-validator';
+export * from './event-market-linker'; // BAB-5: Event-market connection
+export * from './market-metrics-service'; // BAB-5: Metrics-based question generation
 export * from './market-mover-agent';
 export * from './onchain-market-service';
 export * from './price-update-service';
