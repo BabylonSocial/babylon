@@ -264,6 +264,7 @@ import {
 import {
   type GeneratedTag,
   generateTagsFromPost,
+  handlePlayerMention,
   StaticDataRegistry,
   storeTagsForPost,
 } from '@babylon/engine';
@@ -1071,6 +1072,35 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     },
     'POST /api/posts'
   );
+
+  // Handle player influence for mentioned NPCs (boosts their response probability)
+  // Check if any mentioned users are NPCs/actors
+  const mentionedActorIds = mentionedUsers
+    .filter((u) => {
+      // Check if this user is an actor (NPC)
+      const actor = StaticDataRegistry.getActor(u.id);
+      return actor !== null;
+    })
+    .map((u) => u.id);
+
+  if (mentionedActorIds.length > 0) {
+    void Promise.all(
+      mentionedActorIds.map((actorId) =>
+        handlePlayerMention(canonicalUserId, actorId, post.id)
+      )
+    ).catch((err) => {
+      logger.warn(
+        'Failed to handle player mentions for NPCs',
+        { error: err instanceof Error ? err.message : String(err) },
+        'POST /api/posts'
+      );
+    });
+    logger.info(
+      'Triggered NPC mention influence',
+      { postId: post.id, npcCount: mentionedActorIds.length },
+      'POST /api/posts'
+    );
+  }
 
   trackServerEvent(canonicalUserId, 'post_created', {
     postId: post.id,

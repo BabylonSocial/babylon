@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
@@ -7,6 +7,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -16,6 +17,68 @@ import type { JsonValue } from '../types';
 import { agentPerformanceMetrics } from './agents';
 import { onboardingStatusEnum } from './enums';
 import { userAgentConfigs } from './user-agent-configs';
+
+/**
+ * Game onboarding step types
+ */
+export type GameOnboardingStep =
+  | 'welcome'
+  | 'explore_feed'
+  | 'follow_npc'
+  | 'view_markets'
+  | 'first_prediction'
+  | 'first_trade'
+  | 'complete';
+
+/**
+ * Game onboarding state stored in JSONB
+ */
+export interface GameOnboardingState {
+  completedSteps: GameOnboardingStep[];
+  currentStep: GameOnboardingStep;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  rewards: Array<{ step: GameOnboardingStep; points: number }>;
+}
+
+/**
+ * GameOnboarding - Tracks user's game tutorial progress
+ */
+export const gameOnboarding = pgTable(
+  'GameOnboarding',
+  {
+    id: text('id').primaryKey(),
+    userId: text('userId').notNull().unique(),
+
+    // Current step in the tutorial
+    currentStep: text('currentStep')
+      .$type<GameOnboardingStep>()
+      .notNull()
+      .default('welcome'),
+
+    // Full state as JSONB for flexibility
+    state: jsonb('state')
+      .$type<GameOnboardingState>()
+      .default(
+        sql`'{"completedSteps":[],"currentStep":"welcome","startedAt":null,"completedAt":null,"rewards":[]}'::jsonb`
+      ),
+
+    // Quick access flags
+    isComplete: boolean('isComplete').notNull().default(false),
+    skippedAt: timestamp('skippedAt', { mode: 'date' }),
+
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).notNull(),
+  },
+  (table) => [
+    index('GameOnboarding_userId_idx').on(table.userId),
+    index('GameOnboarding_isComplete_idx').on(table.isComplete),
+    index('GameOnboarding_currentStep_idx').on(table.currentStep),
+  ]
+);
+
+export type GameOnboardingRow = typeof gameOnboarding.$inferSelect;
+export type NewGameOnboardingRow = typeof gameOnboarding.$inferInsert;
 
 // User - Main user table
 export const users = pgTable(

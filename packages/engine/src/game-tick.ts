@@ -66,6 +66,10 @@ import { characterMappingService } from './services/character-mapping-service';
 import { generateEvents } from './services/event-generation-helpers';
 import { bootstrapGameIfNeeded } from './services/game-bootstrap-service';
 import { MarketContextService } from './services/market-context-service';
+import {
+  createArcState,
+  processArcTick,
+} from './services/narrative-event-processor';
 import { NPCGroupDynamicsService } from './services/npc-group-dynamics-service';
 import { getOracleService } from './services/oracle/oracle-service';
 import { createParodyHeadlineGenerator } from './services/parody-headline-generator';
@@ -104,6 +108,7 @@ import type {
 import { calculateEstimatedCost } from './types/token-stats';
 import { getGameDayNumber, toSafeDayNumber } from './utils/date-utils';
 import { worldFactsService } from './world-facts-service';
+// Note: Event-market pipeline is called from within narrative-event-processor
 
 // Services that are still in the web app (Web3/Oracle specific - use dynamic imports)
 
@@ -144,6 +149,12 @@ export interface GameTickResult {
     headlinesCleaned: number;
   };
   relationshipsUpdated?: number;
+  /** Narrative arc processing stats */
+  narrativeArcs?: {
+    arcsProcessed: number;
+    transitioned: number;
+    eventsGenerated: number;
+  };
   /** Token usage statistics for this tick */
   tokenStats?: {
     totalCalls: number;
@@ -671,11 +682,27 @@ export async function executeGameTick(
     }
   }
 
+  // Process narrative arcs for active questions
+  // Each question can have an arc that progresses through phases
+  if (Date.now() < deadline) {
+    const narrativeStats = await processNarrativeArcs(
+      currentActiveQuestions,
+      dayNumberForTimestamp(timestamp) ?? 1
+    );
+    result.narrativeArcs = narrativeStats;
+    if (narrativeStats.transitioned > 0 || narrativeStats.eventsGenerated > 0) {
+      logger.info('Narrative arcs processed', narrativeStats, 'GameTick');
+    }
+  }
+
+  // Calculate and update currentDay based on game start time
+  const currentDay = dayNumberForTimestamp(timestamp);
   await db
     .update(games)
     .set({
       lastTickAt: timestamp,
       updatedAt: timestamp,
+      currentDay: currentDay ?? 1,
     })
     .where(eq(games.isContinuous, true));
 
@@ -3180,5 +3207,69 @@ async function updateWorldFactsIfNeeded(): Promise<{
       parodiesGenerated: parodies.length,
       headlinesCleaned: cleaned,
     },
+  };
+}
+
+/**
+ * Process narrative arcs for active questions.
+ * Each question can have an arc that progresses through phases based on game day.
+ */
+async function processNarrativeArcs(
+  activeQuestions: Array<{ id: string }>,
+  dayNumber: number
+): Promise<{
+  arcsProcessed: number;
+  transitioned: number;
+  eventsGenerated: number;
+}> {
+  const { arcStates } = await import('@babylon/db');
+
+  let arcsProcessed = 0;
+  let transitioned = 0;
+  let eventsGenerated = 0;
+
+  for (const question of activeQuestions) {
+    try {
+      // Check if this question has an arc state
+      const [existingArc] = await db
+        .select({ id: arcStates.id })
+        .from(arcStates)
+        .where(eq(arcStates.questionId, question.id))
+        .limit(1);
+
+      let arcId: string;
+      if (!existingArc) {
+        // Create arc state for this question
+        arcId = await createArcState(question.id);
+      } else {
+        arcId = existingArc.id;
+      }
+
+      // Process the arc tick
+      const result = await processArcTick(arcId, dayNumber);
+      arcsProcessed++;
+
+      if (result.transitioned) {
+        transitioned++;
+      }
+      if (result.eventGenerated) {
+        eventsGenerated++;
+
+        // Apply market impacts for events (if any stocks are affected)
+        // This is handled by the narrative event processor internally
+      }
+    } catch (error) {
+      logger.error(
+        `Failed to process narrative arc for question ${question.id}`,
+        { error: error instanceof Error ? error.message : String(error) },
+        'GameTick'
+      );
+    }
+  }
+
+  return {
+    arcsProcessed,
+    transitioned,
+    eventsGenerated,
   };
 }

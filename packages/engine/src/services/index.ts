@@ -12,9 +12,12 @@
 // =============================================================================
 
 export * from './ActorSocialActions';
+export * from './activity-pattern-service';
 export * from './alpha-group-invite-service';
 export * from './capital-allocation-service';
+export * from './event-market-pipeline';
 export * from './following-mechanics';
+export * from './game-onboarding-service';
 // Group Chat Service
 export {
   GroupChatService,
@@ -25,9 +28,13 @@ export * from './InteractionTracker';
 export * from './initial-investment-service';
 export * from './lookahead-generation-service';
 export * from './message-quality-checker';
+export * from './narrative-event-processor';
 export * from './npc-group-dynamics-service';
 export * from './npc-interaction-tracker';
+export * from './npc-memory-service';
 export * from './npc-persona-generator';
+export * from './player-influence-service';
+export * from './posting-probability-service';
 export * from './reply-rate-limiter';
 export * from './tier-config';
 export * from './tiered-group-service';

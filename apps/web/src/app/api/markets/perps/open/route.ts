@@ -1,4 +1,5 @@
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
+import { handlePlayerTrade } from '@babylon/engine';
 import { logger, PerpOpenPositionSchema } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { trackServerEvent } from '@/lib/posthog/server';
@@ -63,6 +64,21 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   }).catch((error) => {
     logger.warn(
       'Failed to track trade_opened event',
+      { error: error instanceof Error ? error.message : String(error) },
+      'PerpOpen'
+    );
+  });
+
+  // Handle player influence - significant trades affect NPC memory
+  // This adds the trade to NPC memories of affiliated actors
+  void handlePlayerTrade(
+    user.userId,
+    ticker,
+    normalizedSide,
+    numericSize
+  ).catch((error) => {
+    logger.warn(
+      'Failed to handle player trade influence',
       { error: error instanceof Error ? error.message : String(error) },
       'PerpOpen'
     );

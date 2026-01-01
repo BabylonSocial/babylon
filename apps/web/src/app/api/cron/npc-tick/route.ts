@@ -27,12 +27,24 @@ import {
   relayCronToStaging,
   verifyCronAuth,
 } from '@babylon/api';
-import type { Game } from '@babylon/db';
-import { db } from '@babylon/db';
-import { StaticDataRegistry } from '@babylon/engine';
+import { db, eq, games } from '@babylon/db';
+import {
+  isActiveHour,
+  npcMemoryService,
+  type PostingContext,
+  postingProbabilityService,
+  StaticDataRegistry,
+} from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
+/** Game state shape for cache */
+interface GameState {
+  id: string;
+  isRunning: boolean;
+  isContinuous: boolean;
+}
 
 // Vercel function configuration
 export const maxDuration = 300; // 5 minutes max for NPC tick
@@ -112,12 +124,20 @@ export async function POST(_req: NextRequest) {
   }
 
   // Check Game status from database (cached for 60s to reduce DB load)
-  const gameState = await getCacheOrFetch<Game | null>(
+  const gameState = await getCacheOrFetch<GameState | null>(
     'continuous-game',
-    async () =>
-      db.game.findFirst({
-        where: { isContinuous: true },
-      }),
+    async () => {
+      const [game] = await db
+        .select({
+          id: games.id,
+          isRunning: games.isRunning,
+          isContinuous: games.isContinuous,
+        })
+        .from(games)
+        .where(eq(games.isContinuous, true))
+        .limit(1);
+      return game ?? null;
+    },
     { namespace: 'npc-tick', ttl: 60 }
   );
 
@@ -163,32 +183,57 @@ export async function POST(_req: NextRequest) {
     });
   }
 
-  // Rotate through NPCs using modulo-based iteration for robust wrap-around
-  // Include seconds-based entropy to prevent same-minute race conditions
-  // If two jobs fire within the same minute but at different seconds, they'll process different batches
-  const now = Date.now();
-  const tickNumber = Math.floor(now / 60000);
-  const secondsOffset = Math.floor((now % 60000) / 1000); // 0-59
-  const entropyOffset = Math.floor(secondsOffset / 10); // 0-5, adds batch-level diversity
-  const startIndex =
-    (tickNumber * NPCS_PER_TICK + entropyOffset) % allNpcs.length;
-  const npcsThisTick: typeof allNpcs = [];
+  // Build posting context for probability calculation
+  const now = new Date();
+  const currentHour = now.getUTCHours();
+  const postingContext: PostingContext = {
+    currentHour,
+    currentTime: now,
+    recentlyMentionedActorIds: [], // TODO: Populate from recent mentions
+    activeEventQuestionIds: [],
+    activeEvents: [],
+  };
 
-  // Use modulo to handle wrap-around correctly regardless of array size
-  const count = Math.min(NPCS_PER_TICK, allNpcs.length);
-  for (let i = 0; i < count; i++) {
-    const npc = allNpcs[(startIndex + i) % allNpcs.length];
-    if (npc) {
-      npcsThisTick.push(npc);
-    }
-  }
+  // Get actor states for all NPCs
+  const actorIds = allNpcs.map((a) => a.id);
+  const stateMap = await postingProbabilityService.getStateMap(actorIds);
+
+  // Filter to "awake" NPCs (in their active hours)
+  const awakeNpcs = allNpcs.filter((npc) => isActiveHour(npc, currentHour));
 
   logger.info(
-    `NPC tick processing ${npcsThisTick.length} NPCs`,
+    `${awakeNpcs.length}/${allNpcs.length} NPCs are in active hours`,
+    { currentHour, awakeCount: awakeNpcs.length },
+    'NPCTick'
+  );
+
+  // Calculate probability for each awake NPC
+  const candidates = awakeNpcs.map((npc) => ({
+    npc,
+    probability: postingProbabilityService.calculate(
+      npc,
+      stateMap.get(npc.id) ?? null,
+      postingContext
+    ),
+  }));
+
+  // Weighted random selection
+  const selected = postingProbabilityService.weightedSample(
+    candidates,
+    NPCS_PER_TICK
+  );
+  const npcsThisTick = selected.map((s) => s.npc);
+
+  logger.info(
+    `NPC tick processing ${npcsThisTick.length} NPCs (probabilistic selection)`,
     {
-      startIndex,
+      awakeNpcs: awakeNpcs.length,
       totalNpcs: allNpcs.length,
       npcsThisTick: npcsThisTick.map((n) => n.name),
+      probabilities: selected.map((s) => ({
+        name: s.npc.name,
+        prob: s.probability.toFixed(3),
+      })),
     },
     'NPCTick'
   );
@@ -269,6 +314,13 @@ export async function POST(_req: NextRequest) {
         tickResult.actionsExecuted.groupMessages;
 
       totalActionsExecuted += actionCount;
+
+      // Update activity state for organic behavior tracking
+      const didPost = tickResult.actionsExecuted.posts > 0;
+      await npcMemoryService.updateActivityState(npc.id, {
+        active: true,
+        posted: didPost,
+      });
 
       results.push({
         npcId: npc.id,

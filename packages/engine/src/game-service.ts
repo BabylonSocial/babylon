@@ -9,8 +9,9 @@
  * Vercel-compatible: No filesystem access, all data from database.
  */
 
-import { db, eq, getDbInstance, markets } from '@babylon/db';
+import { db, eq, games, getDbInstance, markets } from '@babylon/db';
 import { StaticDataRegistry } from './services/static-data-registry';
+import { getGameDayNumber } from './utils/date-utils';
 
 /**
  * Active market summary for NPC context (lightweight)
@@ -125,24 +126,22 @@ class GameService {
    * Returns 0 if no game is running.
    */
   async getCurrentGameDay(): Promise<number> {
-    const game = await db.game.findFirst({
-      where: { isContinuous: true, isRunning: true },
-      select: { currentDay: true, startedAt: true },
-    });
+    const [game] = await db
+      .select({
+        currentDay: games.currentDay,
+        startedAt: games.startedAt,
+      })
+      .from(games)
+      .where(eq(games.isContinuous, true))
+      .limit(1);
 
-    // Use currentDay from DB if available
-    if (game?.currentDay !== undefined && game.currentDay !== null) {
-      return game.currentDay;
-    }
-
-    // Fall back to calculating from startedAt
+    // Fall back to calculating from startedAt if no game or no currentDay
     if (!game?.startedAt) {
-      return 0;
+      return game?.currentDay ?? 0;
     }
 
-    const now = new Date();
-    const dayMs = 24 * 60 * 60 * 1000;
-    return Math.floor((now.getTime() - game.startedAt.getTime()) / dayMs);
+    // Always calculate fresh from startedAt for accuracy
+    return getGameDayNumber(game.startedAt, new Date());
   }
 
   /**

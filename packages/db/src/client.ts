@@ -1150,11 +1150,9 @@ export interface DrizzleClient {
     InferSelect<typeof schema.users>,
     InferInsert<typeof schema.users>
   >;
-  actorState: TableRepository<
-    typeof schema.actorState,
-    InferSelect<typeof schema.actorState>,
-    InferInsert<typeof schema.actorState>
-  >;
+  // Note: actorState has JSONB with custom types, values need runtime casting
+  // biome-ignore lint/suspicious/noExplicitAny: JSONB types require runtime casting
+  actorState: TableRepository<typeof schema.actorState, any, any>;
   actorFollow: TableRepository<
     typeof schema.actorFollows,
     InferSelect<typeof schema.actorFollows>,
@@ -1215,11 +1213,9 @@ export interface DrizzleClient {
     InferSelect<typeof schema.poolDeposits>,
     InferInsert<typeof schema.poolDeposits>
   >;
-  organizationState: TableRepository<
-    typeof schema.organizationState,
-    InferSelect<typeof schema.organizationState>,
-    InferInsert<typeof schema.organizationState>
-  >;
+  // Note: organizationState has JSONB with custom types, values need runtime casting
+  // biome-ignore lint/suspicious/noExplicitAny: JSONB types require runtime casting
+  organizationState: TableRepository<typeof schema.organizationState, any, any>;
   stockPrice: TableRepository<
     typeof schema.stockPrices,
     InferSelect<typeof schema.stockPrices>,

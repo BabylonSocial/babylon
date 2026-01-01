@@ -1,4 +1,5 @@
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
+import { handlePlayerTrade } from '@babylon/engine';
 import { ClosePerpPositionSchema, logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
@@ -84,6 +85,22 @@ export const POST = withErrorHandling(
     }).catch((error) => {
       logger.warn(
         'Failed to track trade_closed event',
+        { error: error instanceof Error ? error.message : String(error) },
+        'PerpClose'
+      );
+    });
+
+    // Handle player influence - closing positions also affects NPC memory
+    // The opposite side represents the closing action
+    const closingSide = result.side === 'long' ? 'short' : 'long';
+    void handlePlayerTrade(
+      user.userId,
+      result.ticker,
+      closingSide,
+      result.size
+    ).catch((error) => {
+      logger.warn(
+        'Failed to handle player trade influence',
         { error: error instanceof Error ? error.message : String(error) },
         'PerpClose'
       );
