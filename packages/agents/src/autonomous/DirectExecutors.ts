@@ -895,26 +895,34 @@ export async function executeDirectLike(
     'DirectExecutors'
   );
 
-  const reactionId = await generateSnowflakeId();
+  try {
+    const reactionId = await generateSnowflakeId();
 
-  await db.insert(reactions).values({
-    id: reactionId,
-    postId,
-    userId: agentUserId,
-    type: 'like',
-    createdAt: new Date(),
-  });
+    await db.insert(reactions).values({
+      id: reactionId,
+      postId,
+      userId: agentUserId,
+      type: 'like',
+      createdAt: new Date(),
+    });
 
-  logger.info(
-    `[DirectExecutor] Post liked: ${postId}`,
-    undefined,
-    'DirectExecutors'
-  );
+    logger.info(
+      `[DirectExecutor] Post liked: ${postId}`,
+      undefined,
+      'DirectExecutors'
+    );
 
-  return {
-    success: true,
-    liked: true,
-  };
+    return {
+      success: true,
+      liked: true,
+    };
+  } catch (error) {
+    // Handle unique constraint violation (concurrent like)
+    if ((error as Error).message?.includes('unique constraint')) {
+      return { success: true, liked: true };
+    }
+    throw error;
+  }
 }
 
 // =============================================================================
@@ -968,39 +976,53 @@ export async function executeDirectRepost(
     'DirectExecutors'
   );
 
-  const shareId = await generateSnowflakeId();
   const now = new Date();
 
-  // Create share record
-  await db.insert(shares).values({
-    id: shareId,
-    userId: agentUserId,
-    postId,
-    createdAt: now,
-  });
+  try {
+    const shareId = await generateSnowflakeId();
 
-  // If there's a quote comment, create a quote post
-  if (comment && comment.trim().length > 0) {
-    const quotePostId = await generateSnowflakeId();
-    await db.insert(posts).values({
-      id: quotePostId,
-      content: comment.trim(),
-      authorId: agentUserId,
-      originalPostId: postId,
-      type: 'repost',
-      timestamp: now,
+    // Create share record
+    await db.insert(shares).values({
+      id: shareId,
+      userId: agentUserId,
+      postId,
       createdAt: now,
     });
+
+    // If there's a quote comment, create a quote post
+    if (comment && comment.trim().length > 0) {
+      const quotePostId = await generateSnowflakeId();
+      await db.insert(posts).values({
+        id: quotePostId,
+        content: comment.trim(),
+        authorId: agentUserId,
+        originalPostId: postId,
+        type: 'repost',
+        timestamp: now,
+        createdAt: now,
+      });
+    }
+
+    logger.info(
+      `[DirectExecutor] Post reposted: ${postId} -> share ${shareId}`,
+      undefined,
+      'DirectExecutors'
+    );
+
+    return {
+      success: true,
+      repostId: shareId,
+    };
+  } catch (error) {
+    // Handle unique constraint violation (concurrent repost)
+    if ((error as Error).message?.includes('unique constraint')) {
+      const [share] = await db
+        .select({ id: shares.id })
+        .from(shares)
+        .where(and(eq(shares.postId, postId), eq(shares.userId, agentUserId)))
+        .limit(1);
+      return { success: true, repostId: share?.id };
+    }
+    throw error;
   }
-
-  logger.info(
-    `[DirectExecutor] Post reposted: ${postId} -> share ${shareId}`,
-    undefined,
-    'DirectExecutors'
-  );
-
-  return {
-    success: true,
-    repostId: shareId,
-  };
 }

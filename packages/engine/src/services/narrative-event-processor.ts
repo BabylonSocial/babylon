@@ -27,6 +27,7 @@ import {
   worldEvents,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
+import { secureRandom } from '../utils/entropy';
 import type { BabylonLLMClient } from '../llm/openai-client';
 import { toSafeDayNumber } from '../utils/date-utils';
 import { generateArticlesForArcEvent } from './event-generation-helpers';
@@ -93,7 +94,7 @@ export function evaluateStateTransition(
       // Probability check
       if (
         transition.probability === undefined ||
-        Math.random() < transition.probability
+        secureRandom() < transition.probability
       ) {
         return transition.targetState as LongTermArcState;
       }
@@ -158,7 +159,7 @@ export function shouldGenerateEvent(
     }
   }
 
-  return Math.random() < prob;
+  return secureRandom() < prob;
 }
 
 /**
@@ -185,7 +186,7 @@ export async function generateStructuredEvent(
     arc.currentState as LongTermArcState
   ] ?? ['rumor'];
   const eventType =
-    possibleTypes[Math.floor(Math.random() * possibleTypes.length)]!;
+    possibleTypes[Math.floor(secureRandom() * possibleTypes.length)]!;
 
   // Severity increases as arc progresses
   const severityByState: Record<LongTermArcState, number> = {
@@ -198,7 +199,7 @@ export async function generateStructuredEvent(
   };
   const baseSeverity =
     severityByState[arc.currentState as LongTermArcState] ?? 2;
-  const severity = Math.min(5, baseSeverity + Math.floor(Math.random() * 2)) as
+  const severity = Math.min(5, baseSeverity + Math.floor(secureRandom() * 2)) as
     | 1
     | 2
     | 3
@@ -212,7 +213,7 @@ export async function generateStructuredEvent(
   } else if (eventType === 'confirmation' || eventType === 'proof') {
     signalDirection = 'YES';
   } else {
-    signalDirection = Math.random() > 0.5 ? 'YES' : 'NO';
+    signalDirection = secureRandom() > 0.5 ? 'YES' : 'NO';
   }
 
   // Signal strength increases with severity
@@ -235,7 +236,7 @@ export async function generateStructuredEvent(
         ? 'up'
         : signalDirection === 'NO'
           ? 'down'
-          : Math.random() > 0.5
+          : secureRandom() > 0.5
             ? 'up'
             : 'down',
     magnitude: severity <= 2 ? 'minor' : severity <= 4 ? 'moderate' : 'major',
@@ -307,7 +308,7 @@ export async function createWorldEventFromArcEvent(
   };
 
   const templates = descriptionTemplates[structuredEvent.type];
-  const template = templates[Math.floor(Math.random() * templates.length)]!;
+  const template = templates[Math.floor(secureRandom() * templates.length)]!;
   const topic =
     questionText.length > 80 ? questionText.slice(0, 80) + '...' : questionText;
   const description = template.replace('{topic}', topic);

@@ -14,6 +14,19 @@ import {
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { secureRandom } from '../utils/entropy';
+import { StaticDataRegistry } from './static-data-registry';
+
+/**
+ * Resolve a ticker to an organization ID.
+ * Returns null if the ticker doesn't match any organization.
+ */
+function resolveTickerToOrgId(ticker: string): string | null {
+  const orgs = StaticDataRegistry.getAllOrganizations();
+  const org = orgs.find(
+    (o) => o.ticker?.toLowerCase() === ticker.toLowerCase()
+  );
+  return org?.id ?? null;
+}
 
 /**
  * Magnitude multipliers for market impacts
@@ -95,24 +108,28 @@ export async function applyEventToMarkets(
 
 /**
  * Add a price modifier to a stock
+ * @param stockIdOrTicker - Either an organization ID or a ticker symbol
  */
 export async function addPriceModifier(
-  stockId: string,
+  stockIdOrTicker: string,
   modifier: PriceModifier
 ): Promise<void> {
+  // Resolve ticker to org ID if needed
+  const orgId = resolveTickerToOrgId(stockIdOrTicker) ?? stockIdOrTicker;
+
   // Get current state
   const [state] = await db
     .select({
       activeModifiers: organizationState.activeModifiers,
     })
     .from(organizationState)
-    .where(eq(organizationState.id, stockId))
+    .where(eq(organizationState.id, orgId))
     .limit(1);
 
   if (!state) {
     logger.warn(
-      `Cannot add modifier: OrganizationState not found for ${stockId}`,
-      { stockId },
+      `Cannot add modifier: OrganizationState not found for ${stockIdOrTicker}`,
+      { stockIdOrTicker, resolvedOrgId: orgId },
       'EventMarketPipeline'
     );
     return;
@@ -137,7 +154,7 @@ export async function addPriceModifier(
       activeModifiers: modifiers,
       updatedAt: now,
     })
-    .where(eq(organizationState.id, stockId));
+    .where(eq(organizationState.id, orgId));
 }
 
 /**
@@ -178,10 +195,14 @@ export function calculateCurrentPrice(
 
 /**
  * Update a stock's current price based on its fundamentals
+ * @param stockIdOrTicker - Either an organization ID or a ticker symbol
  */
 export async function updateStockPrice(
-  stockId: string
+  stockIdOrTicker: string
 ): Promise<number | null> {
+  // Resolve ticker to org ID if needed
+  const orgId = resolveTickerToOrgId(stockIdOrTicker) ?? stockIdOrTicker;
+
   const [state] = await db
     .select({
       basePrice: organizationState.basePrice,
@@ -189,7 +210,7 @@ export async function updateStockPrice(
       activeModifiers: organizationState.activeModifiers,
     })
     .from(organizationState)
-    .where(eq(organizationState.id, stockId))
+    .where(eq(organizationState.id, orgId))
     .limit(1);
 
   if (!state || !state.basePrice) {
@@ -220,30 +241,34 @@ export async function updateStockPrice(
       activeModifiers,
       updatedAt: now,
     })
-    .where(eq(organizationState.id, stockId));
+    .where(eq(organizationState.id, orgId));
 
   return newPrice;
 }
 
 /**
  * Update sentiment for a stock based on event
+ * @param stockIdOrTicker - Either an organization ID or a ticker symbol
  */
 export async function updateStockSentiment(
-  stockId: string,
+  stockIdOrTicker: string,
   sentimentChange: number
 ): Promise<void> {
+  // Resolve ticker to org ID if needed
+  const orgId = resolveTickerToOrgId(stockIdOrTicker) ?? stockIdOrTicker;
+
   const [state] = await db
     .select({
       sentiment: organizationState.sentiment,
     })
     .from(organizationState)
-    .where(eq(organizationState.id, stockId))
+    .where(eq(organizationState.id, orgId))
     .limit(1);
 
   if (!state) {
     logger.warn(
-      `Cannot update sentiment: OrganizationState not found for ${stockId}`,
-      { stockId },
+      `Cannot update sentiment: OrganizationState not found for ${stockIdOrTicker}`,
+      { stockIdOrTicker, resolvedOrgId: orgId },
       'EventMarketPipeline'
     );
     return;
@@ -261,11 +286,11 @@ export async function updateStockSentiment(
       sentiment: newSentiment,
       updatedAt: new Date(),
     })
-    .where(eq(organizationState.id, stockId));
+    .where(eq(organizationState.id, orgId));
 
   logger.debug(
-    `Updated sentiment for ${stockId}`,
-    { stockId, oldSentiment: currentSentiment, newSentiment },
+    `Updated sentiment for ${stockIdOrTicker}`,
+    { stockIdOrTicker, resolvedOrgId: orgId, oldSentiment: currentSentiment, newSentiment },
     'EventMarketPipeline'
   );
 }

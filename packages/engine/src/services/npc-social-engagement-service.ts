@@ -376,12 +376,24 @@ export async function getEngagementStats(): Promise<EngagementStats> {
   ] = await Promise.all([
     db.select({ count: count() }).from(reactions),
     db.select({ count: count() }).from(shares),
-    db.select({ count: count() }).from(comments).where(isNull(comments.deletedAt)),
-    db.select({ count: count() }).from(reactions).where(gte(reactions.createdAt, oneDayAgo)),
-    db.select({ count: count() }).from(shares).where(gte(shares.createdAt, oneDayAgo)),
-    db.select({ count: count() }).from(comments).where(
-      and(isNull(comments.deletedAt), gte(comments.createdAt, oneDayAgo))
-    ),
+    db
+      .select({ count: count() })
+      .from(comments)
+      .where(isNull(comments.deletedAt)),
+    db
+      .select({ count: count() })
+      .from(reactions)
+      .where(gte(reactions.createdAt, oneDayAgo)),
+    db
+      .select({ count: count() })
+      .from(shares)
+      .where(gte(shares.createdAt, oneDayAgo)),
+    db
+      .select({ count: count() })
+      .from(comments)
+      .where(
+        and(isNull(comments.deletedAt), gte(comments.createdAt, oneDayAgo))
+      ),
   ]);
 
   return {

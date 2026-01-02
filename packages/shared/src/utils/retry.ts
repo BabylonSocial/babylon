@@ -5,6 +5,8 @@
  * Automatically retries on network errors, 5xx server errors, and rate limit (429) responses.
  */
 
+import { logger } from './logger';
+
 /**
  * Retry configuration options
  */
@@ -180,4 +182,78 @@ export async function retryWithCondition<T>(
   }
 
   throw lastError || new Error('Operation failed with unknown error');
+}
+
+/**
+ * Fire-and-forget retry options
+ */
+export interface FireAndForgetRetryOptions {
+  /** Maximum number of retry attempts (default: 3) */
+  maxAttempts?: number;
+  /** Base delay in milliseconds (default: 100) */
+  baseDelayMs?: number;
+  /** Context for logging (e.g., 'PerpOpen', 'PerpClose') */
+  logContext?: string;
+  /** Additional metadata to include in error logs */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Fire-and-forget async operation with retry
+ *
+ * @description Executes an async operation in the background with retry logic.
+ * Logs errors after all retries are exhausted. Does not throw - meant for
+ * non-critical side effects that shouldn't block the main flow.
+ *
+ * @param {() => Promise<void>} operation - Async operation to execute
+ * @param {FireAndForgetRetryOptions} options - Configuration options
+ *
+ * @example
+ * ```typescript
+ * fireAndForgetWithRetry(
+ *   () => handlePlayerTrade(userId, ticker, side, size),
+ *   { logContext: 'PerpOpen', metadata: { userId, ticker } }
+ * );
+ * ```
+ */
+export function fireAndForgetWithRetry(
+  operation: () => Promise<void>,
+  options: FireAndForgetRetryOptions = {}
+): void {
+  const {
+    maxAttempts = 3,
+    baseDelayMs = 100,
+    logContext = 'FireAndForget',
+    metadata = {},
+  } = options;
+
+  void (async () => {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        await operation();
+        return; // Success
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < maxAttempts - 1) {
+          // Exponential backoff
+          await new Promise((r) =>
+            setTimeout(r, baseDelayMs * Math.pow(2, attempt))
+          );
+        }
+      }
+    }
+
+    // All retries failed - log as error for monitoring
+    logger.error(
+      'Fire-and-forget operation failed after retries',
+      {
+        error: lastError?.message ?? 'Unknown error',
+        retriesAttempted: maxAttempts,
+        ...metadata,
+      },
+      logContext
+    );
+  })();
 }

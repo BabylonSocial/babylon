@@ -1,6 +1,6 @@
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
 import { handlePlayerTrade } from '@babylon/engine';
-import { logger, PerpOpenPositionSchema } from '@babylon/shared';
+import { logger, fireAndForgetWithRetry, PerpOpenPositionSchema } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { trackServerEvent } from '@/lib/posthog/server';
 import {
@@ -71,43 +71,13 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
   // Handle player influence - significant trades affect NPC memory
   // This adds the trade to NPC memories of affiliated actors
-  // Fire-and-forget with retry logic for resilience
-  void (async () => {
-    const maxRetries = 3;
-    let lastError: Error | undefined;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        await handlePlayerTrade(
-          user.userId,
-          ticker,
-          normalizedSide,
-          numericSize
-        );
-        return; // Success
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        if (attempt < maxRetries - 1) {
-          // Exponential backoff: 100ms, 200ms, 400ms
-          await new Promise((r) => setTimeout(r, 100 * Math.pow(2, attempt)));
-        }
-      }
+  fireAndForgetWithRetry(
+    () => handlePlayerTrade(user.userId, ticker, normalizedSide, numericSize),
+    {
+      logContext: 'PerpOpen',
+      metadata: { userId: user.userId, ticker, side: normalizedSide, size: numericSize },
     }
-
-    // All retries failed - log as error for monitoring
-    logger.error(
-      'Failed to handle player trade influence after retries',
-      {
-        error: lastError?.message ?? 'Unknown error',
-        userId: user.userId,
-        ticker,
-        side: normalizedSide,
-        size: numericSize,
-        retriesAttempted: maxRetries,
-      },
-      'PerpOpen'
-    );
-  })();
+  );
 
   return successResponse(
     {

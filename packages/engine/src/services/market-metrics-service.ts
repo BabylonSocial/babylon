@@ -355,11 +355,12 @@ export class MarketMetricsService {
           price24hAgo: snapshot.price24hAgo,
         });
       }
-    } catch {
+    } catch (error) {
       // Table may not exist in all environments - continue without snapshot data
+      // Log error for debugging but don't fail the request
       logger.debug(
         'PerpMarketSnapshot table not available, using stockPrices only',
-        undefined,
+        { error: error instanceof Error ? error.message : String(error) },
         'MarketMetrics'
       );
     }

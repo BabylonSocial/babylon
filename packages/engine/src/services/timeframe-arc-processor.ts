@@ -28,10 +28,13 @@
  * MONTHLY+ (2+ weeks):
  *   setup ──> tension ──> escalation ──> crisis ──> revelation ──> resolution
  *   └── Full 6-phase narrative arc
+ *
+ * Uses secureRandom for deterministic behavior in testing.
  */
 
 import { db, eq, type TimeframedMarket, timeframedMarkets } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { secureRandom } from '../utils/entropy';
 import {
   getCurrentArcState,
   getEventCooldownMs,
@@ -304,7 +307,7 @@ export class TimeframeArcProcessor {
     const probability = Math.min(1, baseProbability * multiplier);
 
     // Roll for event
-    if (Math.random() > probability) {
+    if (secureRandom() > probability) {
       return {
         generated: false,
         marketId: market.id,
@@ -314,7 +317,8 @@ export class TimeframeArcProcessor {
 
     // Select event type
     const eventTypes = STATE_EVENT_TYPES[market.arcState] ?? ['generic_event'];
-    const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    const eventType =
+      eventTypes[Math.floor(secureRandom() * eventTypes.length)];
 
     // Update market
     await db

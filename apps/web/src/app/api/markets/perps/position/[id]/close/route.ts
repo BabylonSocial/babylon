@@ -1,6 +1,10 @@
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
 import { handlePlayerTrade } from '@babylon/engine';
-import { ClosePerpPositionSchema, logger } from '@babylon/shared';
+import {
+  ClosePerpPositionSchema,
+  fireAndForgetWithRetry,
+  logger,
+} from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { trackServerEvent } from '@/lib/posthog/server';
@@ -92,44 +96,20 @@ export const POST = withErrorHandling(
 
     // Handle player influence - closing positions also affects NPC memory
     // The opposite side represents the closing action
-    // Fire-and-forget with retry logic for resilience
     const closingSide = result.side === 'long' ? 'short' : 'long';
-    void (async () => {
-      const maxRetries = 3;
-      let lastError: Error | undefined;
-
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          await handlePlayerTrade(
-            user.userId,
-            result.ticker,
-            closingSide,
-            result.size
-          );
-          return; // Success
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          if (attempt < maxRetries - 1) {
-            // Exponential backoff: 100ms, 200ms, 400ms
-            await new Promise((r) => setTimeout(r, 100 * Math.pow(2, attempt)));
-          }
-        }
-      }
-
-      // All retries failed - log as error for monitoring
-      logger.error(
-        'Failed to handle player trade influence after retries',
-        {
-          error: lastError?.message ?? 'Unknown error',
+    fireAndForgetWithRetry(
+      () =>
+        handlePlayerTrade(user.userId, result.ticker, closingSide, result.size),
+      {
+        logContext: 'PerpClose',
+        metadata: {
           userId: user.userId,
           ticker: result.ticker,
           side: closingSide,
           size: result.size,
-          retriesAttempted: maxRetries,
         },
-        'PerpClose'
-      );
-    })();
+      }
+    );
 
     return successResponse({
       position: result,
