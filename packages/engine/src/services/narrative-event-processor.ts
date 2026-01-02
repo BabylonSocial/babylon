@@ -126,10 +126,7 @@ export async function transitionArcState(
         pendingTransitions: [],
       })
       .where(
-        and(
-          eq(arcStates.id, arcId),
-          eq(arcStates.currentState, currentState)
-        )
+        and(eq(arcStates.id, arcId), eq(arcStates.currentState, currentState))
       )
       .returning({ id: arcStates.id });
 

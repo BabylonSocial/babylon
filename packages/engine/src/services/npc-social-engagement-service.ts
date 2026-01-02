@@ -185,7 +185,10 @@ export async function processNPCSocialEngagements(): Promise<SocialEngagementRes
             engagedActors.add(actor.id);
           } catch (error) {
             // Handle unique constraint violation (race condition with concurrent tick)
-            if (error instanceof Error && error.message.includes('unique constraint')) {
+            if (
+              error instanceof Error &&
+              error.message.includes('unique constraint')
+            ) {
               reactionSet.add(key); // Mark as existing to prevent retries
             } else {
               throw error;
@@ -207,7 +210,10 @@ export async function processNPCSocialEngagements(): Promise<SocialEngagementRes
               engagedActors.add(actor.id);
             } catch (error) {
               // Handle unique constraint violation (race condition with concurrent tick)
-              if (error instanceof Error && error.message.includes('unique constraint')) {
+              if (
+                error instanceof Error &&
+                error.message.includes('unique constraint')
+              ) {
                 shareSet.add(key); // Mark as existing to prevent retries
               } else {
                 throw error;

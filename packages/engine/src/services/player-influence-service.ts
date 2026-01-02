@@ -9,7 +9,7 @@
  * Falls back to in-memory cache if Redis is unavailable.
  */
 
-import { getCache, setCache, invalidateCache } from '@babylon/api';
+import { getCache, invalidateCache, setCache } from '@babylon/api';
 import { db, eq, organizations } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { npcMemoryService } from './npc-memory-service';
@@ -120,14 +120,14 @@ async function recordMention(actorId: string, timestamp: Date): Promise<void> {
 
     // Also update the set of mentioned actors
     const currentSet = await getCache<string[]>(MENTION_SET_KEY, {});
-    const updatedSet = currentSet ? [...new Set([...currentSet, actorId])] : [actorId];
-    await setCache(MENTION_SET_KEY, updatedSet, { ttl: MENTION_RECENCY_SECONDS });
+    const updatedSet = currentSet
+      ? [...new Set([...currentSet, actorId])]
+      : [actorId];
+    await setCache(MENTION_SET_KEY, updatedSet, {
+      ttl: MENTION_RECENCY_SECONDS,
+    });
 
-    logger.debug(
-      'Mention recorded in Redis',
-      { actorId },
-      'PlayerInfluence'
-    );
+    logger.debug('Mention recorded in Redis', { actorId }, 'PlayerInfluence');
   } catch {
     // Fallback to in-memory cache
     memoryFallbackCache.set(actorId, timestamp);
@@ -268,7 +268,10 @@ export async function getRecentlyMentionedActorIds(): Promise<string[]> {
       // Verify each ID is still valid
       for (const actorId of cachedSet) {
         const timestamp = await getMentionTimestamp(actorId);
-        if (timestamp && now.getTime() - timestamp.getTime() < MENTION_RECENCY_SECONDS * 1000) {
+        if (
+          timestamp &&
+          now.getTime() - timestamp.getTime() < MENTION_RECENCY_SECONDS * 1000
+        ) {
           recentIds.push(actorId);
         }
       }
@@ -280,7 +283,10 @@ export async function getRecentlyMentionedActorIds(): Promise<string[]> {
 
   // Fallback to in-memory cache
   for (const [actorId, lastMention] of memoryFallbackCache.entries()) {
-    if (now.getTime() - lastMention.getTime() < MENTION_RECENCY_SECONDS * 1000) {
+    if (
+      now.getTime() - lastMention.getTime() <
+      MENTION_RECENCY_SECONDS * 1000
+    ) {
       recentIds.push(actorId);
     } else {
       // Clean up old entries

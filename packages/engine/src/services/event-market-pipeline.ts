@@ -17,8 +17,8 @@ import {
   eq,
   organizationState,
   type PriceModifier,
-  sql,
   type StructuredEventData,
+  sql,
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { secureRandom } from '../utils/entropy';
@@ -87,8 +87,12 @@ export async function applyEventToMarkets(
     try {
       const magnitude = MAGNITUDE_MULTIPLIERS[impact.magnitude];
       // Bound the effect to prevent extreme values
-      const rawEffect = impact.direction === 'up' ? 1 + magnitude : 1 - magnitude;
-      const effect = Math.max(MIN_PRICE_MULTIPLIER, Math.min(MAX_PRICE_MULTIPLIER, rawEffect));
+      const rawEffect =
+        impact.direction === 'up' ? 1 + magnitude : 1 - magnitude;
+      const effect = Math.max(
+        MIN_PRICE_MULTIPLIER,
+        Math.min(MAX_PRICE_MULTIPLIER, rawEffect)
+      );
       const decayRate = DECAY_RATES[impact.duration];
       const durationHours = DURATION_HOURS[impact.duration];
 
@@ -164,14 +168,19 @@ export async function addPriceModifier(
 
     // Use Zod validation for safe parsing
     const now = new Date();
-    const existingModifiers = parseModifiersSafe(state.activeModifiers, { orgId });
+    const existingModifiers = parseModifiersSafe(state.activeModifiers, {
+      orgId,
+    });
 
     // Filter expired modifiers and bound effect values
     const validModifiers: PriceModifier[] = existingModifiers
       .filter((m) => new Date(m.expiresAt).getTime() > now.getTime())
       .map((m) => ({
         ...m,
-        effect: Math.max(MIN_PRICE_MULTIPLIER, Math.min(MAX_PRICE_MULTIPLIER, m.effect)),
+        effect: Math.max(
+          MIN_PRICE_MULTIPLIER,
+          Math.min(MAX_PRICE_MULTIPLIER, m.effect)
+        ),
       }));
 
     // Add new modifier
@@ -237,7 +246,10 @@ export function calculateCurrentPrice(
     }
 
     // Bound effect to prevent extreme values
-    const boundedEffect = Math.max(MIN_PRICE_MULTIPLIER, Math.min(MAX_PRICE_MULTIPLIER, mod.effect));
+    const boundedEffect = Math.max(
+      MIN_PRICE_MULTIPLIER,
+      Math.min(MAX_PRICE_MULTIPLIER, mod.effect)
+    );
 
     const hoursSince = (now.getTime() - appliedAt.getTime()) / (1000 * 60 * 60);
     const decayedEffect =
@@ -285,14 +297,19 @@ export async function updateStockPrice(
 
     // Use Zod validation for safe parsing
     const now = new Date();
-    const storedModifiers = parseModifiersSafe(state.activeModifiers, { orgId });
+    const storedModifiers = parseModifiersSafe(state.activeModifiers, {
+      orgId,
+    });
 
     // Clean up expired modifiers and bound effects
     const activeModifiers = storedModifiers
       .filter((m) => new Date(m.expiresAt).getTime() > now.getTime())
       .map((m) => ({
         ...m,
-        effect: Math.max(MIN_PRICE_MULTIPLIER, Math.min(MAX_PRICE_MULTIPLIER, m.effect)),
+        effect: Math.max(
+          MIN_PRICE_MULTIPLIER,
+          Math.min(MAX_PRICE_MULTIPLIER, m.effect)
+        ),
       }));
 
     // Calculate new price
