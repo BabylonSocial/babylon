@@ -124,7 +124,11 @@ function hasAffiliatedEvent(
     }
 
     // Check if actor's org affiliations have tickers that match affected stocks
-    if (actor.affiliations && event.affectedStocks && event.affectedStocks.length > 0) {
+    if (
+      actor.affiliations &&
+      event.affectedStocks &&
+      event.affectedStocks.length > 0
+    ) {
       // Convert affected stocks to lowercase Set for O(1) lookup
       const affectedStocksLower = new Set(
         event.affectedStocks.map((s) => s.toLowerCase())
@@ -168,7 +172,8 @@ export function calculatePostingProbability(
   // Use context.currentTime for consistency with the context snapshot
   if (state?.lastPostAt) {
     const hoursSinceLastPost =
-      (context.currentTime.getTime() - state.lastPostAt.getTime()) / (1000 * 60 * 60);
+      (context.currentTime.getTime() - state.lastPostAt.getTime()) /
+      (1000 * 60 * 60);
     if (hoursSinceLastPost < MIN_HOURS_BETWEEN_POSTS) {
       return 0; // Posted too recently
     }
@@ -321,12 +326,17 @@ export async function getActiveEventsForPosting(): Promise<{
   const now = Date.now();
 
   // Return cached result if still valid
-  if (activeEventsCache && now - activeEventsCache.timestamp < ACTIVE_EVENTS_CACHE_MS) {
+  if (
+    activeEventsCache &&
+    now - activeEventsCache.timestamp < ACTIVE_EVENTS_CACHE_MS
+  ) {
     return activeEventsCache.data;
   }
 
   const currentDate = new Date();
-  const cutoff = new Date(currentDate.getTime() - RECENT_EVENTS_HOURS * 60 * 60 * 1000);
+  const cutoff = new Date(
+    currentDate.getTime() - RECENT_EVENTS_HOURS * 60 * 60 * 1000
+  );
 
   // Fetch recent world events
   const recentEvents = await db
