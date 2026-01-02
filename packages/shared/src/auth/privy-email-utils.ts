@@ -125,7 +125,11 @@ export function getAllVerifiedEmails(
   // Check linkedAccounts for additional email-type accounts
   if (Array.isArray(user.linkedAccounts)) {
     for (const account of user.linkedAccounts) {
-      if (account?.type === 'email' && 'address' in account && account.address) {
+      if (
+        account?.type === 'email' &&
+        'address' in account &&
+        account.address
+      ) {
         const emailAccount = account as PrivyEmailAccount;
         // Only include verified emails
         if (isEmailVerified(emailAccount)) {
@@ -185,7 +189,9 @@ export function findEmailByDomain(
  *   // User has admin access
  * }
  */
-export function checkForAdminEmail(user: PrivyUserWithEmails | null | undefined): {
+export function checkForAdminEmail(
+  user: PrivyUserWithEmails | null | undefined
+): {
   adminEmail: string | null;
   allVerifiedEmails: string[];
 } {

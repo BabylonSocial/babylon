@@ -26,12 +26,12 @@ export {
 } from './group-chat-service';
 export * from './InteractionTracker';
 export * from './initial-investment-service';
+export * from './jsonb-validators';
 export * from './lookahead-generation-service';
 export * from './message-quality-checker';
 export * from './narrative-event-processor';
 export * from './npc-group-dynamics-service';
 export * from './npc-interaction-tracker';
-export * from './jsonb-validators';
 export * from './npc-memory-service';
 export * from './npc-persona-generator';
 export * from './player-influence-service';

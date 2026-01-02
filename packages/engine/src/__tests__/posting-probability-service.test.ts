@@ -181,9 +181,7 @@ describe('Posting Probability Service - Event Boost', () => {
     const actor = createMockActor();
     const baseContext = createMockContext();
     const eventContext = createMockContext({
-      activeEvents: [
-        { questionId: 'q1', affectedActorIds: [actor.id] },
-      ],
+      activeEvents: [{ questionId: 'q1', affectedActorIds: [actor.id] }],
     });
 
     const probBase = calculatePostingProbability(actor, null, baseContext);
@@ -227,7 +225,7 @@ describe('Posting Probability Service - Weighted Random Sample', () => {
       { probability: 0, id: 'c' },
     ];
     const result = weightedRandomSample(candidates, 2);
-    
+
     // Should still return 2 items (random selection fallback)
     expect(result.length).toBe(2);
   });

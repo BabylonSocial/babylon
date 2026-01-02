@@ -6,13 +6,13 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
+  type ActivityActor,
   activityPatternService,
   convertToLocalHour,
   deriveActivityPattern,
   getActivityMultiplier,
   isActiveHour,
   isWeekend,
-  type ActivityActor,
 } from '../services/activity-pattern-service';
 
 describe('Activity Pattern Service - Timezone Conversion', () => {

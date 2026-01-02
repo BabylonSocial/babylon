@@ -3,13 +3,13 @@
  * Tests for email extraction and admin domain checking from Privy user objects
  */
 
-import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import {
-  getAllVerifiedEmails,
-  findEmailByDomain,
   checkForAdminEmail,
-  type PrivyUserWithEmails,
+  findEmailByDomain,
+  getAllVerifiedEmails,
   type PrivyEmailAccount,
+  type PrivyUserWithEmails,
 } from '@babylon/shared';
 
 describe('Privy Email Utilities', () => {
@@ -223,12 +223,16 @@ describe('Privy Email Utilities', () => {
       // Note: findEmailByDomain returns the email as-is from the input array
       // Normalization happens in getAllVerifiedEmails before calling this function
       const emails = ['user@ELIZALABS.AI'];
-      expect(findEmailByDomain(emails, 'elizalabs.ai')).toBe('user@ELIZALABS.AI');
+      expect(findEmailByDomain(emails, 'elizalabs.ai')).toBe(
+        'user@ELIZALABS.AI'
+      );
     });
 
     it('should match domain case-insensitively (admin domain uppercase)', () => {
       const emails = ['user@elizalabs.ai'];
-      expect(findEmailByDomain(emails, 'ELIZALABS.AI')).toBe('user@elizalabs.ai');
+      expect(findEmailByDomain(emails, 'ELIZALABS.AI')).toBe(
+        'user@elizalabs.ai'
+      );
     });
 
     it('should trim whitespace from domain', () => {

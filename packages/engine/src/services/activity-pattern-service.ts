@@ -149,9 +149,7 @@ const DOMAIN_PATTERNS: Record<string, Partial<ActivityPattern>> = {
 function getTimezoneOffset(timezone: string, date: Date = new Date()): number {
   try {
     // Get UTC and local time strings for comparison
-    const utcDate = new Date(
-      date.toLocaleString('en-US', { timeZone: 'UTC' })
-    );
+    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
     const tzDate = new Date(
       date.toLocaleString('en-US', { timeZone: timezone })
     );

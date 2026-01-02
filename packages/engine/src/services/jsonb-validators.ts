@@ -160,7 +160,9 @@ export function validateMemory(
  * Validate a single relationship update before writing.
  * Throws if invalid - use for write operations.
  */
-export function validateRelationshipUpdate(interaction: unknown): asserts interaction is {
+export function validateRelationshipUpdate(
+  interaction: unknown
+): asserts interaction is {
   sentimentChange: number;
   note?: string;
 } {
