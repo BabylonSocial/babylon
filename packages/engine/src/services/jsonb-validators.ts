@@ -61,6 +61,14 @@ export const RelationshipsMapSchema = z.record(
 );
 
 /**
+ * Interaction update schema for relationship updates
+ */
+export const InteractionUpdateSchema = z.object({
+  sentimentChange: z.number().min(-1).max(1),
+  note: z.string().optional(),
+});
+
+/**
  * Safely parse NPC memories from JSONB with fallback to empty array.
  * Logs a warning for invalid data but doesn't throw.
  */
@@ -162,13 +170,6 @@ export function validateMemory(
  */
 export function validateRelationshipUpdate(
   interaction: unknown
-): asserts interaction is {
-  sentimentChange: number;
-  note?: string;
-} {
-  const InteractionSchema = z.object({
-    sentimentChange: z.number().min(-1).max(1),
-    note: z.string().optional(),
-  });
-  InteractionSchema.parse(interaction);
+): asserts interaction is z.infer<typeof InteractionUpdateSchema> {
+  InteractionUpdateSchema.parse(interaction);
 }

@@ -32,6 +32,11 @@ const STATE_DAY_RANGES: Record<ArcStateType, [number, number]> = {
 };
 
 /**
+ * Minimum hours between event generations to prevent spam
+ */
+const EVENT_COOLDOWN_HOURS = 2;
+
+/**
  * Get the expected arc state for a given day number
  */
 export function getExpectedState(dayNumber: number): ArcStateType {
@@ -125,7 +130,7 @@ export function shouldGenerateEvent(
   if (arc.lastEventAt) {
     const hoursSinceLastEvent =
       (Date.now() - arc.lastEventAt.getTime()) / (1000 * 60 * 60);
-    if (hoursSinceLastEvent < 2) {
+    if (hoursSinceLastEvent < EVENT_COOLDOWN_HOURS) {
       return false; // Cooldown
     }
   }
@@ -230,25 +235,71 @@ export async function generateStructuredEvent(
 
 /**
  * Get affected stock tickers for a question.
- * Looks up organizations mentioned in the question or related to it.
+ * Parses the question text for organization mentions and returns their tickers.
  */
 async function getAffectedStocksForQuestion(
-  _questionId: string
+  questionId: string
 ): Promise<string[]> {
   try {
-    // Get organizations that might be affected by this question
-    // For now, get a sample of active stocks - in production this would
-    // be based on question metadata or NLP parsing of the question text
-    const { organizations } = await import('@babylon/db');
+    const { organizations, questions } = await import('@babylon/db');
+    const { StaticDataRegistry } = await import('./static-data-registry');
 
-    const orgs = await db
-      .select({ ticker: organizations.ticker })
-      .from(organizations)
-      .where(sql`${organizations.ticker} IS NOT NULL`)
-      .limit(2);
+    // First, get the question text
+    const [question] = await db
+      .select({ text: questions.text })
+      .from(questions)
+      .where(eq(questions.id, questionId))
+      .limit(1);
 
-    return orgs.map((o) => o.ticker).filter((t): t is string => t !== null);
-  } catch {
+    if (!question) {
+      return [];
+    }
+
+    // Get all organizations and look for mentions in the question text
+    const allOrgs = StaticDataRegistry.getAllOrganizations();
+    const questionTextLower = question.text.toLowerCase();
+
+    const mentionedOrgs = allOrgs.filter((org) => {
+      // Check if org name is mentioned in question
+      const nameMatch = questionTextLower.includes(org.name.toLowerCase());
+      // Check if ticker is mentioned (e.g., "$PEAR" or "PEAR")
+      const tickerMatch =
+        org.ticker &&
+        (questionTextLower.includes(`$${org.ticker.toLowerCase()}`) ||
+          questionTextLower.includes(org.ticker.toLowerCase()));
+      // Check if original name is mentioned
+      const originalMatch =
+        org.originalName &&
+        questionTextLower.includes(org.originalName.toLowerCase());
+
+      return nameMatch || tickerMatch || originalMatch;
+    });
+
+    // Return tickers for mentioned orgs
+    const tickers = mentionedOrgs
+      .map((org) => org.ticker)
+      .filter((t): t is string => t !== undefined && t !== null);
+
+    // If no specific orgs found, fall back to getting some default stocks
+    if (tickers.length === 0) {
+      const defaultOrgs = await db
+        .select({ ticker: organizations.ticker })
+        .from(organizations)
+        .where(sql`${organizations.ticker} IS NOT NULL`)
+        .limit(2);
+
+      return defaultOrgs
+        .map((o) => o.ticker)
+        .filter((t): t is string => t !== null);
+    }
+
+    return tickers;
+  } catch (error) {
+    logger.warn(
+      'Failed to get affected stocks for question',
+      { questionId, error: error instanceof Error ? error.message : String(error) },
+      'NarrativeEventProcessor'
+    );
     return [];
   }
 }

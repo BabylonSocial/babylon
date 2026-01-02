@@ -9,11 +9,17 @@
 import { db, eq, organizations } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { npcMemoryService } from './npc-memory-service';
+import { StaticDataRegistry } from './static-data-registry';
 
 /**
  * Threshold for a "significant" trade (in game currency)
  */
 const SIGNIFICANT_TRADE_THRESHOLD = 1000;
+
+/**
+ * Threshold for a "large" trade that warrants special mention
+ */
+const LARGE_TRADE_THRESHOLD = 5000;
 
 /**
  * How long a mention stays "recent" (in ms)
@@ -191,7 +197,7 @@ export async function handlePlayerTrade(
     const successCount = await npcMemoryService.addMemoryBatch(relevantNpcs, {
       type: 'witnessed_event',
       timestamp: new Date().toISOString(),
-      summary: `A player took a ${size >= 5000 ? 'large ' : ''}${side} position on ${stockTicker}`,
+      summary: `A player took a ${size >= LARGE_TRADE_THRESHOLD ? 'large ' : ''}${side} position on ${stockTicker}`,
       actorIds: [playerId],
       sentiment: side === 'long' ? 0.1 : -0.1,
     });
@@ -222,7 +228,8 @@ export async function handlePlayerTrade(
 }
 
 /**
- * Get NPC IDs affiliated with a stock ticker's organization
+ * Get NPC IDs affiliated with a stock ticker's organization.
+ * Uses StaticDataRegistry to find actors whose affiliations include the organization.
  */
 async function getNpcsAffiliatedWith(stockTicker: string): Promise<string[]> {
   // Get the organization for this ticker
@@ -236,11 +243,13 @@ async function getNpcsAffiliatedWith(stockTicker: string): Promise<string[]> {
     return [];
   }
 
-  // Get all actor states and check for affiliation
-  // Note: In production, we'd have a proper affiliation index
-  // For now, return empty - affiliations are in static data
-  // This will be populated when we integrate with StaticDataRegistry
-  return [];
+  // Find actors affiliated with this organization using static data
+  const allActors = StaticDataRegistry.getAllActors();
+  const affiliatedActorIds = allActors
+    .filter((actor) => actor.affiliations.includes(org.id))
+    .map((actor) => actor.id);
+
+  return affiliatedActorIds;
 }
 
 /**

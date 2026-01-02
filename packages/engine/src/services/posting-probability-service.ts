@@ -8,6 +8,7 @@
 import { type ActorStateRow, actorState, db, eq, inArray } from '@babylon/db';
 import { ACTOR_TIERS, type ActorTier } from '@babylon/shared';
 import { getActivityMultiplier } from './activity-pattern-service';
+import { StaticDataRegistry } from './static-data-registry';
 
 /**
  * Minimal actor interface for posting probability.
@@ -37,6 +38,8 @@ export interface PostingContext {
   activeEvents: Array<{
     questionId: string;
     affectedActorIds: string[];
+    /** Stock tickers affected by this event */
+    affectedStocks?: string[];
   }>;
 }
 
@@ -172,18 +175,30 @@ function hasRelevantActiveEvent(
 
 /**
  * Check if an event affects one of the actor's affiliated organizations.
+ * Maps actor's affiliated org IDs to tickers and checks against event's affected stocks.
  */
 function hasAffiliatedEvent(
   actor: PostingActor,
-  _context: PostingContext
+  context: PostingContext
 ): boolean {
   const affiliations = actor.affiliations ?? [];
   if (affiliations.length === 0) return false;
 
-  // Check if any active event involves actor's affiliations
-  // This would require event data to include affected org IDs
-  // For now, return false - will be enhanced in Phase 4
-  return false;
+  // Get tickers for all affiliated organizations
+  const affiliatedTickers = new Set<string>();
+  for (const orgId of affiliations) {
+    const org = StaticDataRegistry.getOrganization(orgId);
+    if (org?.ticker) {
+      affiliatedTickers.add(org.ticker);
+    }
+  }
+
+  if (affiliatedTickers.size === 0) return false;
+
+  // Check if any active event affects an affiliated organization's stock
+  return context.activeEvents.some((event) =>
+    event.affectedStocks?.some((ticker) => affiliatedTickers.has(ticker))
+  );
 }
 
 /**

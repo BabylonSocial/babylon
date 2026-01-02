@@ -353,6 +353,8 @@ export class NpcMemoryService {
 
   /**
    * Update activity state when NPC takes an action.
+   * Uses optimistic locking with retry to prevent race conditions
+   * when multiple concurrent updates occur.
    */
   async updateActivityState(
     actorId: string,
@@ -361,36 +363,47 @@ export class NpcMemoryService {
       active?: boolean;
     } = {}
   ): Promise<void> {
-    try {
-      const now = new Date();
-      const updates: Partial<{
-        lastPostAt: Date;
-        lastActiveAt: Date;
-        postsToday: number;
-        postsTodayResetAt: Date;
-        updatedAt: Date;
-      }> = {
-        updatedAt: now,
-      };
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const now = new Date();
 
-      if (options.active) {
-        updates.lastActiveAt = now;
-      }
-
-      if (options.posted) {
-        updates.lastPostAt = now;
-
-        // Get current posts today count and check if needs reset
+        // Get current state including updatedAt for optimistic locking
         const [state] = await db
           .select({
             postsToday: actorState.postsToday,
             postsTodayResetAt: actorState.postsTodayResetAt,
+            updatedAt: actorState.updatedAt,
           })
           .from(actorState)
           .where(eq(actorState.id, actorId))
           .limit(1);
 
-        if (state) {
+        if (!state) {
+          logger.warn(
+            `Actor state not found for ${actorId}`,
+            { actorId },
+            'NpcMemoryService'
+          );
+          return;
+        }
+
+        const updates: Partial<{
+          lastPostAt: Date;
+          lastActiveAt: Date;
+          postsToday: number;
+          postsTodayResetAt: Date;
+          updatedAt: Date;
+        }> = {
+          updatedAt: now,
+        };
+
+        if (options.active) {
+          updates.lastActiveAt = now;
+        }
+
+        if (options.posted) {
+          updates.lastPostAt = now;
+
           const resetAt = state.postsTodayResetAt;
           const shouldReset =
             !resetAt || now.getTime() - resetAt.getTime() > 24 * 60 * 60 * 1000;
@@ -402,18 +415,49 @@ export class NpcMemoryService {
             updates.postsToday = (state.postsToday ?? 0) + 1;
           }
         }
-      }
 
-      await db
-        .update(actorState)
-        .set(updates)
-        .where(eq(actorState.id, actorId));
-    } catch (error) {
-      logger.error(
-        `Failed to update activity state for ${actorId}`,
-        { error: error instanceof Error ? error.message : String(error) },
-        'NpcMemoryService'
-      );
+        // Update with optimistic locking
+        const result = await db
+          .update(actorState)
+          .set(updates)
+          .where(
+            and(
+              eq(actorState.id, actorId),
+              eq(actorState.updatedAt, state.updatedAt)
+            )
+          )
+          .returning({ id: actorState.id });
+
+        // If no rows were updated, another process modified the record
+        if (result.length === 0) {
+          if (attempt < MAX_RETRIES - 1) {
+            // Exponential backoff before retry
+            const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            logger.debug(
+              `Activity state update conflict for ${actorId}, retrying (attempt ${attempt + 1})`,
+              { actorId },
+              'NpcMemoryService'
+            );
+            continue;
+          }
+          logger.warn(
+            `Activity state update failed after ${MAX_RETRIES} attempts due to concurrent modification`,
+            { actorId },
+            'NpcMemoryService'
+          );
+          return;
+        }
+
+        return; // Success
+      } catch (error) {
+        logger.error(
+          `Failed to update activity state for ${actorId}`,
+          { error: error instanceof Error ? error.message : String(error) },
+          'NpcMemoryService'
+        );
+        return;
+      }
     }
   }
 

@@ -78,8 +78,9 @@ export function GameOnboardingProvider({
             setShowTooltip(true);
           }
         }
-      } catch {
-        // Silently fail - onboarding is optional
+      } catch (error) {
+        // Onboarding is optional, but log errors for debugging
+        console.error('Failed to fetch onboarding status:', error);
       } finally {
         setIsLoading(false);
       }
@@ -119,8 +120,9 @@ export function GameOnboardingProvider({
           );
         }
       }
-    } catch {
-      // Silently fail
+    } catch (error) {
+      // Onboarding is optional, but log errors for debugging
+      console.error('Failed to complete onboarding step:', error);
     }
   }, []);
 
@@ -130,8 +132,9 @@ export function GameOnboardingProvider({
       await apiFetch('/api/onboarding/game-skip', { method: 'POST' });
       setStatus((prev) => (prev ? { ...prev, isComplete: true } : null));
       setShowTooltip(false);
-    } catch {
-      // Silently fail
+    } catch (error) {
+      // Onboarding is optional, but log errors for debugging
+      console.error('Failed to skip onboarding:', error);
     }
   }, []);
 
