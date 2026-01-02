@@ -116,15 +116,17 @@ export const GET = withErrorHandling(
     );
 
     if (!rateLimit.allowed) {
+      // retryAfter is already in seconds from checkRateLimit
+      const retryAfterSeconds = rateLimit.retryAfter || 60;
       return NextResponse.json(
         {
           error: 'Too many requests',
-          retryAfter: rateLimit.retryAfter,
+          retryAfter: retryAfterSeconds,
         },
         {
           status: 429,
           headers: {
-            'Retry-After': String(Math.ceil((rateLimit.retryAfter || 60000) / 1000)),
+            'Retry-After': String(retryAfterSeconds),
           },
         }
       );

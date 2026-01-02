@@ -82,15 +82,40 @@ const MENTION_BOOST = 1.5;
 const AFFILIATION_BOOST = 1.5;
 
 /**
+ * Build a map of org ID -> ticker for efficient lookup.
+ * Cached at module level since org data is static.
+ */
+let orgIdToTickerMap: Map<string, string> | null = null;
+
+function getOrgIdToTickerMap(): Map<string, string> {
+  if (!orgIdToTickerMap) {
+    orgIdToTickerMap = new Map();
+    const allOrgs = StaticDataRegistry.getAllOrganizations();
+    for (const org of allOrgs) {
+      if (org.ticker) {
+        orgIdToTickerMap.set(org.id.toLowerCase(), org.ticker.toLowerCase());
+      }
+    }
+  }
+  return orgIdToTickerMap;
+}
+
+/**
  * Check if an actor has an affiliated event in the current context.
  * Returns true if:
  * - Actor is directly listed in an event's affectedActorIds
- * - Actor's affiliations overlap with affected stocks
+ * - Actor's org affiliations have tickers that match affected stocks (exact match)
  */
-function hasAffiliatedEvent(actor: PostingActor, context: PostingContext): boolean {
+function hasAffiliatedEvent(
+  actor: PostingActor,
+  context: PostingContext
+): boolean {
   if (context.activeEvents.length === 0) {
     return false;
   }
+
+  // Get the org ID -> ticker map for proper lookup
+  const orgToTicker = getOrgIdToTickerMap();
 
   for (const event of context.activeEvents) {
     // Check if actor is directly affected by the event
@@ -98,15 +123,17 @@ function hasAffiliatedEvent(actor: PostingActor, context: PostingContext): boole
       return true;
     }
 
-    // Check if actor's affiliations overlap with affected stocks
-    if (actor.affiliations && event.affectedStocks) {
+    // Check if actor's org affiliations have tickers that match affected stocks
+    if (actor.affiliations && event.affectedStocks && event.affectedStocks.length > 0) {
+      // Convert affected stocks to lowercase Set for O(1) lookup
+      const affectedStocksLower = new Set(
+        event.affectedStocks.map((s) => s.toLowerCase())
+      );
+
       for (const affiliation of actor.affiliations) {
-        // Affiliations are org IDs, and affected stocks are tickers
-        // We check if any affectedStock matches (simplified check)
-        if (event.affectedStocks.some((stock) => 
-          affiliation.toLowerCase().includes(stock.toLowerCase()) ||
-          stock.toLowerCase().includes(affiliation.toLowerCase())
-        )) {
+        // Look up the ticker for this org ID
+        const ticker = orgToTicker.get(affiliation.toLowerCase());
+        if (ticker && affectedStocksLower.has(ticker)) {
           return true;
         }
       }
@@ -138,9 +165,10 @@ export function calculatePostingProbability(
   }
 
   // Recent post check - spread posts out over time
+  // Use context.currentTime for consistency with the context snapshot
   if (state?.lastPostAt) {
     const hoursSinceLastPost =
-      (Date.now() - state.lastPostAt.getTime()) / (1000 * 60 * 60);
+      (context.currentTime.getTime() - state.lastPostAt.getTime()) / (1000 * 60 * 60);
     if (hoursSinceLastPost < MIN_HOURS_BETWEEN_POSTS) {
       return 0; // Posted too recently
     }
@@ -263,25 +291,48 @@ export const postingProbabilityService = new PostingProbabilityService();
 const RECENT_EVENTS_HOURS = 6;
 
 /**
+ * Cache duration for active events (in milliseconds)
+ * Events don't change frequently, so cache for 2 minutes
+ */
+const ACTIVE_EVENTS_CACHE_MS = 2 * 60 * 1000;
+
+/**
+ * Cached active events result
+ */
+let activeEventsCache: {
+  data: {
+    activeEventQuestionIds: string[];
+    activeEvents: PostingContext['activeEvents'];
+  };
+  timestamp: number;
+} | null = null;
+
+/**
  * Fetch active events for use in PostingContext.
  * Returns events from the last RECENT_EVENTS_HOURS hours.
- * 
+ * Results are cached for ACTIVE_EVENTS_CACHE_MS to reduce DB load.
+ *
  * @returns Object with activeEventQuestionIds and activeEvents arrays
  */
 export async function getActiveEventsForPosting(): Promise<{
   activeEventQuestionIds: string[];
   activeEvents: PostingContext['activeEvents'];
 }> {
-  const now = new Date();
-  const cutoff = new Date(now.getTime() - RECENT_EVENTS_HOURS * 60 * 60 * 1000);
+  const now = Date.now();
+
+  // Return cached result if still valid
+  if (activeEventsCache && now - activeEventsCache.timestamp < ACTIVE_EVENTS_CACHE_MS) {
+    return activeEventsCache.data;
+  }
+
+  const currentDate = new Date();
+  const cutoff = new Date(currentDate.getTime() - RECENT_EVENTS_HOURS * 60 * 60 * 1000);
 
   // Fetch recent world events
   const recentEvents = await db
     .select()
     .from(worldEvents)
-    .where(
-      gte(worldEvents.timestamp, cutoff)
-    )
+    .where(gte(worldEvents.timestamp, cutoff))
     .orderBy(desc(worldEvents.timestamp))
     .limit(50);
 
@@ -309,7 +360,7 @@ export async function getActiveEventsForPosting(): Promise<{
 
   for (const event of recentEvents) {
     const actorIds = (event.actors || []) as string[];
-    
+
     // Collect affected stocks from affiliated actors
     const affectedStocks = new Set<string>();
     for (const actorId of actorIds) {
@@ -330,8 +381,24 @@ export async function getActiveEventsForPosting(): Promise<{
     }
   }
 
-  return {
+  const result = {
     activeEventQuestionIds: Array.from(activeEventQuestionIds),
     activeEvents,
   };
+
+  // Cache the result
+  activeEventsCache = {
+    data: result,
+    timestamp: now,
+  };
+
+  return result;
+}
+
+/**
+ * Clear the active events cache.
+ * Useful for testing or when events are known to have changed.
+ */
+export function clearActiveEventsCache(): void {
+  activeEventsCache = null;
 }
