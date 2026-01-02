@@ -103,9 +103,14 @@ const POSTS_BY_HOUR: [number, number][] = [
 // Article probability scales with active market count
 const ARTICLE_PROB = [0.05, 0.12, 0.18, 0.25, 0.3, 0.35];
 
-/** Get natural post count for hour (biased toward lower end) */
+/**
+ * Get natural post count for hour (biased toward lower end)
+ * @param hour - Hour of day (0-23). Invalid values are clamped to valid range.
+ */
 function getPostCount(hour: number): number {
-  const [min, max] = POSTS_BY_HOUR[hour] ?? [5, 10];
+  // Validate and clamp hour to 0-23 range
+  const validHour = Math.max(0, Math.min(23, Math.floor(hour)));
+  const [min, max] = POSTS_BY_HOUR[validHour] ?? [5, 10];
   return Math.floor(min + secureRandom() * secureRandom() * (max - min));
 }
 

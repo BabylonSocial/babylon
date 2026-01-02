@@ -39,6 +39,7 @@ import {
   getStateBoundaries,
   TIMEFRAME_CONFIGS,
 } from './market-timeframes';
+import { StaticDataRegistry } from './static-data-registry';
 import { subMarketService } from './sub-market-service';
 
 // =============================================================================
@@ -356,16 +357,38 @@ export class TimeframeArcProcessor {
     }
 
     try {
+      // Get affiliated organization data for template variables
+      const affiliatedOrgIds = (market.affiliatedOrgIds as string[]) ?? [];
+      let orgName = 'Organization';
+      let ticker = 'TICK';
+
+      if (affiliatedOrgIds.length > 0) {
+        const org = StaticDataRegistry.getOrganization(affiliatedOrgIds[0]!);
+        if (org) {
+          orgName = org.name;
+          ticker = org.ticker ?? 'TICK';
+        }
+      }
+
+      // Generate threshold based on event type and market category
+      const thresholdMap: Record<string, string> = {
+        price_move: '2',
+        volume_surge: '3',
+        breakout: '5',
+        peak_activity: '4',
+        decisive_move: '3',
+      };
+      const threshold = thresholdMap[eventType] ?? '2';
+
       const result = await subMarketService.trySpawnFromEvent({
         parentMarketId: market.id,
         eventType,
         category: market.category,
         timeframe: market.timeframe,
         templateVars: {
-          // Default template vars - would be populated from actual event data
-          org: 'Organization',
-          ticker: 'TICK',
-          threshold: '2',
+          org: orgName,
+          ticker,
+          threshold,
         },
       });
 

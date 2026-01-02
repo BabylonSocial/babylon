@@ -34,6 +34,7 @@ export * from './npc-group-dynamics-service';
 export * from './npc-interaction-tracker';
 export * from './npc-memory-service';
 export * from './npc-persona-generator';
+export * from './npc-social-engagement-service';
 export * from './player-influence-service';
 export * from './posting-probability-service';
 export * from './reply-rate-limiter';
@@ -71,7 +72,7 @@ export * from './npc-character-config';
 export * from './parody-headline-generator';
 export * from './post-generation-helpers';
 export * from './question-arc-planner';
-
+export * from './story-seed-service';
 // Tag Service
 export {
   type GeneratedTag,
@@ -85,7 +86,7 @@ export {
   storeTagsForPost,
   storeTrendingTags,
 } from './tag-service';
-
+export * from './topic-diversity-service';
 export * from './trending-calculation-service';
 export * from './trending-grouping-service';
 

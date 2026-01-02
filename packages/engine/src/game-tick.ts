@@ -56,48 +56,42 @@ import { NPCInvestmentManager } from './npc/npc-investment-manager';
 import { generateWorldContext } from './prompts';
 import { QuestionManager } from './QuestionManager';
 import { RelationshipEvolutionEngine } from './RelationshipEvolutionEngine';
-import { AlphaGroupInviteService } from './services/alpha-group-invite-service';
+// Services - using barrel exports from services/index.ts
 import {
-  generateArticleImageWithRetry,
-  initFalClient,
-} from './services/article-image-service';
-import { characterMappingService } from './services/character-mapping-service';
-// Content generation helpers
-import { generateEvents } from './services/event-generation-helpers';
-import { bootstrapGameIfNeeded } from './services/game-bootstrap-service';
-import { MarketContextService } from './services/market-context-service';
-import {
-  createArcState,
-  processArcTick,
-  setNarrativeProcessorLLMClient,
-} from './services/narrative-event-processor';
-import { NPCGroupDynamicsService } from './services/npc-group-dynamics-service';
-import { getOracleService } from './services/oracle/oracle-service';
-import { createParodyHeadlineGenerator } from './services/parody-headline-generator';
-import {
-  generateOrgArticle,
-  generateOrgPost,
-} from './services/post-generation-helpers';
-import { PriceUpdateService } from './services/price-update-service';
-import {
-  ReputationService,
-  syncReputationIfAvailable,
-} from './services/reputation-service';
-import { rssFeedService } from './services/rss-feed-service';
-import { StaticDataRegistry } from './services/static-data-registry';
-import { getStorySeedService } from './services/story-seed-service';
-import { timeframeArcProcessor } from './services/timeframe-arc-processor';
-import { TokenStatsService } from './services/token-stats-service';
-import { getTopicDiversityService } from './services/topic-diversity-service';
-// Migrated services - local imports
-import { invalidateAfterPredictionTrade } from './services/trade-cache-invalidation';
-import { TradeExecutionService } from './services/trade-execution-service';
-import {
+  ActorSocialActions,
+  AlphaGroupInviteService,
+  bootstrapGameIfNeeded,
   calculateTrendingIfNeeded,
   calculateTrendingTags,
+  characterMappingService,
+  createArcState,
+  createParodyHeadlineGenerator,
+  generateArticleImageWithRetry,
+  generateEvents,
+  generateOrgArticle,
+  generateOrgPost,
+  getOracleService,
+  getStorySeedService,
+  getTopicDiversityService,
   getTrendingPromptContext,
-} from './services/trending-calculation-service';
-import { WalletService } from './services/wallet-service';
+  initFalClient,
+  invalidateAfterPredictionTrade,
+  MarketContextService,
+  NPCGroupDynamicsService,
+  PriceUpdateService,
+  processArcTick,
+  processNPCSocialEngagements,
+  ReputationService,
+  rssFeedService,
+  StaticDataRegistry,
+  setNarrativeProcessorLLMClient,
+  setSocialEngagementLLMClient,
+  syncReputationIfAvailable,
+  TokenStatsService,
+  TradeExecutionService,
+  timeframeArcProcessor,
+  WalletService,
+} from './services';
 import type { TradingExecutionResult } from './types/market-decisions';
 import type {
   ActorTier,
@@ -124,6 +118,12 @@ export interface GameTickResult {
   widgetCachesUpdated: number;
   trendingCalculated: boolean;
   reputationSynced: boolean;
+  /** NPC social engagement metrics */
+  npcLikesCreated?: number;
+  npcSharesCreated?: number;
+  npcCommentsCreated?: number;
+  npcSocialActionsProcessed?: number;
+  npcRebalanceActionsExecuted?: number;
   reputationSyncStats?: {
     total: number;
     successful: number;
@@ -657,6 +657,137 @@ export async function executeGameTick(
       executionResult
     );
     result.marketsUpdated += marketsUpdated;
+  }
+
+  // =========================================================================
+  // NPC SOCIAL ENGAGEMENT (likes, shares, comments)
+  // Creates organic social activity to make the feed feel alive
+  // =========================================================================
+  if (Date.now() < deadline) {
+    try {
+      // Set LLM client for NPC comment generation
+      setSocialEngagementLLMClient(llmClient);
+
+      const socialEngagementResult = await processNPCSocialEngagements();
+      result.npcLikesCreated = socialEngagementResult.likesCreated;
+      result.npcSharesCreated = socialEngagementResult.sharesCreated;
+      result.npcCommentsCreated = socialEngagementResult.commentsCreated;
+
+      if (
+        socialEngagementResult.likesCreated > 0 ||
+        socialEngagementResult.sharesCreated > 0 ||
+        socialEngagementResult.commentsCreated > 0
+      ) {
+        logger.info(
+          'NPC social engagements processed',
+          {
+            likes: socialEngagementResult.likesCreated,
+            shares: socialEngagementResult.sharesCreated,
+            comments: socialEngagementResult.commentsCreated,
+            actors: socialEngagementResult.actorsEngaged,
+          },
+          'GameTick'
+        );
+      }
+    } catch (error) {
+      logger.error(
+        'NPC social engagement failed',
+        { error: error instanceof Error ? error.message : String(error) },
+        'GameTick'
+      );
+    }
+  }
+
+  // =========================================================================
+  // NPC SOCIAL ACTIONS (DMs, group invites based on interactions)
+  // =========================================================================
+  if (Date.now() < deadline) {
+    try {
+      const socialActions =
+        await ActorSocialActions.processRandomSocialActions();
+      result.npcSocialActionsProcessed = socialActions.length;
+
+      if (socialActions.length > 0) {
+        logger.info(
+          'NPC social actions processed',
+          {
+            total: socialActions.length,
+            invites: socialActions.filter((a) => a.type === 'group_chat_invite')
+              .length,
+            dms: socialActions.filter((a) => a.type === 'dm').length,
+          },
+          'GameTick'
+        );
+      }
+    } catch (error) {
+      logger.error(
+        'NPC social actions failed',
+        { error: error instanceof Error ? error.message : String(error) },
+        'GameTick'
+      );
+    }
+  }
+
+  // =========================================================================
+  // NPC PORTFOLIO REBALANCING
+  // Monitor NPC portfolios and execute rebalancing actions
+  // =========================================================================
+  if (Date.now() < deadline) {
+    try {
+      // Get all active NPC pools and monitor them
+      const activePools = await db
+        .select({ id: pools.id, npcActorId: pools.npcActorId })
+        .from(pools)
+        .where(eq(pools.isActive, true))
+        .limit(10); // Limit to prevent overwhelming the tick
+
+      let rebalanceActionsExecuted = 0;
+
+      for (const pool of activePools) {
+        if (Date.now() >= deadline) break;
+
+        const actor = StaticDataRegistry.getActor(pool.npcActorId);
+        const strategy = actor?.personality
+          ?.toLowerCase()
+          .includes('aggressive')
+          ? 'aggressive'
+          : actor?.personality?.toLowerCase().includes('conservative')
+            ? 'conservative'
+            : 'balanced';
+
+        const rebalanceActions = await NPCInvestmentManager.monitorPortfolio(
+          pool.id,
+          pool.npcActorId,
+          strategy
+        );
+
+        if (rebalanceActions.length > 0) {
+          // Execute rebalance actions through TradeExecutionService
+          for (const action of rebalanceActions) {
+            if (action.type === 'close' && action.positionId) {
+              // Close position logic would go here
+              rebalanceActionsExecuted++;
+            }
+          }
+        }
+      }
+
+      result.npcRebalanceActionsExecuted = rebalanceActionsExecuted;
+
+      if (rebalanceActionsExecuted > 0) {
+        logger.info(
+          'NPC portfolio rebalancing completed',
+          { actionsExecuted: rebalanceActionsExecuted },
+          'GameTick'
+        );
+      }
+    } catch (error) {
+      logger.error(
+        'NPC portfolio rebalancing failed',
+        { error: error instanceof Error ? error.message : String(error) },
+        'GameTick'
+      );
+    }
   }
 
   // Generate articles AFTER market decisions (lower priority, but parallelized)

@@ -25,6 +25,9 @@ import {
   perpPositions,
   positions,
   posts,
+  reactions,
+  shares,
+  sql,
   users,
 } from '@babylon/db';
 import { StaticDataRegistry, WalletService } from '@babylon/engine';
@@ -37,7 +40,9 @@ import { logger } from '../shared/logger';
 import { autonomousBatchResponseService } from './AutonomousBatchResponseService';
 import {
   executeDirectComment,
+  executeDirectLike,
   executeDirectPost,
+  executeDirectRepost,
   executeDirectTrade,
 } from './DirectExecutors';
 import { topicDiversityService } from './TopicDiversityService';
@@ -63,6 +68,7 @@ export interface MultiStepExecutorResult {
     posts: number;
     comments: number;
     messages: number;
+    engagements: number;
   };
   iterations: number;
   trace: ActionTraceResult[];
@@ -127,11 +133,19 @@ export class MultiStepExecutor {
     // Determine enabled features - NPCs have all features enabled by default
     const enabledFeatures: string[] = [];
     if (isNpc) {
-      enabledFeatures.push('trading', 'posting', 'commenting', 'DMs');
+      enabledFeatures.push(
+        'trading',
+        'posting',
+        'commenting',
+        'engaging',
+        'DMs'
+      );
     } else {
       if (config?.autonomousTrading) enabledFeatures.push('trading');
       if (config?.autonomousPosting) enabledFeatures.push('posting');
       if (config?.autonomousCommenting) enabledFeatures.push('commenting');
+      // User-controlled agents can also engage if they can comment
+      if (config?.autonomousCommenting) enabledFeatures.push('engaging');
       if (config?.autonomousDMs) enabledFeatures.push('DMs');
     }
 
@@ -541,11 +555,17 @@ export class MultiStepExecutor {
       }
     }
 
-    // Fetch agent's existing comments on these posts (top-level only)
+    // Fetch agent's existing engagement on these posts
     const postIds = recentPostsRaw.map((p) => p.id);
     const agentComments = new Map<string, string>();
+    const agentLikes = new Set<string>();
+    const agentReposts = new Set<string>();
+    const postLikeCounts = new Map<string, number>();
+    const postRepostCounts = new Map<string, number>();
+    const postCommentCounts = new Map<string, number>();
 
     if (postIds.length > 0) {
+      // Fetch agent's existing comments (top-level only)
       const existingComments = await db
         .select({
           postId: comments.postId,
@@ -566,15 +586,91 @@ export class MultiStepExecutor {
           agentComments.set(comment.postId, comment.content);
         }
       }
+
+      // Fetch agent's existing likes
+      const existingLikes = await db
+        .select({ postId: reactions.postId })
+        .from(reactions)
+        .where(
+          and(
+            inArray(reactions.postId, postIds),
+            eq(reactions.userId, agentUserId),
+            eq(reactions.type, 'like')
+          )
+        );
+
+      for (const like of existingLikes) {
+        if (like.postId) agentLikes.add(like.postId);
+      }
+
+      // Fetch agent's existing reposts
+      const existingReposts = await db
+        .select({ postId: shares.postId })
+        .from(shares)
+        .where(
+          and(inArray(shares.postId, postIds), eq(shares.userId, agentUserId))
+        );
+
+      for (const repost of existingReposts) {
+        agentReposts.add(repost.postId);
+      }
+
+      // Get engagement counts for each post
+      const likeCounts = await db
+        .select({
+          postId: reactions.postId,
+          count: sql<number>`count(*)`,
+        })
+        .from(reactions)
+        .where(
+          and(inArray(reactions.postId, postIds), eq(reactions.type, 'like'))
+        )
+        .groupBy(reactions.postId);
+
+      for (const row of likeCounts) {
+        if (row.postId) postLikeCounts.set(row.postId, Number(row.count));
+      }
+
+      const repostCounts = await db
+        .select({
+          postId: shares.postId,
+          count: sql<number>`count(*)`,
+        })
+        .from(shares)
+        .where(inArray(shares.postId, postIds))
+        .groupBy(shares.postId);
+
+      for (const row of repostCounts) {
+        postRepostCounts.set(row.postId, Number(row.count));
+      }
+
+      const commentCounts = await db
+        .select({
+          postId: comments.postId,
+          count: sql<number>`count(*)`,
+        })
+        .from(comments)
+        .where(
+          and(inArray(comments.postId, postIds), isNull(comments.deletedAt))
+        )
+        .groupBy(comments.postId);
+
+      for (const row of commentCounts) {
+        if (row.postId) postCommentCounts.set(row.postId, Number(row.count));
+      }
     }
 
     return recentPostsRaw.map((p) => ({
       id: p.id,
       authorName: authorNames.get(p.authorId) || 'User',
       content: p.content,
-      commentCount: 0, // Simplified - could add actual count if needed
+      commentCount: postCommentCounts.get(p.id) ?? 0,
+      likeCount: postLikeCounts.get(p.id) ?? 0,
+      repostCount: postRepostCounts.get(p.id) ?? 0,
       timeAgo: getTimeAgo(p.createdAt),
       agentComment: agentComments.get(p.id),
+      agentLiked: agentLikes.has(p.id),
+      agentReposted: agentReposts.has(p.id),
     }));
   }
 
@@ -854,6 +950,78 @@ export class MultiStepExecutor {
         };
       }
 
+      case 'LIKE': {
+        const postId = parameters.postId as string;
+
+        if (!postId) {
+          return {
+            actionType: 'LIKE',
+            success: false,
+            summary: 'Missing required parameter (postId)',
+            error: 'Invalid parameters',
+            parameters,
+            timestamp: Date.now(),
+          };
+        }
+
+        const likeResult = await executeDirectLike({
+          agentUserId,
+          postId,
+        });
+
+        return {
+          actionType: 'LIKE',
+          success: likeResult.success,
+          summary: likeResult.success
+            ? `Liked post ${postId}`
+            : `Like failed: ${likeResult.error}`,
+          result: {
+            success: likeResult.success,
+            liked: likeResult.liked,
+            error: likeResult.error,
+          },
+          parameters,
+          timestamp: Date.now(),
+        };
+      }
+
+      case 'REPOST': {
+        const postId = parameters.postId as string;
+        const comment = parameters.comment as string | undefined;
+
+        if (!postId) {
+          return {
+            actionType: 'REPOST',
+            success: false,
+            summary: 'Missing required parameter (postId)',
+            error: 'Invalid parameters',
+            parameters,
+            timestamp: Date.now(),
+          };
+        }
+
+        const repostResult = await executeDirectRepost({
+          agentUserId,
+          postId,
+          comment,
+        });
+
+        return {
+          actionType: 'REPOST',
+          success: repostResult.success,
+          summary: repostResult.success
+            ? `Reposted ${postId}${comment ? ' with comment' : ''}`
+            : `Repost failed: ${repostResult.error}`,
+          result: {
+            success: repostResult.success,
+            repostId: repostResult.repostId,
+            error: repostResult.error,
+          },
+          parameters,
+          timestamp: Date.now(),
+        };
+      }
+
       case 'RESPOND': {
         // RESPOND still uses the batch service which has its own LLM
         // for deciding WHICH interactions to respond to
@@ -914,6 +1082,7 @@ export class MultiStepExecutor {
       posts: 0,
       comments: 0,
       messages: 0,
+      engagements: 0,
     };
 
     for (const result of trace) {
@@ -934,6 +1103,10 @@ export class MultiStepExecutor {
           break;
         case 'DM':
           counts.messages++;
+          break;
+        case 'LIKE':
+        case 'REPOST':
+          counts.engagements++;
           break;
       }
     }

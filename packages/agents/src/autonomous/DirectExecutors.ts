@@ -22,6 +22,8 @@ import {
   messages,
   positions,
   posts,
+  reactions,
+  shares,
   sql,
 } from '@babylon/db';
 import {
@@ -92,6 +94,29 @@ export interface DirectMessageParams {
 export interface DirectMessageResult {
   success: boolean;
   messageId?: string;
+  error?: string;
+}
+
+export interface DirectLikeParams {
+  agentUserId: string;
+  postId: string;
+}
+
+export interface DirectLikeResult {
+  success: boolean;
+  liked?: boolean;
+  error?: string;
+}
+
+export interface DirectRepostParams {
+  agentUserId: string;
+  postId: string;
+  comment?: string;
+}
+
+export interface DirectRepostResult {
+  success: boolean;
+  repostId?: string;
   error?: string;
 }
 
@@ -815,5 +840,167 @@ export async function executeDirectMessage(
   return {
     success: true,
     messageId,
+  };
+}
+
+// =============================================================================
+// Direct Like Executor
+// =============================================================================
+
+/**
+ * Like a post directly without LLM decision-making.
+ * Includes deduplication to prevent double-liking.
+ */
+export async function executeDirectLike(
+  params: DirectLikeParams
+): Promise<DirectLikeResult> {
+  const { agentUserId, postId } = params;
+
+  // Verify post exists
+  const [post] = await db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .limit(1);
+
+  if (!post) {
+    return { success: false, error: `Post not found: ${postId}` };
+  }
+
+  // Check if already liked
+  const [existingLike] = await db
+    .select({ id: reactions.id })
+    .from(reactions)
+    .where(
+      and(
+        eq(reactions.postId, postId),
+        eq(reactions.userId, agentUserId),
+        eq(reactions.type, 'like')
+      )
+    )
+    .limit(1);
+
+  if (existingLike) {
+    logger.debug(
+      `[DirectExecutor] Agent already liked post ${postId}`,
+      { agentUserId },
+      'DirectExecutors'
+    );
+    return { success: true, liked: true };
+  }
+
+  logger.info(
+    `[DirectExecutor] Liking post ${postId}`,
+    { agentUserId },
+    'DirectExecutors'
+  );
+
+  const reactionId = await generateSnowflakeId();
+
+  await db.insert(reactions).values({
+    id: reactionId,
+    postId,
+    userId: agentUserId,
+    type: 'like',
+    createdAt: new Date(),
+  });
+
+  logger.info(
+    `[DirectExecutor] Post liked: ${postId}`,
+    undefined,
+    'DirectExecutors'
+  );
+
+  return {
+    success: true,
+    liked: true,
+  };
+}
+
+// =============================================================================
+// Direct Repost Executor
+// =============================================================================
+
+/**
+ * Repost/share a post directly without LLM decision-making.
+ * Creates a share record and optionally a quote post.
+ */
+export async function executeDirectRepost(
+  params: DirectRepostParams
+): Promise<DirectRepostResult> {
+  const { agentUserId, postId, comment } = params;
+
+  // Verify post exists
+  const [post] = await db
+    .select({ id: posts.id, authorId: posts.authorId, content: posts.content })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .limit(1);
+
+  if (!post) {
+    return { success: false, error: `Post not found: ${postId}` };
+  }
+
+  // Don't let agents repost their own content
+  if (post.authorId === agentUserId) {
+    return { success: false, error: 'Cannot repost own content' };
+  }
+
+  // Check if already shared
+  const [existingShare] = await db
+    .select({ id: shares.id })
+    .from(shares)
+    .where(and(eq(shares.postId, postId), eq(shares.userId, agentUserId)))
+    .limit(1);
+
+  if (existingShare) {
+    logger.debug(
+      `[DirectExecutor] Agent already reposted ${postId}`,
+      { agentUserId },
+      'DirectExecutors'
+    );
+    return { success: true, repostId: existingShare.id };
+  }
+
+  logger.info(
+    `[DirectExecutor] Reposting post ${postId}`,
+    { agentUserId, hasComment: !!comment },
+    'DirectExecutors'
+  );
+
+  const shareId = await generateSnowflakeId();
+  const now = new Date();
+
+  // Create share record
+  await db.insert(shares).values({
+    id: shareId,
+    userId: agentUserId,
+    postId,
+    createdAt: now,
+  });
+
+  // If there's a quote comment, create a quote post
+  if (comment && comment.trim().length > 0) {
+    const quotePostId = await generateSnowflakeId();
+    await db.insert(posts).values({
+      id: quotePostId,
+      content: comment.trim(),
+      authorId: agentUserId,
+      originalPostId: postId,
+      type: 'repost',
+      timestamp: now,
+      createdAt: now,
+    });
+  }
+
+  logger.info(
+    `[DirectExecutor] Post reposted: ${postId} -> share ${shareId}`,
+    undefined,
+    'DirectExecutors'
+  );
+
+  return {
+    success: true,
+    repostId: shareId,
   };
 }

@@ -16,6 +16,7 @@ import {
   eq,
   gte,
   markets,
+  perpMarketSnapshots,
   positions,
   predictionPriceHistories,
   sql,
@@ -339,10 +340,29 @@ export class MarketMetricsService {
       pricesByOrg.set(p.orgId, existing);
     }
 
-    // Note: PerpMarketSnapshot table provides additional context but may not exist
-    // in all environments. The stockPrices table is the primary data source.
-    // When PerpMarketSnapshot is migrated to all environments, add:
-    // TODO(BAB-5): Add perpMarketSnapshots query once table is in production
+    // Enhance with PerpMarketSnapshot data if available (provides 24h price comparison)
+    const snapshotMap = new Map<string, { price24hAgo: number | null }>();
+    try {
+      const snapshots = await db
+        .select({
+          organizationId: perpMarketSnapshots.organizationId,
+          price24hAgo: perpMarketSnapshots.price24hAgo,
+        })
+        .from(perpMarketSnapshots);
+
+      for (const snapshot of snapshots) {
+        snapshotMap.set(snapshot.organizationId, {
+          price24hAgo: snapshot.price24hAgo,
+        });
+      }
+    } catch {
+      // Table may not exist in all environments - continue without snapshot data
+      logger.debug(
+        'PerpMarketSnapshot table not available, using stockPrices only',
+        undefined,
+        'MarketMetrics'
+      );
+    }
 
     const metrics: PerpMarketMetrics[] = [];
 
@@ -354,9 +374,14 @@ export class MarketMetricsService {
 
       const currentPrice = prices[0]!.price;
       const oldestPrice = prices[prices.length - 1]!.price;
+
+      // Use 24h ago price from snapshot if available (more accurate)
+      const snapshot = snapshotMap.get(orgId);
+      const referencePrice = snapshot?.price24hAgo ?? oldestPrice;
+
       const priceChangePercent =
-        oldestPrice > 0
-          ? ((currentPrice - oldestPrice) / oldestPrice) * 100
+        referencePrice > 0
+          ? ((currentPrice - referencePrice) / referencePrice) * 100
           : 0;
 
       const volatility = this.calculateVolatility(

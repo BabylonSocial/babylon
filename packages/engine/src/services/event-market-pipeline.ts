@@ -13,6 +13,7 @@ import {
   type StructuredEventData,
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { secureRandom } from '../utils/entropy';
 
 /**
  * Magnitude multipliers for market impacts
@@ -167,8 +168,9 @@ export function calculateCurrentPrice(
   }
 
   // Apply sentiment-based volatility (small random component)
+  // Uses secureRandom for deterministic testing and to prevent manipulation
   const volatility = (Math.abs(sentiment) / 100) * 0.02;
-  const noise = (Math.random() - 0.5) * 2 * volatility;
+  const noise = (secureRandom() - 0.5) * 2 * volatility;
   price *= 1 + noise;
 
   return price;

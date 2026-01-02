@@ -438,8 +438,8 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
 
           if (positionsRes.ok) {
             const positionsJson = await positionsRes.json();
-            setPredictions(positionsJson.predictions.positions);
-            setPerps(positionsJson.perpetuals.positions);
+            setPredictions(positionsJson.predictions?.positions ?? []);
+            setPerps(positionsJson.perpetuals?.positions ?? []);
           }
         }}
       />

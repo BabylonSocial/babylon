@@ -98,12 +98,15 @@ export async function GET(
     orderBy: { createdDate: 'asc' },
   });
 
-  // Get all posts from this time period
-  // TODO: Add relatedQuestion field to Post model for better filtering
+  // Get all posts from this time period, filtered by related question if available
+  const questionNumbers = questions.map((q) => q.questionNumber);
   const posts = await db.post.findMany({
     where: {
       gameId: gameId,
-      // relatedQuestion: { in: questions.map(q => q.questionNumber) }  // TODO: Add field
+      OR: [
+        { relatedQuestion: { in: questionNumbers } },
+        { relatedQuestion: null }, // Include posts without question association
+      ],
     },
     select: {
       id: true,
@@ -113,13 +116,18 @@ export async function GET(
       dayNumber: true,
       sentiment: true,
       createdAt: true,
+      relatedQuestion: true,
     },
     orderBy: { createdAt: 'asc' },
   });
 
-  // Group posts by question (simplified for now):
+  // Group posts by question
   const questionData = questions.map((q) => {
-    const questionPosts = posts; // TODO: Filter by relatedQuestion when field added
+    // Filter posts to those related to this question, or all posts if no relatedQuestion set
+    const questionPosts = posts.filter(
+      (p) =>
+        p.relatedQuestion === q.questionNumber || p.relatedQuestion === null
+    );
 
     return {
       questionId: q.questionNumber,

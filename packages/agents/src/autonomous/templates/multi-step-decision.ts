@@ -46,9 +46,15 @@ export interface PostContext {
   authorName: string;
   content: string;
   commentCount: number;
+  likeCount: number;
+  repostCount: number;
   timeAgo: string;
   /** Agent's existing comment on this post, if any */
   agentComment?: string;
+  /** Whether agent already liked this post */
+  agentLiked?: boolean;
+  /** Whether agent already reposted this post */
+  agentReposted?: boolean;
 }
 
 export interface PendingInteraction {
@@ -166,6 +172,7 @@ ${NPC_POST_QUALITY_RULES}
   const canTrade = context.enabledFeatures.includes('trading');
   const canComment = context.enabledFeatures.includes('commenting');
   const canRespondDMs = context.enabledFeatures.includes('DMs');
+  const canEngage = context.enabledFeatures.includes('engaging');
 
   // Build conditional sections (only show context for enabled features)
   const tradingSection = canTrade
@@ -227,6 +234,8 @@ ${canComment ? '5. **COMMENT on the feed**: Look at Recent Posts above - reply t
 ${canTrade ? '- **TRADE**: Take a position on a market' : ''}
 ${context.enabledFeatures.includes('posting') ? '- **POST**: Share your take on events, markets, or anything' : ''}
 ${canComment ? "- **COMMENT**: Reply to someone's post from the feed above (use postId)" : ''}
+${canEngage ? '- **LIKE**: Show appreciation for a post you agree with or find interesting' : ''}
+${canEngage ? "- **REPOST**: Share someone else's post (optionally with your own take)" : ''}
 ${canRespondDMs ? '- **RESPOND**: Reply to pending DMs/mentions if you have any' : ''}
 
 ${
@@ -258,7 +267,7 @@ Examples:
 # Output Format (JSON only, no markdown)
 {
   "thought": "Brief reasoning for this decision",
-  "action": "${[canTrade ? 'TRADE' : '', context.enabledFeatures.includes('posting') ? 'POST' : '', canComment ? 'COMMENT' : '', canRespondDMs ? 'RESPOND' : '', '""'].filter(Boolean).join(' | ')}",
+  "action": "${[canTrade ? 'TRADE' : '', context.enabledFeatures.includes('posting') ? 'POST' : '', canComment ? 'COMMENT' : '', canEngage ? 'LIKE' : '', canEngage ? 'REPOST' : '', canRespondDMs ? 'RESPOND' : '', '""'].filter(Boolean).join(' | ')}",
   "parameters": { /* action-specific, see below */ },
   "isFinish": false
 }
@@ -303,6 +312,21 @@ COMMENT:
   "postId": "exact_post_id_from_list",
   "content": "Your comment (1-2 sentences)",
   "parentCommentId": "optional_if_replying_to_comment"
+}`
+    : ''
+}
+${
+  canEngage
+    ? `
+LIKE:
+{
+  "postId": "exact_post_id_from_list"
+}
+
+REPOST:
+{
+  "postId": "exact_post_id_from_list",
+  "comment": "optional quote comment (your take on the content)"
 }`
     : ''
 }
@@ -385,15 +409,23 @@ function formatRecentPosts(posts: PostContext[]): string {
   return posts
     .map((p, idx) => {
       // Use short index for display, store real ID for parameters
-      const baseInfo = `- Post #${idx + 1} (id: ${p.id}) @${p.authorName} (${p.timeAgo}): "${p.content.substring(0, 80)}${p.content.length > 80 ? '...' : ''}" (${p.commentCount} comments)`;
+      const engagementStats = `💬${p.commentCount} ❤️${p.likeCount ?? 0} 🔁${p.repostCount ?? 0}`;
+      const baseInfo = `- Post #${idx + 1} (id: ${p.id}) @${p.authorName} (${p.timeAgo}): "${p.content.substring(0, 80)}${p.content.length > 80 ? '...' : ''}" [${engagementStats}]`;
 
-      // Show agent's existing comment if any
+      // Show agent's existing engagement
+      const engagementNotes: string[] = [];
+      if (p.agentLiked) engagementNotes.push('liked');
+      if (p.agentReposted) engagementNotes.push('reposted');
       if (p.agentComment) {
         const truncatedComment =
           p.agentComment.length > 60
             ? `${p.agentComment.substring(0, 60)}...`
             : p.agentComment;
-        return `${baseInfo}\n    [Already commented: "${truncatedComment}"]`;
+        engagementNotes.push(`commented: "${truncatedComment}"`);
+      }
+
+      if (engagementNotes.length > 0) {
+        return `${baseInfo}\n    [Already: ${engagementNotes.join(', ')}]`;
       }
 
       return baseInfo;
@@ -419,6 +451,13 @@ function formatAvailableActions(enabledFeatures: string[]): string {
   if (enabledFeatures.includes('trading')) {
     actions.push(
       '- TRADE: Buy/sell on prediction markets (buy_yes/buy_no) or perps (open_long/open_short)'
+    );
+  }
+
+  if (enabledFeatures.includes('engaging')) {
+    actions.push('- LIKE: Like a post you agree with or find interesting');
+    actions.push(
+      "- REPOST: Share/repost someone else's content (optionally with a quote comment)"
     );
   }
 
