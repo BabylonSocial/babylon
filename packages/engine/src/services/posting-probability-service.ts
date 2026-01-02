@@ -1,14 +1,13 @@
 /**
  * Posting Probability Service
  *
- * Calculates the probability that an NPC should post in a given tick.
- * Combines multiple factors: tier, activity patterns, recency, events, mentions.
+ * SIMPLIFIED: Equal probability for all NPCs with spam prevention.
+ * Tier affects post quality/voice, not posting frequency.
+ * Entropy > elaborate probability math.
  */
 
 import { type ActorStateRow, actorState, db, eq, inArray } from '@babylon/db';
-import { ACTOR_TIERS, type ActorTier } from '@babylon/shared';
-import { getActivityMultiplier } from './activity-pattern-service';
-import { StaticDataRegistry } from './static-data-registry';
+import { type ActorTier } from '@babylon/shared';
 
 /**
  * Minimal actor interface for posting probability.
@@ -44,161 +43,66 @@ export interface PostingContext {
 }
 
 /**
- * Base probability by tier.
- * S_TIER posts most frequently, C_TIER least.
+ * SIMPLIFIED: Equal base probability for all tiers.
+ * All NPCs have equal chance to post - creates natural entropy.
  */
-const BASE_PROBABILITY: Record<ActorTier, number> = {
-  [ACTOR_TIERS.S_TIER]: 0.35,
-  [ACTOR_TIERS.A_TIER]: 0.22,
-  [ACTOR_TIERS.B_TIER]: 0.12,
-  [ACTOR_TIERS.C_TIER]: 0.06,
-};
+const BASE_PROBABILITY = 0.5;
 
 /**
- * Maximum posts per day per NPC to prevent spam
+ * Maximum posts per day per NPC to prevent spam.
+ * Same for all tiers - fair rotation.
  */
-const MAX_POSTS_PER_DAY: Record<ActorTier, number> = {
-  [ACTOR_TIERS.S_TIER]: 8,
-  [ACTOR_TIERS.A_TIER]: 5,
-  [ACTOR_TIERS.B_TIER]: 3,
-  [ACTOR_TIERS.C_TIER]: 2,
-};
+const MAX_POSTS_PER_DAY = 4;
 
 /**
- * Probability multiplier constants.
- * Extracted for clarity and ease of tuning.
+ * Minimum hours between posts for same NPC.
+ * Prevents same NPC posting multiple times per tick.
  */
+const MIN_HOURS_BETWEEN_POSTS = 1;
 
-/** Maximum recency boost when actor hasn't posted recently */
-const RECENCY_BOOST_MAX = 2.5;
-
-/** Hours over which recency boost grows from 1.0 to max */
-const RECENCY_BOOST_HOURS = 6;
-
-/** Default hours since last post when no data available */
-const DEFAULT_HOURS_SINCE_LAST_POST = 24;
-
-/** Boost when relevant event just occurred */
-const EVENT_BOOST_MULTIPLIER = 1.8;
-
-/** Boost when actor was mentioned by player/NPC recently */
-const MENTION_BOOST_MULTIPLIER = 2.5;
-
-/** Boost when event affects actor's affiliated organization */
-const AFFILIATION_BOOST_MULTIPLIER = 1.5;
-
-/** Maximum probability cap to preserve randomness */
-const MAX_PROBABILITY_CAP = 0.95;
+/**
+ * Boost when actor was mentioned by player (keeps engagement reactive)
+ */
+const MENTION_BOOST = 1.5;
 
 /**
  * Calculate posting probability for an NPC.
  *
- * Formula:
- *   base (tier) × time multiplier × recency boost × event boost × mention boost
+ * SIMPLIFIED formula:
+ *   base × spam_check × mention_boost
  *
- * Capped at 0.95 to always allow some randomness.
+ * All NPCs have equal base chance. Spam prevention keeps it fair.
  */
 export function calculatePostingProbability(
   actor: PostingActor,
   state: ActorStateRow | null,
   context: PostingContext
 ): number {
-  const tier = actor.tier ?? ACTOR_TIERS.B_TIER;
-
-  // Check daily post cap
-  const maxPosts = MAX_POSTS_PER_DAY[tier];
   const postsToday = state?.postsToday ?? 0;
-  if (postsToday >= maxPosts) {
-    return 0; // Hit daily cap
+
+  // Daily cap check - prevent any single NPC from dominating
+  if (postsToday >= MAX_POSTS_PER_DAY) {
+    return 0;
   }
 
-  // Base probability from tier
-  let prob = BASE_PROBABILITY[tier];
-
-  // Time multiplier from activity patterns
-  const timeMultiplier = getActivityMultiplier(actor, context.currentTime);
-  prob *= timeMultiplier;
-
-  // Recency boost: longer since last post = higher chance
-  const hoursSinceLastPost = getHoursSince(state?.lastPostAt ?? null);
-  // Boost grows from 1.0 to max over configured hours
-  const recencyBoost = Math.min(
-    1.0 + hoursSinceLastPost / RECENCY_BOOST_HOURS,
-    RECENCY_BOOST_MAX
-  );
-  prob *= recencyBoost;
-
-  // Event boost: if a relevant event just occurred
-  if (hasRelevantActiveEvent(actor, context)) {
-    prob *= EVENT_BOOST_MULTIPLIER;
-  }
-
-  // Mention boost: if mentioned by player/NPC recently
-  if (context.recentlyMentionedActorIds.includes(actor.id)) {
-    prob *= MENTION_BOOST_MULTIPLIER;
-  }
-
-  // Affiliation boost: if event affects actor's organization
-  if (hasAffiliatedEvent(actor, context)) {
-    prob *= AFFILIATION_BOOST_MULTIPLIER;
-  }
-
-  // Cap at configured maximum
-  return Math.min(prob, MAX_PROBABILITY_CAP);
-}
-
-/**
- * Calculate hours since a timestamp.
- * Returns default if null.
- */
-function getHoursSince(timestamp: Date | null): number {
-  if (!timestamp) {
-    return DEFAULT_HOURS_SINCE_LAST_POST;
-  }
-  const now = new Date();
-  const diffMs = now.getTime() - timestamp.getTime();
-  return diffMs / (1000 * 60 * 60);
-}
-
-/**
- * Check if there's an active event relevant to this actor's domain.
- */
-function hasRelevantActiveEvent(
-  actor: PostingActor,
-  context: PostingContext
-): boolean {
-  // Check if actor is directly affected by any active event
-  return context.activeEvents.some((event) =>
-    event.affectedActorIds.includes(actor.id)
-  );
-}
-
-/**
- * Check if an event affects one of the actor's affiliated organizations.
- * Maps actor's affiliated org IDs to tickers and checks against event's affected stocks.
- */
-function hasAffiliatedEvent(
-  actor: PostingActor,
-  context: PostingContext
-): boolean {
-  const affiliations = actor.affiliations ?? [];
-  if (affiliations.length === 0) return false;
-
-  // Get tickers for all affiliated organizations
-  const affiliatedTickers = new Set<string>();
-  for (const orgId of affiliations) {
-    const org = StaticDataRegistry.getOrganization(orgId);
-    if (org?.ticker) {
-      affiliatedTickers.add(org.ticker);
+  // Recent post check - spread posts out over time
+  if (state?.lastPostAt) {
+    const hoursSinceLastPost =
+      (Date.now() - state.lastPostAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceLastPost < MIN_HOURS_BETWEEN_POSTS) {
+      return 0; // Posted too recently
     }
   }
 
-  if (affiliatedTickers.size === 0) return false;
+  // Base probability - equal for all
+  let prob = BASE_PROBABILITY;
 
-  // Check if any active event affects an affiliated organization's stock
-  return context.activeEvents.some((event) =>
-    event.affectedStocks?.some((ticker) => affiliatedTickers.has(ticker))
-  );
+  // Mention boost - keep this for player engagement reactivity
+  if (context.recentlyMentionedActorIds.includes(actor.id)) {
+    prob *= MENTION_BOOST;
+  }
+
+  return Math.min(prob, 1.0);
 }
 
 /**

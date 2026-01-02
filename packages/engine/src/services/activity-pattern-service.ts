@@ -1,8 +1,10 @@
 /**
  * Activity Pattern Service
  *
- * Derives activity patterns (sleep schedules, peak hours) from NPC
- * domain and personality to make posting behavior feel organic.
+ * SIMPLIFIED: Hour-based rotation to spread actors across the day.
+ * Each actor is assigned to a "shift" based on their ID hash.
+ * Active for 8 hours, rotating through 24 hours.
+ * This ensures all 140+ actors get fair coverage without timezone complexity.
  */
 
 /**
@@ -16,12 +18,12 @@ export interface ActivityActor {
 }
 
 /**
- * Activity pattern for an NPC
+ * Activity pattern for an NPC (simplified)
  */
 export interface ActivityPattern {
   /** IANA timezone string */
   timezone: string;
-  /** Hours when most active (0-23 in local time) */
+  /** Hours when most active (0-23) */
   peakHours: number[];
   /** Whether the NPC is active late night */
   nightOwl: boolean;
@@ -32,225 +34,78 @@ export interface ActivityPattern {
 }
 
 /**
- * Default activity pattern for unknown domains
+ * Hours each actor is active per day.
+ * 8 hours = 1/3 of actors active at any time = ~47 actors from 140.
  */
-const DEFAULT_PATTERN: ActivityPattern = {
-  timezone: 'UTC',
-  peakHours: [9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21],
-  nightOwl: false,
-  workaholic: false,
-  weekendActive: true,
-};
+const ACTIVE_HOURS_PER_DAY = 8;
 
 /**
- * Domain-based activity patterns
- * Reflects real-world posting behavior of different industries
+ * Simple hash function to get a number from actor ID.
+ * Used to deterministically assign actors to time slots.
  */
-const DOMAIN_PATTERNS: Record<string, Partial<ActivityPattern>> = {
-  // Tech industry: West coast, work late, very online
-  tech: {
-    timezone: 'America/Los_Angeles',
-    peakHours: [10, 11, 12, 14, 15, 16, 21, 22, 23],
-    nightOwl: true,
-    workaholic: true,
-    weekendActive: true,
-  },
-
-  // Finance: East coast, early risers, markets hours
-  finance: {
-    timezone: 'America/New_York',
-    peakHours: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-    nightOwl: false,
-    workaholic: true,
-    weekendActive: false,
-  },
-
-  // Media/Entertainment: Varied, evening heavy
-  media: {
-    timezone: 'America/New_York',
-    peakHours: [9, 10, 11, 12, 17, 18, 19, 20, 21, 22],
-    nightOwl: true,
-    workaholic: false,
-    weekendActive: true,
-  },
-
-  // Crypto: 24/7, UTC, very night owl
-  crypto: {
-    timezone: 'UTC',
-    peakHours: [0, 1, 2, 8, 9, 10, 11, 12, 14, 15, 16, 20, 21, 22, 23],
-    nightOwl: true,
-    workaholic: true,
-    weekendActive: true,
-  },
-
-  // Politics: East coast, news cycle driven
-  politics: {
-    timezone: 'America/New_York',
-    peakHours: [7, 8, 9, 10, 11, 12, 17, 18, 19, 20, 21],
-    nightOwl: false,
-    workaholic: true,
-    weekendActive: false,
-  },
-
-  // AI/Research: Academic hours with late night research
-  ai: {
-    timezone: 'America/Los_Angeles',
-    peakHours: [9, 10, 11, 14, 15, 16, 21, 22, 23, 0],
-    nightOwl: true,
-    workaholic: true,
-    weekendActive: true,
-  },
-
-  // Gaming/Entertainment: Evening and night heavy
-  gaming: {
-    timezone: 'America/Los_Angeles',
-    peakHours: [12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 0, 1],
-    nightOwl: true,
-    workaholic: false,
-    weekendActive: true,
-  },
-
-  // Sports: Event driven, evening
-  sports: {
-    timezone: 'America/New_York',
-    peakHours: [11, 12, 13, 18, 19, 20, 21, 22, 23],
-    nightOwl: true,
-    workaholic: false,
-    weekendActive: true,
-  },
-
-  // Business/Startup: All hours, hustle culture
-  business: {
-    timezone: 'America/New_York',
-    peakHours: [7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 20, 21],
-    nightOwl: false,
-    workaholic: true,
-    weekendActive: true,
-  },
-
-  // Science: Academic schedule
-  science: {
-    timezone: 'America/New_York',
-    peakHours: [9, 10, 11, 12, 14, 15, 16, 17],
-    nightOwl: false,
-    workaholic: true,
-    weekendActive: false,
-  },
-};
-
-/**
- * Get timezone offset in hours for a timezone name.
- * Uses Intl.DateTimeFormat to correctly handle DST.
- *
- * @param timezone IANA timezone string (e.g., 'America/New_York')
- * @param date Date to get offset for (defaults to now)
- * @returns Offset in hours from UTC (negative for west, positive for east)
- */
-function getTimezoneOffset(timezone: string, date: Date = new Date()): number {
-  try {
-    // Get UTC and local time strings for comparison
-    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzDate = new Date(
-      date.toLocaleString('en-US', { timeZone: timezone })
-    );
-    // Calculate offset in hours
-    const offsetMs = tzDate.getTime() - utcDate.getTime();
-    return offsetMs / (1000 * 60 * 60);
-  } catch {
-    // Invalid timezone, return 0 (UTC)
-    return 0;
+function hashActorId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    const char = id.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
   }
+  return Math.abs(hash);
+}
+
+/**
+ * Get the hours an actor is active based on their ID.
+ * Spreads actors evenly across the 24-hour day.
+ */
+function getActorActiveHours(actorId: string): number[] {
+  // Hash ID to get starting hour (0-23)
+  const startHour = hashActorId(actorId) % 24;
+
+  // Generate 8 consecutive hours (wrapping around midnight)
+  const hours: number[] = [];
+  for (let i = 0; i < ACTIVE_HOURS_PER_DAY; i++) {
+    hours.push((startHour + i) % 24);
+  }
+  return hours;
 }
 
 /**
  * Convert UTC hour to local hour for a timezone.
- * Accounts for DST using the provided date.
- *
- * @param utcHour Hour in UTC (0-23)
- * @param timezone IANA timezone string
- * @param date Date to use for DST calculation (defaults to now)
+ * Kept for API compatibility.
  */
 export function convertToLocalHour(
   utcHour: number,
-  timezone: string,
-  date: Date = new Date()
+  _timezone: string,
+  _date: Date = new Date()
 ): number {
-  const offset = getTimezoneOffset(timezone, date);
-  let localHour = (utcHour + offset) % 24;
-  if (localHour < 0) {
-    localHour += 24;
-  }
-  return localHour;
+  return utcHour;
 }
 
 /**
  * Derive activity pattern from actor data.
- * Uses domain as primary signal, with personality modifiers.
+ * Uses actor ID to determine their active hours.
  */
 export function deriveActivityPattern(actor: ActivityActor): ActivityPattern {
-  // Get primary domain (first in list)
-  const primaryDomain = actor.domain?.[0]?.toLowerCase() ?? 'crypto';
-
-  // Get base pattern from domain
-  const domainPattern = DOMAIN_PATTERNS[primaryDomain];
-  const basePattern = { ...DEFAULT_PATTERN, ...domainPattern };
-
-  // Apply personality modifiers
-  const personality = actor.personality?.toLowerCase() ?? '';
-
-  // Night owl personalities
-  if (
-    personality.includes('degen') ||
-    personality.includes('chaotic') ||
-    personality.includes('manic')
-  ) {
-    basePattern.nightOwl = true;
-    // Add late night hours
-    if (!basePattern.peakHours.includes(23)) basePattern.peakHours.push(23);
-    if (!basePattern.peakHours.includes(0)) basePattern.peakHours.push(0);
-    if (!basePattern.peakHours.includes(1)) basePattern.peakHours.push(1);
-  }
-
-  // Workaholic personalities
-  if (
-    personality.includes('ambitious') ||
-    personality.includes('driven') ||
-    personality.includes('workaholic')
-  ) {
-    basePattern.workaholic = true;
-    basePattern.weekendActive = true;
-  }
-
-  // Professional/corporate personalities - more regular hours
-  if (
-    personality.includes('professional') ||
-    personality.includes('corporate') ||
-    personality.includes('formal')
-  ) {
-    basePattern.nightOwl = false;
-    basePattern.peakHours = basePattern.peakHours.filter(
-      (h) => h >= 8 && h <= 18
-    );
-  }
-
-  return basePattern;
+  return {
+    timezone: 'UTC',
+    peakHours: getActorActiveHours(actor.id),
+    nightOwl: true,
+    workaholic: true,
+    weekendActive: true,
+  };
 }
 
 /**
  * Check if an NPC is in their active hours right now.
- *
- * @param actor Actor to check
- * @param utcHour Hour in UTC (0-23)
- * @param date Date to use for DST calculation (defaults to now)
+ * Based on simple hour rotation from actor ID hash.
  */
 export function isActiveHour(
   actor: ActivityActor,
   utcHour: number,
-  date: Date = new Date()
+  _date: Date = new Date()
 ): boolean {
-  const pattern = deriveActivityPattern(actor);
-  const localHour = convertToLocalHour(utcHour, pattern.timezone, date);
-  return pattern.peakHours.includes(localHour);
+  const activeHours = getActorActiveHours(actor.id);
+  return activeHours.includes(utcHour);
 }
 
 /**
@@ -263,47 +118,14 @@ export function isWeekend(date: Date = new Date()): boolean {
 
 /**
  * Get activity multiplier for an NPC at current time.
- * Returns 0-1 indicating how likely they are to be active.
- * Correctly handles DST for the given date.
+ * Returns 1.0 if in active hours, 0.0 otherwise.
  */
 export function getActivityMultiplier(
   actor: ActivityActor,
   date: Date = new Date()
 ): number {
-  const pattern = deriveActivityPattern(actor);
   const utcHour = date.getUTCHours();
-  const localHour = convertToLocalHour(utcHour, pattern.timezone, date);
-
-  // Base: Are they in peak hours?
-  const inPeakHours = pattern.peakHours.includes(localHour);
-
-  // Weekend modifier
-  const weekend = isWeekend(date);
-  if (weekend && !pattern.weekendActive) {
-    return inPeakHours ? 0.3 : 0.1;
-  }
-
-  // Night hours (local 0-6)
-  const isNightTime = localHour >= 0 && localHour < 6;
-  if (isNightTime && !pattern.nightOwl) {
-    return 0.05; // Very unlikely to post
-  }
-
-  // Return multiplier
-  if (inPeakHours) {
-    return 1.0;
-  }
-
-  // Adjacent to peak hours
-  const adjacentToPeak = pattern.peakHours.some(
-    (h) => Math.abs(h - localHour) === 1 || Math.abs(h - localHour) === 23
-  );
-  if (adjacentToPeak) {
-    return 0.5;
-  }
-
-  // Off-peak
-  return 0.2;
+  return isActiveHour(actor, utcHour, date) ? 1.0 : 0.0;
 }
 
 /**

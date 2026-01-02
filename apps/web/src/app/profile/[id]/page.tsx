@@ -200,7 +200,7 @@ export default function ActorProfilePage() {
           description: user.bio || '',
           role: user.isActor ? 'Actor' : 'User',
           type: user.isActor ? 'actor' : ('user' as const),
-          isUser: true, // Show ProfileWidget for all users including actors/NPCs
+          isUser: true,
           username: user.username,
           profileImageUrl: user.profileImageUrl,
           coverImageUrl: user.coverImageUrl,
@@ -212,8 +212,11 @@ export default function ActorProfilePage() {
           const cleanUsername = user.username.startsWith('@')
             ? user.username.slice(1)
             : user.username;
-          router.replace(`/profile/${cleanUsername}`);
-          return;
+          // Only redirect if we're not already on the target URL
+          if (cleanUsername !== actorId) {
+            router.replace(`/profile/${cleanUsername}`);
+            return;
+          }
         }
 
         setLoading(false);
@@ -246,7 +249,7 @@ export default function ActorProfilePage() {
             description: user.bio || '',
             role: user.isActor ? 'Actor' : 'User',
             type: user.isActor ? 'actor' : ('user' as const),
-            isUser: true, // Show ProfileWidget for all users including actors/NPCs
+            isUser: true,
             username: user.username,
             profileImageUrl: user.profileImageUrl,
             coverImageUrl: user.coverImageUrl,
@@ -258,8 +261,11 @@ export default function ActorProfilePage() {
             const cleanUsername = user.username.startsWith('@')
               ? user.username.slice(1)
               : user.username;
-            router.replace(`/profile/${cleanUsername}`);
-            return;
+            // Only redirect if we're not already on the target URL
+            if (cleanUsername !== actorId) {
+              router.replace(`/profile/${cleanUsername}`);
+              return;
+            }
           }
 
           setLoading(false);
@@ -269,13 +275,20 @@ export default function ActorProfilePage() {
     }
 
     // Try to load from API endpoint (uses optimized server-side loader)
-    const response = await fetch('/api/actors');
-    if (!response.ok) throw new Error('Failed to load actors');
-
-    const actorsDb = (await response.json()) as {
-      actors?: Actor[];
-      organizations?: Organization[];
+    let actorsDb: { actors?: Actor[]; organizations?: Organization[] } = {
+      actors: [],
+      organizations: [],
     };
+    try {
+      const response = await fetch('/api/actors');
+      if (response.ok) {
+        actorsDb = await response.json();
+      } else {
+        console.error('Failed to load actors:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching actors:', error);
+    }
 
     // Find actor by id, username, or name
     let actor = actorsDb.actors?.find((a) => a.id === actorId);
@@ -333,7 +346,6 @@ export default function ActorProfilePage() {
         affiliations: actor.affiliations,
         role: actor.role || actor.tier || 'Actor',
         type: 'actor' as const,
-        isUser: true, // Show ProfileWidget for actors
         game: gameId ? { id: gameId } : undefined,
         username: ('username' in actor
           ? (actor.username as string)
@@ -376,7 +388,6 @@ export default function ActorProfilePage() {
         description: org.description,
         profileDescription: org.profileDescription,
         type: 'organization' as const,
-        isUser: true, // Show ProfileWidget for organizations
         role: 'Organization',
         stats,
       });
@@ -970,8 +981,8 @@ export default function ActorProfilePage() {
           </div>
         </div>
 
-        {/* Widget Sidebar - Show for all user profiles */}
-        {actorInfo && actorInfo.isUser && (
+        {/* Widget Sidebar - Show for all profiles (users, actors, organizations) */}
+        {actorInfo && (
           <div className="hidden w-96 flex-shrink-0 flex-col overflow-y-auto bg-sidebar p-4 xl:flex">
             <ProfileWidget userId={actorInfo.id} />
           </div>

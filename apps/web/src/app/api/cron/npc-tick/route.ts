@@ -54,8 +54,9 @@ export const dynamic = 'force-dynamic';
 /**
  * Number of NPCs to process per tick (rotates through all).
  * Configurable via NPC_TICK_BATCH_SIZE environment variable.
+ * Default increased to 40 for better coverage across 140+ NPCs.
  */
-const NPCS_PER_TICK = Number(process.env.NPC_TICK_BATCH_SIZE) || 20;
+const NPCS_PER_TICK = Number(process.env.NPC_TICK_BATCH_SIZE) || 40;
 
 /**
  * Maximum consecutive errors before aborting the tick (circuit breaker).
@@ -212,17 +213,17 @@ export async function POST(_req: NextRequest) {
   const actorIds = allNpcs.map((a) => a.id);
   const stateMap = await postingProbabilityService.getStateMap(actorIds);
 
-  // Filter to "awake" NPCs (in their active hours)
-  const awakeNpcs = allNpcs.filter((npc) => isActiveHour(npc, currentHour));
+  // Filter to NPCs in their active hours (simple ID-based rotation, ~1/3 active at any time)
+  const activeNpcs = allNpcs.filter((npc) => isActiveHour(npc, currentHour));
 
   logger.info(
-    `${awakeNpcs.length}/${allNpcs.length} NPCs are in active hours`,
-    { currentHour, awakeCount: awakeNpcs.length },
+    `${activeNpcs.length}/${allNpcs.length} NPCs active this hour (ID-based rotation)`,
+    { currentHour, activeCount: activeNpcs.length },
     'NPCTick'
   );
 
-  // Calculate probability for each awake NPC
-  const candidates = awakeNpcs.map((npc) => ({
+  // Calculate probability for each active NPC (equal chance with spam prevention)
+  const candidates = activeNpcs.map((npc) => ({
     npc,
     probability: postingProbabilityService.calculate(
       npc,
@@ -239,15 +240,10 @@ export async function POST(_req: NextRequest) {
   const npcsThisTick = selected.map((s) => s.npc);
 
   logger.info(
-    `NPC tick processing ${npcsThisTick.length} NPCs (probabilistic selection)`,
+    `NPC tick processing ${npcsThisTick.length} NPCs (random selection with spam prevention)`,
     {
-      awakeNpcs: awakeNpcs.length,
       totalNpcs: allNpcs.length,
-      npcsThisTick: npcsThisTick.map((n) => n.name),
-      probabilities: selected.map((s) => ({
-        name: s.npc.name,
-        prob: s.probability.toFixed(3),
-      })),
+      selectedNpcs: npcsThisTick.map((n) => n.name),
     },
     'NPCTick'
   );

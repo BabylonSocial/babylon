@@ -96,11 +96,22 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
       setLoading(true);
 
       // Fetch all data in parallel (balance is public for all users)
-      const [balanceRes, positionsRes, profileRes] = await Promise.all([
-        fetch(`/api/users/${encodeURIComponent(userId)}/balance`),
-        fetch(`/api/markets/positions/${encodeURIComponent(userId)}`),
-        fetch(`/api/users/${encodeURIComponent(userId)}/profile`),
-      ]);
+      // Use try-catch to handle network errors gracefully
+      let balanceRes: Response | null = null;
+      let positionsRes: Response | null = null;
+      let profileRes: Response | null = null;
+
+      try {
+        [balanceRes, positionsRes, profileRes] = await Promise.all([
+          fetch(`/api/users/${encodeURIComponent(userId)}/balance`),
+          fetch(`/api/markets/positions/${encodeURIComponent(userId)}`),
+          fetch(`/api/users/${encodeURIComponent(userId)}/profile`),
+        ]);
+      } catch (error) {
+        console.error('Error fetching profile widget data:', error);
+        setLoading(false);
+        return;
+      }
 
       let balanceData: UserBalanceData | null = null;
       let predictionsData: PredictionPosition[] = [];
@@ -108,7 +119,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
       let statsData: UserProfileStats | null = null;
 
       // Process balance
-      if (balanceRes.ok) {
+      if (balanceRes?.ok) {
         const balanceJson = await balanceRes.json();
         balanceData = {
           balance: Number(balanceJson.balance || 0),
@@ -120,7 +131,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
       }
 
       // Process positions
-      if (positionsRes.ok) {
+      if (positionsRes?.ok) {
         const positionsJson = await positionsRes.json();
         predictionsData = positionsJson.predictions?.positions || [];
         perpsData = positionsJson.perpetuals?.positions || [];
@@ -129,7 +140,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
       }
 
       // Process stats
-      if (profileRes.ok) {
+      if (profileRes?.ok) {
         const profileJson = await profileRes.json();
 
         // Check if user needs onboarding (graceful handling)
