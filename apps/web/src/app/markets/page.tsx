@@ -97,6 +97,10 @@ export default function MarketsPage() {
   >(null);
 
   // Sync URL params with tab state (only when URL changes externally)
+  // Intentionally excludes activeTab from deps to avoid feedback loop:
+  // - URL change → state update (this effect)
+  // - State change → URL update (handleTabChange)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: One-way sync from URL to state
   useEffect(() => {
     const urlTab = parseTabFromParams(searchParams);
     if (urlTab !== activeTab) {
@@ -104,7 +108,7 @@ export default function MarketsPage() {
         setActiveTab(urlTab);
       });
     }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Handle tab change with URL update - uses startTransition for smooth UX
   const handleTabChange = useCallback(

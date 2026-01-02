@@ -192,7 +192,7 @@ export async function POST(_req: NextRequest) {
 
   // Get recently mentioned actor IDs from player influence tracking
   // This boosts posting probability for NPCs that were mentioned by players
-  const recentlyMentionedActorIds = getRecentlyMentionedActorIds();
+  const recentlyMentionedActorIds = await getRecentlyMentionedActorIds();
 
   const postingContext: PostingContext = {
     currentHour,

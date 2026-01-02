@@ -8,12 +8,12 @@
  * Zod schemas for runtime validation.
  */
 
-import type { NpcMemory, RelationshipState } from '@babylon/db';
+import type { NpcMemory, PriceModifier, RelationshipState } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { z } from 'zod';
 
 // Re-export types from the source of truth for convenience
-export type { NpcMemory, RelationshipState } from '@babylon/db';
+export type { NpcMemory, PriceModifier, RelationshipState } from '@babylon/db';
 
 /**
  * NPC Memory schema - validates against NpcMemory interface from @babylon/db
@@ -212,4 +212,90 @@ export function validateRelationshipUpdate(
   interaction: unknown
 ): asserts interaction is z.infer<typeof InteractionUpdateSchema> {
   InteractionUpdateSchema.parse(interaction);
+}
+
+/**
+ * PriceModifier schema - validates against PriceModifier interface from @babylon/db
+ */
+export const PriceModifierSchema = z.object({
+  eventId: z.string(),
+  effect: z.number().min(0.01).max(10), // Effect multiplier bounded 0.01x to 10x
+  decayRate: z.number().min(0).max(1), // Decay rate 0-100% per hour
+  appliedAt: z.string(), // ISO date string
+  expiresAt: z.string(), // ISO date string
+}) satisfies z.ZodType<PriceModifier>;
+
+/**
+ * Array of price modifiers
+ */
+export const PriceModifiersSchema = z.array(PriceModifierSchema);
+
+/**
+ * Safely parse price modifiers from JSONB with fallback to empty array.
+ * Logs a warning for invalid data but doesn't throw.
+ */
+export function parseModifiersSafe(
+  data: unknown,
+  context?: { orgId?: string }
+): PriceModifier[] {
+  if (data === null || data === undefined) {
+    return [];
+  }
+
+  const result = PriceModifiersSchema.safeParse(data);
+  if (result.success) {
+    return result.data;
+  }
+
+  // Log the validation error but don't throw
+  logger.warn(
+    'Invalid modifiers JSONB data',
+    {
+      orgId: context?.orgId,
+      issues: result.error.issues.slice(0, 3),
+    },
+    'JSONBValidation'
+  );
+
+  // Try to salvage valid modifiers from the array
+  if (Array.isArray(data)) {
+    const validModifiers: PriceModifier[] = [];
+    let discardedCount = 0;
+    for (const item of data) {
+      const itemResult = PriceModifierSchema.safeParse(item);
+      if (itemResult.success) {
+        validModifiers.push(itemResult.data);
+      } else {
+        discardedCount++;
+      }
+    }
+
+    // Log salvage statistics
+    if (discardedCount > 0) {
+      logger.info(
+        'Salvaged partial modifiers from corrupted data',
+        {
+          orgId: context?.orgId,
+          salvaged: validModifiers.length,
+          discarded: discardedCount,
+          total: data.length,
+        },
+        'JSONBValidation'
+      );
+    }
+
+    return validModifiers;
+  }
+
+  return [];
+}
+
+/**
+ * Validate a single price modifier before inserting.
+ * Throws if invalid - use for write operations.
+ */
+export function validatePriceModifier(
+  modifier: unknown
+): asserts modifier is PriceModifier {
+  PriceModifierSchema.parse(modifier);
 }

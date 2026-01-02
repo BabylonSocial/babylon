@@ -171,34 +171,52 @@ export async function processNPCSocialEngagements(): Promise<SocialEngagementRes
         const key = `${post.id}-${actor.id}`;
         const probs = calculateEngagementProbability(actor, post);
 
-        // LIKE
+        // LIKE - with unique constraint handling for concurrent execution
         if (!reactionSet.has(key) && secureRandom() < probs.like) {
-          await db.insert(reactions).values({
-            id: await generateSnowflakeId(),
-            postId: post.id,
-            userId: actor.id,
-            type: 'like',
-          });
-          result.likesCreated++;
-          reactionSet.add(key);
-          engagedActors.add(actor.id);
-        }
-
-        // SHARE
-        if (!shareSet.has(key) && result.sharesCreated < MAX_SHARES_PER_TICK) {
-          if (secureRandom() < probs.share) {
-            await db.insert(shares).values({
+          try {
+            await db.insert(reactions).values({
               id: await generateSnowflakeId(),
               postId: post.id,
               userId: actor.id,
+              type: 'like',
             });
-            result.sharesCreated++;
-            shareSet.add(key);
+            result.likesCreated++;
+            reactionSet.add(key);
             engagedActors.add(actor.id);
+          } catch (error) {
+            // Handle unique constraint violation (race condition with concurrent tick)
+            if (error instanceof Error && error.message.includes('unique constraint')) {
+              reactionSet.add(key); // Mark as existing to prevent retries
+            } else {
+              throw error;
+            }
           }
         }
 
-        // COMMENT
+        // SHARE - with unique constraint handling for concurrent execution
+        if (!shareSet.has(key) && result.sharesCreated < MAX_SHARES_PER_TICK) {
+          if (secureRandom() < probs.share) {
+            try {
+              await db.insert(shares).values({
+                id: await generateSnowflakeId(),
+                postId: post.id,
+                userId: actor.id,
+              });
+              result.sharesCreated++;
+              shareSet.add(key);
+              engagedActors.add(actor.id);
+            } catch (error) {
+              // Handle unique constraint violation (race condition with concurrent tick)
+              if (error instanceof Error && error.message.includes('unique constraint')) {
+                shareSet.add(key); // Mark as existing to prevent retries
+              } else {
+                throw error;
+              }
+            }
+          }
+        }
+
+        // COMMENT - comments don't have unique constraints per-actor
         if (llmClientRef && result.commentsCreated < MAX_COMMENTS_PER_TICK) {
           if (secureRandom() < probs.comment) {
             const comment = await generateNPCComment(actor, post);

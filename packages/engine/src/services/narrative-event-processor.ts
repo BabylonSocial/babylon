@@ -105,30 +105,61 @@ export function evaluateStateTransition(
 }
 
 /**
- * Transition an arc to a new state (long-term arcs only)
+ * Transition an arc to a new state with optimistic locking (long-term arcs only)
  */
 export async function transitionArcState(
   arcId: string,
-  newState: LongTermArcState
-): Promise<void> {
+  newState: LongTermArcState,
+  currentState?: ArcStateType
+): Promise<boolean> {
   const now = new Date();
 
-  await db
-    .update(arcStates)
-    .set({
-      currentState: newState,
-      stateEnteredAt: now,
-      updatedAt: now,
-      // Clear pending transitions that triggered
-      pendingTransitions: [],
-    })
-    .where(eq(arcStates.id, arcId));
+  // If currentState provided, use optimistic locking
+  if (currentState) {
+    const result = await db
+      .update(arcStates)
+      .set({
+        currentState: newState,
+        stateEnteredAt: now,
+        updatedAt: now,
+        // Clear pending transitions that triggered
+        pendingTransitions: [],
+      })
+      .where(
+        and(
+          eq(arcStates.id, arcId),
+          eq(arcStates.currentState, currentState)
+        )
+      )
+      .returning({ id: arcStates.id });
+
+    if (result.length === 0) {
+      logger.warn(
+        `Optimistic lock conflict transitioning arc ${arcId} from ${currentState} to ${newState}`,
+        { arcId, currentState, newState },
+        'NarrativeEventProcessor'
+      );
+      return false;
+    }
+  } else {
+    // Fallback to simple update (for backward compatibility)
+    await db
+      .update(arcStates)
+      .set({
+        currentState: newState,
+        stateEnteredAt: now,
+        updatedAt: now,
+        pendingTransitions: [],
+      })
+      .where(eq(arcStates.id, arcId));
+  }
 
   logger.info(
     `Arc ${arcId} transitioned to ${newState}`,
     { arcId, newState },
     'NarrativeEventProcessor'
   );
+  return true;
 }
 
 /**
@@ -367,7 +398,8 @@ async function getAffectedStocksForQuestion(
   questionId: string
 ): Promise<string[]> {
   try {
-    const { organizations, questions } = await import('@babylon/db');
+    // Dynamic imports to avoid circular dependencies
+    const { organizations } = await import('@babylon/db');
     const { StaticDataRegistry } = await import('./static-data-registry');
 
     // First, get the question text
@@ -456,13 +488,12 @@ export async function processArcTick(
     return { transitioned: false, eventGenerated: false };
   }
 
-  // Check for state transitions
+  // Check for state transitions with optimistic locking
   const newState = evaluateStateTransition(arc, dayNumber);
   let transitioned = false;
 
   if (newState) {
-    await transitionArcState(arcId, newState);
-    transitioned = true;
+    transitioned = await transitionArcState(arcId, newState, arc.currentState);
   }
 
   // Check if event should be generated
@@ -470,6 +501,38 @@ export async function processArcTick(
   let eventGenerated = false;
 
   if (shouldGenerate) {
+    const now = new Date();
+
+    // FIRST: Acquire the lock before creating any side effects
+    // This prevents race conditions where world events are created but the arc isn't updated
+    const updateResult = await db
+      .update(arcStates)
+      .set({
+        eventsGenerated: (arc.eventsGenerated ?? 0) + 1,
+        lastEventAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(eq(arcStates.id, arcId), eq(arcStates.updatedAt, arc.updatedAt))
+      )
+      .returning({ id: arcStates.id });
+
+    if (updateResult.length === 0) {
+      // Optimistic lock conflict - another process updated the arc
+      logger.warn(
+        `Optimistic lock conflict for arc ${arcId}, skipping event generation`,
+        { arcId },
+        'NarrativeEventProcessor'
+      );
+      return {
+        transitioned,
+        eventGenerated: false,
+        newState: newState ?? undefined,
+      };
+    }
+
+    // Lock acquired successfully - now generate the event
+
     // Get arc plan for actor assignments
     const [arcPlan] = await db
       .select({
@@ -504,7 +567,6 @@ export async function processArcTick(
     }
 
     // Create a world event so it appears in the feed
-    const now = new Date();
     const questionText = await getQuestionText(arc.questionId);
     const worldEventId = await createWorldEventFromArcEvent(
       structuredEvent,
@@ -559,32 +621,6 @@ export async function processArcTick(
           'NarrativeEventProcessor'
         );
       }
-    }
-
-    const updateResult = await db
-      .update(arcStates)
-      .set({
-        eventsGenerated: (arc.eventsGenerated ?? 0) + 1,
-        lastEventAt: now,
-        updatedAt: now,
-      })
-      .where(
-        and(eq(arcStates.id, arcId), eq(arcStates.updatedAt, arc.updatedAt))
-      )
-      .returning({ id: arcStates.id });
-
-    if (updateResult.length === 0) {
-      // Optimistic lock conflict - another process updated the arc
-      logger.warn(
-        `Optimistic lock conflict for arc ${arcId}, skipping event`,
-        { arcId },
-        'NarrativeEventProcessor'
-      );
-      return {
-        transitioned,
-        eventGenerated: false,
-        newState: newState ?? undefined,
-      };
     }
 
     eventGenerated = true;

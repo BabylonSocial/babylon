@@ -190,8 +190,8 @@ export async function retryWithCondition<T>(
 export interface FireAndForgetRetryOptions {
   /** Maximum number of retry attempts (default: 3) */
   maxAttempts?: number;
-  /** Base delay in milliseconds (default: 100) */
-  baseDelayMs?: number;
+  /** Initial delay in milliseconds before first retry (default: 100) - aligned with RetryOptions */
+  initialDelayMs?: number;
   /** Context for logging (e.g., 'PerpOpen', 'PerpClose') */
   logContext?: string;
   /** Additional metadata to include in error logs */
@@ -222,7 +222,7 @@ export function fireAndForgetWithRetry(
 ): void {
   const {
     maxAttempts = 3,
-    baseDelayMs = 100,
+    initialDelayMs = 100,
     logContext = 'FireAndForget',
     metadata = {},
   } = options;
@@ -239,7 +239,7 @@ export function fireAndForgetWithRetry(
         if (attempt < maxAttempts - 1) {
           // Exponential backoff
           await new Promise((r) =>
-            setTimeout(r, baseDelayMs * Math.pow(2, attempt))
+            setTimeout(r, initialDelayMs * Math.pow(2, attempt))
           );
         }
       }

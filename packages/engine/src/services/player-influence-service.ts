@@ -4,8 +4,12 @@
  * Handles light player influence on the narrative:
  * - Player mentions of NPCs boost response probability
  * - Large player trades add to NPC memory
+ *
+ * Uses Redis-backed cache for durability across restarts.
+ * Falls back to in-memory cache if Redis is unavailable.
  */
 
+import { getCache, setCache, invalidateCache } from '@babylon/api';
 import { db, eq, organizations } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { npcMemoryService } from './npc-memory-service';
@@ -22,17 +26,27 @@ const SIGNIFICANT_TRADE_THRESHOLD = 1000;
 const LARGE_TRADE_THRESHOLD = 5000;
 
 /**
- * How long a mention stays "recent" (in ms)
+ * How long a mention stays "recent" (in seconds for Redis TTL)
  */
-const MENTION_RECENCY_WINDOW = 30 * 60 * 1000; // 30 minutes
+const MENTION_RECENCY_SECONDS = 30 * 60; // 30 minutes
 
 /**
- * Maximum number of mentions to track (LRU cache bound)
+ * Maximum number of mentions to track in memory fallback (LRU cache bound)
  */
 const MAX_MENTION_CACHE_SIZE = 1000;
 
 /**
- * LRU Cache for recent mentions with bounded size.
+ * Cache key prefix for player mentions
+ */
+const MENTION_CACHE_PREFIX = 'player:mention';
+
+/**
+ * Cache key for the set of all recently mentioned actor IDs
+ */
+const MENTION_SET_KEY = 'player:mention:set';
+
+/**
+ * LRU Cache for recent mentions with bounded size (in-memory fallback).
  * When max size is reached, oldest entries are evicted.
  */
 class LRUMentionCache {
@@ -86,11 +100,81 @@ class LRUMentionCache {
 }
 
 /**
- * Recent mention tracking (in-memory LRU cache, cleared on restart)
- * Maps actorId -> timestamp of last mention
- * Bounded to MAX_MENTION_CACHE_SIZE to prevent memory leaks
+ * In-memory fallback cache (used when Redis is unavailable)
  */
-const recentMentions = new LRUMentionCache(MAX_MENTION_CACHE_SIZE);
+const memoryFallbackCache = new LRUMentionCache(MAX_MENTION_CACHE_SIZE);
+
+/**
+ * Record a player mention in the cache (Redis with in-memory fallback)
+ */
+async function recordMention(actorId: string, timestamp: Date): Promise<void> {
+  const timestampIso = timestamp.toISOString();
+
+  try {
+    // Store in Redis with TTL
+    await setCache(
+      actorId,
+      { timestamp: timestampIso },
+      { namespace: MENTION_CACHE_PREFIX, ttl: MENTION_RECENCY_SECONDS }
+    );
+
+    // Also update the set of mentioned actors
+    const currentSet = await getCache<string[]>(MENTION_SET_KEY, {});
+    const updatedSet = currentSet ? [...new Set([...currentSet, actorId])] : [actorId];
+    await setCache(MENTION_SET_KEY, updatedSet, { ttl: MENTION_RECENCY_SECONDS });
+
+    logger.debug(
+      'Mention recorded in Redis',
+      { actorId },
+      'PlayerInfluence'
+    );
+  } catch {
+    // Fallback to in-memory cache
+    memoryFallbackCache.set(actorId, timestamp);
+    logger.debug(
+      'Mention recorded in memory fallback',
+      { actorId },
+      'PlayerInfluence'
+    );
+  }
+}
+
+/**
+ * Get the last mention timestamp for an actor
+ */
+async function getMentionTimestamp(actorId: string): Promise<Date | null> {
+  try {
+    const cached = await getCache<{ timestamp: string }>(actorId, {
+      namespace: MENTION_CACHE_PREFIX,
+    });
+
+    if (cached?.timestamp) {
+      return new Date(cached.timestamp);
+    }
+  } catch {
+    // Fallback to in-memory cache
+    const memoryValue = memoryFallbackCache.get(actorId);
+    if (memoryValue) {
+      return memoryValue;
+    }
+  }
+
+  // Also check in-memory fallback (could have been set before Redis connected)
+  const memoryValue = memoryFallbackCache.get(actorId);
+  return memoryValue ?? null;
+}
+
+/**
+ * Remove a mention from the cache
+ */
+async function removeMention(actorId: string): Promise<void> {
+  try {
+    await invalidateCache(actorId, { namespace: MENTION_CACHE_PREFIX });
+  } catch {
+    // Ignore Redis errors
+  }
+  memoryFallbackCache.delete(actorId);
+}
 
 /**
  * Handle a player mentioning an NPC in a post or comment
@@ -101,8 +185,8 @@ export async function handlePlayerMention(
   postId: string
 ): Promise<void> {
   try {
-    // 1. Record the mention in memory cache for probability boost
-    recentMentions.set(mentionedActorId, new Date());
+    // 1. Record the mention in cache for probability boost (Redis with fallback)
+    await recordMention(mentionedActorId, new Date());
 
     // 2. Add to NPC's memory
     await npcMemoryService.addMemory(mentionedActorId, {
@@ -134,17 +218,37 @@ export async function handlePlayerMention(
 /**
  * Check if an actor was mentioned recently (for probability boost)
  */
-export function wasMentionedRecently(actorId: string): boolean {
-  const lastMention = recentMentions.get(actorId);
+export async function wasMentionedRecently(actorId: string): Promise<boolean> {
+  const lastMention = await getMentionTimestamp(actorId);
   if (!lastMention) return false;
 
   const now = new Date();
   const isRecent =
-    now.getTime() - lastMention.getTime() < MENTION_RECENCY_WINDOW;
+    now.getTime() - lastMention.getTime() < MENTION_RECENCY_SECONDS * 1000;
 
   // Clean up old entries
   if (!isRecent) {
-    recentMentions.delete(actorId);
+    await removeMention(actorId);
+  }
+
+  return isRecent;
+}
+
+/**
+ * Synchronous check for recently mentioned (uses in-memory cache only)
+ * Use this when async is not possible (e.g., in probability calculations)
+ */
+export function wasMentionedRecentlySync(actorId: string): boolean {
+  const lastMention = memoryFallbackCache.get(actorId);
+  if (!lastMention) return false;
+
+  const now = new Date();
+  const isRecent =
+    now.getTime() - lastMention.getTime() < MENTION_RECENCY_SECONDS * 1000;
+
+  // Clean up old entries
+  if (!isRecent) {
+    memoryFallbackCache.delete(actorId);
   }
 
   return isRecent;
@@ -153,16 +257,34 @@ export function wasMentionedRecently(actorId: string): boolean {
 /**
  * Get all recently mentioned actor IDs
  */
-export function getRecentlyMentionedActorIds(): string[] {
+export async function getRecentlyMentionedActorIds(): Promise<string[]> {
   const now = new Date();
   const recentIds: string[] = [];
 
-  for (const [actorId, lastMention] of recentMentions.entries()) {
-    if (now.getTime() - lastMention.getTime() < MENTION_RECENCY_WINDOW) {
+  try {
+    // Try to get from Redis set
+    const cachedSet = await getCache<string[]>(MENTION_SET_KEY, {});
+    if (cachedSet && cachedSet.length > 0) {
+      // Verify each ID is still valid
+      for (const actorId of cachedSet) {
+        const timestamp = await getMentionTimestamp(actorId);
+        if (timestamp && now.getTime() - timestamp.getTime() < MENTION_RECENCY_SECONDS * 1000) {
+          recentIds.push(actorId);
+        }
+      }
+      return recentIds;
+    }
+  } catch {
+    // Fallback to in-memory
+  }
+
+  // Fallback to in-memory cache
+  for (const [actorId, lastMention] of memoryFallbackCache.entries()) {
+    if (now.getTime() - lastMention.getTime() < MENTION_RECENCY_SECONDS * 1000) {
       recentIds.push(actorId);
     } else {
       // Clean up old entries
-      recentMentions.delete(actorId);
+      memoryFallbackCache.delete(actorId);
     }
   }
 
@@ -291,11 +413,15 @@ export class PlayerInfluenceService {
     return handlePlayerTrade(playerId, stockTicker, side, size);
   }
 
-  wasMentionedRecently(actorId: string): boolean {
+  async wasMentionedRecently(actorId: string): Promise<boolean> {
     return wasMentionedRecently(actorId);
   }
 
-  getRecentlyMentionedActorIds(): string[] {
+  wasMentionedRecentlySync(actorId: string): boolean {
+    return wasMentionedRecentlySync(actorId);
+  }
+
+  async getRecentlyMentionedActorIds(): Promise<string[]> {
     return getRecentlyMentionedActorIds();
   }
 
