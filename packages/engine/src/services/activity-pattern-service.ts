@@ -140,29 +140,44 @@ const DOMAIN_PATTERNS: Record<string, Partial<ActivityPattern>> = {
 
 /**
  * Get timezone offset in hours for a timezone name.
- * Simplified implementation - production would use a library.
+ * Uses Intl.DateTimeFormat to correctly handle DST.
+ *
+ * @param timezone IANA timezone string (e.g., 'America/New_York')
+ * @param date Date to get offset for (defaults to now)
+ * @returns Offset in hours from UTC (negative for west, positive for east)
  */
-function getTimezoneOffset(timezone: string): number {
-  const offsets: Record<string, number> = {
-    UTC: 0,
-    'America/New_York': -5,
-    'America/Los_Angeles': -8,
-    'America/Chicago': -6,
-    'America/Denver': -7,
-    'Europe/London': 0,
-    'Europe/Paris': 1,
-    'Asia/Tokyo': 9,
-    'Asia/Shanghai': 8,
-    'Asia/Singapore': 8,
-  };
-  return offsets[timezone] ?? 0;
+function getTimezoneOffset(timezone: string, date: Date = new Date()): number {
+  try {
+    // Get UTC and local time strings for comparison
+    const utcDate = new Date(
+      date.toLocaleString('en-US', { timeZone: 'UTC' })
+    );
+    const tzDate = new Date(
+      date.toLocaleString('en-US', { timeZone: timezone })
+    );
+    // Calculate offset in hours
+    const offsetMs = tzDate.getTime() - utcDate.getTime();
+    return offsetMs / (1000 * 60 * 60);
+  } catch {
+    // Invalid timezone, return 0 (UTC)
+    return 0;
+  }
 }
 
 /**
  * Convert UTC hour to local hour for a timezone.
+ * Accounts for DST using the provided date.
+ *
+ * @param utcHour Hour in UTC (0-23)
+ * @param timezone IANA timezone string
+ * @param date Date to use for DST calculation (defaults to now)
  */
-export function convertToLocalHour(utcHour: number, timezone: string): number {
-  const offset = getTimezoneOffset(timezone);
+export function convertToLocalHour(
+  utcHour: number,
+  timezone: string,
+  date: Date = new Date()
+): number {
+  const offset = getTimezoneOffset(timezone, date);
   let localHour = (utcHour + offset) % 24;
   if (localHour < 0) {
     localHour += 24;
@@ -225,10 +240,18 @@ export function deriveActivityPattern(actor: ActivityActor): ActivityPattern {
 
 /**
  * Check if an NPC is in their active hours right now.
+ *
+ * @param actor Actor to check
+ * @param utcHour Hour in UTC (0-23)
+ * @param date Date to use for DST calculation (defaults to now)
  */
-export function isActiveHour(actor: ActivityActor, utcHour: number): boolean {
+export function isActiveHour(
+  actor: ActivityActor,
+  utcHour: number,
+  date: Date = new Date()
+): boolean {
   const pattern = deriveActivityPattern(actor);
-  const localHour = convertToLocalHour(utcHour, pattern.timezone);
+  const localHour = convertToLocalHour(utcHour, pattern.timezone, date);
   return pattern.peakHours.includes(localHour);
 }
 
@@ -243,6 +266,7 @@ export function isWeekend(date: Date = new Date()): boolean {
 /**
  * Get activity multiplier for an NPC at current time.
  * Returns 0-1 indicating how likely they are to be active.
+ * Correctly handles DST for the given date.
  */
 export function getActivityMultiplier(
   actor: ActivityActor,
@@ -250,7 +274,7 @@ export function getActivityMultiplier(
 ): number {
   const pattern = deriveActivityPattern(actor);
   const utcHour = date.getUTCHours();
-  const localHour = convertToLocalHour(utcHour, pattern.timezone);
+  const localHour = convertToLocalHour(utcHour, pattern.timezone, date);
 
   // Base: Are they in peak hours?
   const inPeakHours = pattern.peakHours.includes(localHour);
@@ -292,8 +316,8 @@ export class ActivityPatternService {
     return deriveActivityPattern(actor);
   }
 
-  isActiveHour(actor: ActivityActor, utcHour: number): boolean {
-    return isActiveHour(actor, utcHour);
+  isActiveHour(actor: ActivityActor, utcHour: number, date?: Date): boolean {
+    return isActiveHour(actor, utcHour, date);
   }
 
   getMultiplier(actor: ActivityActor, date?: Date): number {

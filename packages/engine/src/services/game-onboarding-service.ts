@@ -13,44 +13,13 @@ import {
   type GameOnboardingStep,
   gameOnboarding,
 } from '@babylon/db';
-import { generateSnowflakeId, logger } from '@babylon/shared';
-
-/**
- * Points awarded for each onboarding step
- */
-const STEP_POINTS: Record<GameOnboardingStep, number> = {
-  welcome: 10,
-  explore_feed: 20,
-  follow_npc: 30,
-  view_markets: 20,
-  first_prediction: 50,
-  first_trade: 50,
-  complete: 0, // No points for completion marker
-};
-
-/**
- * Order of onboarding steps
- */
-const STEP_ORDER: GameOnboardingStep[] = [
-  'welcome',
-  'explore_feed',
-  'follow_npc',
-  'view_markets',
-  'first_prediction',
-  'first_trade',
-  'complete',
-];
-
-/**
- * Get the next step after completing a step
- */
-function getNextStep(currentStep: GameOnboardingStep): GameOnboardingStep {
-  const currentIndex = STEP_ORDER.indexOf(currentStep);
-  if (currentIndex === -1 || currentIndex >= STEP_ORDER.length - 1) {
-    return 'complete';
-  }
-  return STEP_ORDER[currentIndex + 1]!;
-}
+import {
+  generateSnowflakeId,
+  getNextOnboardingStep,
+  logger,
+  ONBOARDING_STEP_ORDER,
+  ONBOARDING_STEP_POINTS,
+} from '@babylon/shared';
 
 /**
  * Create or get onboarding record for a user
@@ -128,11 +97,11 @@ export async function completeOnboardingStep(
   }
 
   // Award points
-  const points = STEP_POINTS[step];
+  const points = ONBOARDING_STEP_POINTS[step];
 
   // Update state
   state.completedSteps.push(step);
-  state.currentStep = getNextStep(step);
+  state.currentStep = getNextOnboardingStep(step);
   state.rewards.push({ step, points });
 
   const isComplete = state.currentStep === 'complete';
@@ -265,11 +234,11 @@ export class GameOnboardingService {
   }
 
   getStepOrder(): GameOnboardingStep[] {
-    return [...STEP_ORDER];
+    return [...ONBOARDING_STEP_ORDER];
   }
 
   getStepPoints(): Record<GameOnboardingStep, number> {
-    return { ...STEP_POINTS };
+    return { ...ONBOARDING_STEP_POINTS };
   }
 }
 

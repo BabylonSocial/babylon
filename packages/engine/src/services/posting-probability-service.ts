@@ -5,7 +5,7 @@
  * Combines multiple factors: tier, activity patterns, recency, events, mentions.
  */
 
-import { type ActorStateRow, actorState, db, eq } from '@babylon/db';
+import { type ActorStateRow, actorState, db, eq, inArray } from '@babylon/db';
 import { ACTOR_TIERS, type ActorTier } from '@babylon/shared';
 import { getActivityMultiplier } from './activity-pattern-service';
 
@@ -62,6 +62,32 @@ const MAX_POSTS_PER_DAY: Record<ActorTier, number> = {
 };
 
 /**
+ * Probability multiplier constants.
+ * Extracted for clarity and ease of tuning.
+ */
+
+/** Maximum recency boost when actor hasn't posted recently */
+const RECENCY_BOOST_MAX = 2.5;
+
+/** Hours over which recency boost grows from 1.0 to max */
+const RECENCY_BOOST_HOURS = 6;
+
+/** Default hours since last post when no data available */
+const DEFAULT_HOURS_SINCE_LAST_POST = 24;
+
+/** Boost when relevant event just occurred */
+const EVENT_BOOST_MULTIPLIER = 1.8;
+
+/** Boost when actor was mentioned by player/NPC recently */
+const MENTION_BOOST_MULTIPLIER = 2.5;
+
+/** Boost when event affects actor's affiliated organization */
+const AFFILIATION_BOOST_MULTIPLIER = 1.5;
+
+/** Maximum probability cap to preserve randomness */
+const MAX_PROBABILITY_CAP = 0.95;
+
+/**
  * Calculate posting probability for an NPC.
  *
  * Formula:
@@ -92,35 +118,39 @@ export function calculatePostingProbability(
 
   // Recency boost: longer since last post = higher chance
   const hoursSinceLastPost = getHoursSince(state?.lastPostAt ?? null);
-  // Boost grows from 1.0 to 2.5 over 6 hours
-  const recencyBoost = Math.min(1.0 + hoursSinceLastPost / 6, 2.5);
+  // Boost grows from 1.0 to max over configured hours
+  const recencyBoost = Math.min(
+    1.0 + hoursSinceLastPost / RECENCY_BOOST_HOURS,
+    RECENCY_BOOST_MAX
+  );
   prob *= recencyBoost;
 
   // Event boost: if a relevant event just occurred
   if (hasRelevantActiveEvent(actor, context)) {
-    prob *= 1.8;
+    prob *= EVENT_BOOST_MULTIPLIER;
   }
 
   // Mention boost: if mentioned by player/NPC recently
   if (context.recentlyMentionedActorIds.includes(actor.id)) {
-    prob *= 2.5;
+    prob *= MENTION_BOOST_MULTIPLIER;
   }
 
   // Affiliation boost: if event affects actor's organization
   if (hasAffiliatedEvent(actor, context)) {
-    prob *= 1.5;
+    prob *= AFFILIATION_BOOST_MULTIPLIER;
   }
 
-  // Cap at 95%
-  return Math.min(prob, 0.95);
+  // Cap at configured maximum
+  return Math.min(prob, MAX_PROBABILITY_CAP);
 }
 
 /**
- * Calculate hours since a timestamp (returns Infinity if null).
+ * Calculate hours since a timestamp.
+ * Returns default if null.
  */
 function getHoursSince(timestamp: Date | null): number {
   if (!timestamp) {
-    return 24; // Default to 24 hours if never posted
+    return DEFAULT_HOURS_SINCE_LAST_POST;
   }
   const now = new Date();
   const diffMs = now.getTime() - timestamp.getTime();
@@ -213,15 +243,12 @@ export async function getNpcsWithState(
     .where(
       actorIds.length === 1
         ? eq(actorState.id, actorIds[0]!)
-        : // For multiple IDs, we'd use inArray but for now fetch all and filter
-          undefined
+        : inArray(actorState.id, actorIds)
     );
 
   const stateMap = new Map<string, ActorStateRow>();
   for (const state of states) {
-    if (actorIds.includes(state.id)) {
-      stateMap.set(state.id, state);
-    }
+    stateMap.set(state.id, state);
   }
 
   return stateMap;

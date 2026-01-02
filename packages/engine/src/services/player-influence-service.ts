@@ -16,15 +16,75 @@ import { npcMemoryService } from './npc-memory-service';
 const SIGNIFICANT_TRADE_THRESHOLD = 1000;
 
 /**
- * Recent mention tracking (in-memory cache, cleared on restart)
- * Maps actorId -> timestamp of last mention
- */
-const recentMentions = new Map<string, Date>();
-
-/**
  * How long a mention stays "recent" (in ms)
  */
 const MENTION_RECENCY_WINDOW = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Maximum number of mentions to track (LRU cache bound)
+ */
+const MAX_MENTION_CACHE_SIZE = 1000;
+
+/**
+ * LRU Cache for recent mentions with bounded size.
+ * When max size is reached, oldest entries are evicted.
+ */
+class LRUMentionCache {
+  private cache = new Map<string, Date>();
+  private readonly maxSize: number;
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+
+  set(actorId: string, timestamp: Date): void {
+    // Delete first to reset position for LRU
+    if (this.cache.has(actorId)) {
+      this.cache.delete(actorId);
+    }
+
+    // Evict oldest entries if at max size
+    while (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      } else {
+        break;
+      }
+    }
+
+    this.cache.set(actorId, timestamp);
+  }
+
+  get(actorId: string): Date | undefined {
+    const value = this.cache.get(actorId);
+    if (value) {
+      // Move to end for LRU (most recently accessed)
+      this.cache.delete(actorId);
+      this.cache.set(actorId, value);
+    }
+    return value;
+  }
+
+  delete(actorId: string): boolean {
+    return this.cache.delete(actorId);
+  }
+
+  entries(): IterableIterator<[string, Date]> {
+    return this.cache.entries();
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+}
+
+/**
+ * Recent mention tracking (in-memory LRU cache, cleared on restart)
+ * Maps actorId -> timestamp of last mention
+ * Bounded to MAX_MENTION_CACHE_SIZE to prevent memory leaks
+ */
+const recentMentions = new LRUMentionCache(MAX_MENTION_CACHE_SIZE);
 
 /**
  * Handle a player mentioning an NPC in a post or comment
@@ -91,7 +151,7 @@ export function getRecentlyMentionedActorIds(): string[] {
   const now = new Date();
   const recentIds: string[] = [];
 
-  for (const [actorId, lastMention] of recentMentions) {
+  for (const [actorId, lastMention] of recentMentions.entries()) {
     if (now.getTime() - lastMention.getTime() < MENTION_RECENCY_WINDOW) {
       recentIds.push(actorId);
     } else {
@@ -105,6 +165,7 @@ export function getRecentlyMentionedActorIds(): string[] {
 
 /**
  * Handle a significant player trade
+ * Uses batch memory updates to avoid N+1 query pattern
  */
 export async function handlePlayerTrade(
   playerId: string,
@@ -121,20 +182,30 @@ export async function handlePlayerTrade(
     // Find NPCs affiliated with this stock's organization
     const relevantNpcs = await getNpcsAffiliatedWith(stockTicker);
 
-    for (const npcId of relevantNpcs) {
-      // Add to NPC's memory
-      await npcMemoryService.addMemory(npcId, {
-        type: 'witnessed_event',
-        timestamp: new Date().toISOString(),
-        summary: `A player took a ${size >= 5000 ? 'large ' : ''}${side} position on ${stockTicker}`,
-        actorIds: [playerId],
-        sentiment: side === 'long' ? 0.1 : -0.1,
-      });
+    if (relevantNpcs.length === 0) {
+      return;
     }
 
+    // Use batch method to add memory to all NPCs at once
+    // This reduces N+1 queries by fetching all states in one query
+    const successCount = await npcMemoryService.addMemoryBatch(relevantNpcs, {
+      type: 'witnessed_event',
+      timestamp: new Date().toISOString(),
+      summary: `A player took a ${size >= 5000 ? 'large ' : ''}${side} position on ${stockTicker}`,
+      actorIds: [playerId],
+      sentiment: side === 'long' ? 0.1 : -0.1,
+    });
+
     logger.info(
-      `Player trade recorded for ${relevantNpcs.length} NPCs`,
-      { playerId, stockTicker, side, size, affectedNpcs: relevantNpcs.length },
+      `Player trade recorded for ${successCount}/${relevantNpcs.length} NPCs`,
+      {
+        playerId,
+        stockTicker,
+        side,
+        size,
+        affectedNpcs: relevantNpcs.length,
+        successCount,
+      },
       'PlayerInfluence'
     );
   } catch (error) {

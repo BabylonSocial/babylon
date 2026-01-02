@@ -10,13 +10,26 @@
  */
 
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
-import type { GameOnboardingStep } from '@babylon/db';
 import { completeOnboardingStep } from '@babylon/engine';
 import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 
-interface CompleteStepRequest {
-  step: GameOnboardingStep;
-}
+/**
+ * Valid onboarding steps for validation
+ */
+const GameOnboardingStepSchema = z.enum([
+  'welcome',
+  'explore_feed',
+  'follow_npc',
+  'view_markets',
+  'first_prediction',
+  'first_trade',
+  'complete',
+]);
+
+const CompleteStepRequestSchema = z.object({
+  step: GameOnboardingStepSchema,
+});
 
 /**
  * POST /api/onboarding/game-complete-step
@@ -26,12 +39,8 @@ interface CompleteStepRequest {
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const user = await authenticate(request);
 
-  const body = (await request.json()) as CompleteStepRequest;
-  const { step } = body;
-
-  if (!step) {
-    throw new Error('Step is required');
-  }
+  const body = await request.json();
+  const { step } = CompleteStepRequestSchema.parse(body);
 
   const result = await completeOnboardingStep(user.userId, step);
 

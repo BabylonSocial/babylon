@@ -4,22 +4,34 @@
  * Manages bounded, summarized memory for NPCs to provide continuity.
  * Memories are stored in actorState.recentMemories (JSONB column).
  * Memory is capped at MAX_MEMORIES entries, with oldest evicted first.
+ *
+ * Uses optimistic locking with retry to prevent race conditions
+ * when multiple concurrent updates occur.
  */
 
 import {
   actorState,
+  and,
   db,
   eq,
+  inArray,
   type NpcMemory,
   type RelationshipState,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
+import { parseMemoriesSafe, parseRelationshipsSafe } from './jsonb-validators';
 
 /** Maximum memories per NPC before eviction */
 const MAX_MEMORIES = 50;
 
 /** Maximum relationship notes per actor pair */
 const MAX_RELATIONSHIP_NOTES = 10;
+
+/** Maximum retries for optimistic locking */
+const MAX_RETRIES = 3;
+
+/** Delay between retries in ms (with exponential backoff) */
+const RETRY_BASE_DELAY_MS = 50;
 
 /**
  * NPC Memory Service
@@ -33,67 +45,101 @@ export class NpcMemoryService {
   /**
    * Add a memory to an NPC's memory store.
    * Automatically evicts oldest memories when cap is exceeded.
+   * Uses optimistic locking with retry to prevent race conditions.
    */
   async addMemory(
     actorId: string,
     memory: Omit<NpcMemory, 'id'>
   ): Promise<void> {
-    try {
-      // Get current state
-      const [state] = await db
-        .select({
-          recentMemories: actorState.recentMemories,
-        })
-        .from(actorState)
-        .where(eq(actorState.id, actorId))
-        .limit(1);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        // Get current state with updatedAt for optimistic locking
+        const [state] = await db
+          .select({
+            recentMemories: actorState.recentMemories,
+            updatedAt: actorState.updatedAt,
+          })
+          .from(actorState)
+          .where(eq(actorState.id, actorId))
+          .limit(1);
 
-      if (!state) {
-        logger.warn(
-          `Cannot add memory: ActorState not found for ${actorId}`,
-          { actorId },
+        if (!state) {
+          logger.warn(
+            `Cannot add memory: ActorState not found for ${actorId}`,
+            { actorId },
+            'NpcMemoryService'
+          );
+          return;
+        }
+
+        // Parse memories with Zod validation - handles corrupted data gracefully
+        const memories = parseMemoriesSafe(state.recentMemories, { actorId });
+
+        // Create new memory with ID
+        const newMemory: NpcMemory = {
+          id: await generateSnowflakeId(),
+          ...memory,
+        };
+
+        // Add new memory and enforce cap
+        memories.push(newMemory);
+        while (memories.length > MAX_MEMORIES) {
+          memories.shift(); // Remove oldest
+        }
+
+        const now = new Date();
+
+        // Update database with optimistic locking
+        // Only update if updatedAt hasn't changed since we read it
+        const result = await db
+          .update(actorState)
+          .set({
+            recentMemories: memories,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(actorState.id, actorId),
+              eq(actorState.updatedAt, state.updatedAt)
+            )
+          )
+          .returning({ id: actorState.id });
+
+        // If no rows were updated, another process modified the record
+        if (result.length === 0) {
+          if (attempt < MAX_RETRIES - 1) {
+            // Exponential backoff before retry
+            const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            logger.debug(
+              `Memory update conflict for ${actorId}, retrying (attempt ${attempt + 1})`,
+              { actorId },
+              'NpcMemoryService'
+            );
+            continue;
+          }
+          logger.warn(
+            `Memory update failed after ${MAX_RETRIES} attempts due to concurrent modification`,
+            { actorId },
+            'NpcMemoryService'
+          );
+          return;
+        }
+
+        logger.debug(
+          `Added memory for ${actorId}`,
+          { memoryType: memory.type, totalMemories: memories.length },
+          'NpcMemoryService'
+        );
+        return; // Success
+      } catch (error) {
+        logger.error(
+          `Failed to add memory for ${actorId}`,
+          { error: error instanceof Error ? error.message : String(error) },
           'NpcMemoryService'
         );
         return;
       }
-
-      // Get existing memories or initialize empty array
-      // Cast from unknown since JSONB columns don't have type info at runtime
-      const memories: NpcMemory[] =
-        (state.recentMemories as NpcMemory[] | null) ?? [];
-
-      // Create new memory with ID
-      const newMemory: NpcMemory = {
-        id: await generateSnowflakeId(),
-        ...memory,
-      };
-
-      // Add new memory and enforce cap
-      memories.push(newMemory);
-      while (memories.length > MAX_MEMORIES) {
-        memories.shift(); // Remove oldest
-      }
-
-      // Update database
-      await db
-        .update(actorState)
-        .set({
-          recentMemories: memories,
-          updatedAt: new Date(),
-        })
-        .where(eq(actorState.id, actorId));
-
-      logger.debug(
-        `Added memory for ${actorId}`,
-        { memoryType: memory.type, totalMemories: memories.length },
-        'NpcMemoryService'
-      );
-    } catch (error) {
-      logger.error(
-        `Failed to add memory for ${actorId}`,
-        { error: error instanceof Error ? error.message : String(error) },
-        'NpcMemoryService'
-      );
     }
   }
 
@@ -118,8 +164,8 @@ export class NpcMemoryService {
         return [];
       }
 
-      // Cast from unknown since JSONB columns don't have type info at runtime
-      let memories = state.recentMemories as NpcMemory[];
+      // Parse memories with Zod validation - handles corrupted data gracefully
+      let memories = parseMemoriesSafe(state.recentMemories, { actorId });
 
       // Filter by type if specified
       if (types && types.length > 0) {
@@ -158,11 +204,10 @@ export class NpcMemoryService {
         return null;
       }
 
-      // Cast from unknown since JSONB columns don't have type info at runtime
-      const relationships = state.relationships as Record<
-        string,
-        RelationshipState
-      >;
+      // Parse relationships with Zod validation - handles corrupted data gracefully
+      const relationships = parseRelationshipsSafe(state.relationships, {
+        actorId,
+      });
       return relationships[otherActorId] ?? null;
     } catch (error) {
       logger.error(
@@ -180,6 +225,7 @@ export class NpcMemoryService {
 
   /**
    * Update relationship between two actors based on an interaction.
+   * Uses optimistic locking with retry to prevent race conditions.
    */
   async updateRelationship(
     actorId: string,
@@ -189,87 +235,119 @@ export class NpcMemoryService {
       note?: string;
     }
   ): Promise<void> {
-    try {
-      const [state] = await db
-        .select({
-          relationships: actorState.relationships,
-        })
-        .from(actorState)
-        .where(eq(actorState.id, actorId))
-        .limit(1);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const [state] = await db
+          .select({
+            relationships: actorState.relationships,
+            updatedAt: actorState.updatedAt,
+          })
+          .from(actorState)
+          .where(eq(actorState.id, actorId))
+          .limit(1);
 
-      if (!state) {
-        logger.warn(
-          `Cannot update relationship: ActorState not found for ${actorId}`,
-          { actorId },
+        if (!state) {
+          logger.warn(
+            `Cannot update relationship: ActorState not found for ${actorId}`,
+            { actorId },
+            'NpcMemoryService'
+          );
+          return;
+        }
+
+        // Parse relationships with Zod validation - handles corrupted data gracefully
+        const relationships = parseRelationshipsSafe(state.relationships, {
+          actorId,
+        });
+
+        // Get or create relationship
+        const existing = relationships[otherActorId];
+        const now = new Date();
+
+        if (existing) {
+          // Update existing relationship
+          existing.sentiment = Math.max(
+            -1,
+            Math.min(1, existing.sentiment + interaction.sentimentChange * 0.1)
+          );
+          existing.lastInteraction = now.toISOString();
+          existing.interactionCount += 1;
+
+          if (interaction.note) {
+            existing.notes.push(interaction.note);
+            // Keep only recent notes
+            while (existing.notes.length > MAX_RELATIONSHIP_NOTES) {
+              existing.notes.shift();
+            }
+          }
+        } else {
+          // Create new relationship
+          relationships[otherActorId] = {
+            actorId: otherActorId,
+            sentiment: Math.max(-1, Math.min(1, interaction.sentimentChange)),
+            lastInteraction: now.toISOString(),
+            interactionCount: 1,
+            notes: interaction.note ? [interaction.note] : [],
+          };
+        }
+
+        // Update database with optimistic locking
+        const result = await db
+          .update(actorState)
+          .set({
+            relationships,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(actorState.id, actorId),
+              eq(actorState.updatedAt, state.updatedAt)
+            )
+          )
+          .returning({ id: actorState.id });
+
+        // If no rows were updated, another process modified the record
+        if (result.length === 0) {
+          if (attempt < MAX_RETRIES - 1) {
+            const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            logger.debug(
+              `Relationship update conflict for ${actorId}, retrying (attempt ${attempt + 1})`,
+              { actorId },
+              'NpcMemoryService'
+            );
+            continue;
+          }
+          logger.warn(
+            `Relationship update failed after ${MAX_RETRIES} attempts due to concurrent modification`,
+            { actorId },
+            'NpcMemoryService'
+          );
+          return;
+        }
+
+        logger.debug(
+          `Updated relationship`,
+          {
+            actorId,
+            otherActorId,
+            newSentiment: relationships[otherActorId]?.sentiment,
+          },
+          'NpcMemoryService'
+        );
+        return; // Success
+      } catch (error) {
+        logger.error(
+          `Failed to update relationship`,
+          {
+            actorId,
+            otherActorId,
+            error: error instanceof Error ? error.message : String(error),
+          },
           'NpcMemoryService'
         );
         return;
       }
-
-      // Cast from unknown since JSONB columns don't have type info at runtime
-      const relationships: Record<string, RelationshipState> =
-        (state.relationships as Record<string, RelationshipState> | null) ?? {};
-
-      // Get or create relationship
-      const existing = relationships[otherActorId];
-      const now = new Date();
-
-      if (existing) {
-        // Update existing relationship
-        existing.sentiment = Math.max(
-          -1,
-          Math.min(1, existing.sentiment + interaction.sentimentChange * 0.1)
-        );
-        existing.lastInteraction = now.toISOString();
-        existing.interactionCount += 1;
-
-        if (interaction.note) {
-          existing.notes.push(interaction.note);
-          // Keep only recent notes
-          while (existing.notes.length > MAX_RELATIONSHIP_NOTES) {
-            existing.notes.shift();
-          }
-        }
-      } else {
-        // Create new relationship
-        relationships[otherActorId] = {
-          actorId: otherActorId,
-          sentiment: Math.max(-1, Math.min(1, interaction.sentimentChange)),
-          lastInteraction: now.toISOString(),
-          interactionCount: 1,
-          notes: interaction.note ? [interaction.note] : [],
-        };
-      }
-
-      // Update database
-      await db
-        .update(actorState)
-        .set({
-          relationships,
-          updatedAt: now,
-        })
-        .where(eq(actorState.id, actorId));
-
-      logger.debug(
-        `Updated relationship`,
-        {
-          actorId,
-          otherActorId,
-          newSentiment: relationships[otherActorId]?.sentiment,
-        },
-        'NpcMemoryService'
-      );
-    } catch (error) {
-      logger.error(
-        `Failed to update relationship`,
-        {
-          actorId,
-          otherActorId,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        'NpcMemoryService'
-      );
     }
   }
 
@@ -336,6 +414,112 @@ export class NpcMemoryService {
         { error: error instanceof Error ? error.message : String(error) },
         'NpcMemoryService'
       );
+    }
+  }
+
+  /**
+   * Add the same memory to multiple NPCs in a batch operation.
+   * Reduces N+1 query problem by fetching all states at once.
+   *
+   * @param actorIds - Array of actor IDs to add memory to
+   * @param memory - Memory to add (without id, will be generated)
+   * @returns Number of successfully updated actors
+   */
+  async addMemoryBatch(
+    actorIds: string[],
+    memory: Omit<NpcMemory, 'id'>
+  ): Promise<number> {
+    if (actorIds.length === 0) {
+      return 0;
+    }
+
+    // For single actor, delegate to single method
+    if (actorIds.length === 1) {
+      await this.addMemory(actorIds[0]!, memory);
+      return 1;
+    }
+
+    try {
+      // Fetch all actor states in one query
+      const states = await db
+        .select({
+          id: actorState.id,
+          recentMemories: actorState.recentMemories,
+          updatedAt: actorState.updatedAt,
+        })
+        .from(actorState)
+        .where(inArray(actorState.id, actorIds));
+
+      const stateMap = new Map(states.map((s) => [s.id, s]));
+
+      // Update each actor in parallel (using Promise.allSettled for isolation)
+      const updateResults = await Promise.allSettled(
+        actorIds.map(async (actorId) => {
+          const state = stateMap.get(actorId);
+          if (!state) {
+            logger.warn(
+              `Cannot add batch memory: ActorState not found for ${actorId}`,
+              { actorId },
+              'NpcMemoryService'
+            );
+            return false;
+          }
+
+          // Parse memories with Zod validation
+          const memories = parseMemoriesSafe(state.recentMemories, { actorId });
+
+          // Create new memory with unique ID
+          const newMemory: NpcMemory = {
+            id: await generateSnowflakeId(),
+            ...memory,
+          };
+
+          // Add and enforce cap
+          memories.push(newMemory);
+          while (memories.length > MAX_MEMORIES) {
+            memories.shift();
+          }
+
+          const now = new Date();
+
+          // Update with optimistic locking
+          const result = await db
+            .update(actorState)
+            .set({
+              recentMemories: memories,
+              updatedAt: now,
+            })
+            .where(
+              and(
+                eq(actorState.id, actorId),
+                eq(actorState.updatedAt, state.updatedAt)
+              )
+            )
+            .returning({ id: actorState.id });
+
+          return result.length > 0;
+        })
+      );
+
+      // Count successes
+      const successCount = updateResults.filter(
+        (r) => r.status === 'fulfilled' && r.value === true
+      ).length;
+
+      logger.debug(
+        `Batch memory added to ${successCount}/${actorIds.length} actors`,
+        { memoryType: memory.type, successCount, totalActors: actorIds.length },
+        'NpcMemoryService'
+      );
+
+      return successCount;
+    } catch (error) {
+      logger.error(
+        `Failed to add batch memory`,
+        { error: error instanceof Error ? error.message : String(error) },
+        'NpcMemoryService'
+      );
+      return 0;
     }
   }
 

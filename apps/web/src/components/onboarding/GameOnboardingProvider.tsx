@@ -1,6 +1,7 @@
 'use client';
 
 import type { GameOnboardingStep } from '@babylon/db';
+import { ONBOARDING_STEP_INFO } from '@babylon/shared';
 import {
   createContext,
   useCallback,
@@ -39,48 +40,9 @@ const GameOnboardingContext = createContext<GameOnboardingContextValue | null>(
 );
 
 /**
- * Step display information
+ * Step display information - imported from shared package
  */
-export const STEP_INFO: Record<
-  GameOnboardingStep,
-  { title: string; description: string; points: number }
-> = {
-  welcome: {
-    title: 'Welcome to Babylon!',
-    description: 'Learn how to navigate the game and start trading.',
-    points: 10,
-  },
-  explore_feed: {
-    title: 'Explore the Feed',
-    description: 'Scroll through the feed to see what NPCs are saying.',
-    points: 20,
-  },
-  follow_npc: {
-    title: 'Follow an NPC',
-    description: 'Follow an NPC to see their posts in your feed.',
-    points: 30,
-  },
-  view_markets: {
-    title: 'View Markets',
-    description: 'Check out the prediction and perpetual markets.',
-    points: 20,
-  },
-  first_prediction: {
-    title: 'Make Your First Prediction',
-    description: 'Buy shares in a prediction market.',
-    points: 50,
-  },
-  first_trade: {
-    title: 'Make Your First Trade',
-    description: 'Open a position in the perpetuals market.',
-    points: 50,
-  },
-  complete: {
-    title: 'Onboarding Complete!',
-    description: 'You earned 180 points for completing the tutorial.',
-    points: 0,
-  },
-};
+export const STEP_INFO = ONBOARDING_STEP_INFO;
 
 /**
  * Game Onboarding Provider

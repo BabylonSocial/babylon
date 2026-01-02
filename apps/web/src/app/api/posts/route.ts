@@ -1084,17 +1084,24 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     .map((u) => u.id);
 
   if (mentionedActorIds.length > 0) {
-    void Promise.all(
+    // Use Promise.allSettled to handle each mention independently
+    // This ensures one failure doesn't prevent processing others
+    void Promise.allSettled(
       mentionedActorIds.map((actorId) =>
-        handlePlayerMention(canonicalUserId, actorId, post.id)
+        handlePlayerMention(canonicalUserId, actorId, post.id).catch((err) => {
+          // Log individual failures to track which actor failed
+          logger.warn(
+            'Failed to handle player mention for NPC',
+            {
+              actorId,
+              postId: post.id,
+              error: err instanceof Error ? err.message : String(err),
+            },
+            'POST /api/posts'
+          );
+        })
       )
-    ).catch((err) => {
-      logger.warn(
-        'Failed to handle player mentions for NPCs',
-        { error: err instanceof Error ? err.message : String(err) },
-        'POST /api/posts'
-      );
-    });
+    );
     logger.info(
       'Triggered NPC mention influence',
       { postId: post.id, npcCount: mentionedActorIds.length },
