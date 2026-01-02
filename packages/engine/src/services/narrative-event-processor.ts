@@ -486,7 +486,10 @@ export async function processArcTick(
           deceiverActorIds: arcPlan.deceiverActorIds ?? [],
         }
       : null;
-    const structuredEvent = await generateStructuredEvent(arc, normalizedArcPlan);
+    const structuredEvent = await generateStructuredEvent(
+      arc,
+      normalizedArcPlan
+    );
 
     // Apply market impacts if event affects stocks
     if (structuredEvent.marketImpacts.length > 0) {
@@ -514,7 +517,11 @@ export async function processArcTick(
       try {
         // Get question details for article context
         const [question] = await db
-          .select({ id: questions.id, text: questions.text, questionNumber: questions.questionNumber })
+          .select({
+            id: questions.id,
+            text: questions.text,
+            questionNumber: questions.questionNumber,
+          })
           .from(questions)
           .where(eq(questions.id, arc.questionId))
           .limit(1);
@@ -543,7 +550,10 @@ export async function processArcTick(
           {
             arcId,
             worldEventId,
-            error: articleError instanceof Error ? articleError.message : String(articleError),
+            error:
+              articleError instanceof Error
+                ? articleError.message
+                : String(articleError),
           },
           'NarrativeEventProcessor'
         );
