@@ -27,9 +27,9 @@ import {
   worldEvents,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
-import { secureRandom } from '../utils/entropy';
 import type { BabylonLLMClient } from '../llm/openai-client';
 import { toSafeDayNumber } from '../utils/date-utils';
+import { secureRandom } from '../utils/entropy';
 import { generateArticlesForArcEvent } from './event-generation-helpers';
 
 // LLM client reference for article generation

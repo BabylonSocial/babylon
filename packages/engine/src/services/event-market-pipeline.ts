@@ -290,7 +290,12 @@ export async function updateStockSentiment(
 
   logger.debug(
     `Updated sentiment for ${stockIdOrTicker}`,
-    { stockIdOrTicker, resolvedOrgId: orgId, oldSentiment: currentSentiment, newSentiment },
+    {
+      stockIdOrTicker,
+      resolvedOrgId: orgId,
+      oldSentiment: currentSentiment,
+      newSentiment,
+    },
     'EventMarketPipeline'
   );
 }

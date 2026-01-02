@@ -1,6 +1,10 @@
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
 import { handlePlayerTrade } from '@babylon/engine';
-import { logger, fireAndForgetWithRetry, PerpOpenPositionSchema } from '@babylon/shared';
+import {
+  fireAndForgetWithRetry,
+  logger,
+  PerpOpenPositionSchema,
+} from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { trackServerEvent } from '@/lib/posthog/server';
 import {
@@ -75,7 +79,12 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     () => handlePlayerTrade(user.userId, ticker, normalizedSide, numericSize),
     {
       logContext: 'PerpOpen',
-      metadata: { userId: user.userId, ticker, side: normalizedSide, size: numericSize },
+      metadata: {
+        userId: user.userId,
+        ticker,
+        side: normalizedSide,
+        size: numericSize,
+      },
     }
   );
 
