@@ -37,7 +37,6 @@ import type { BabylonLLMClient } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import { getGameDayNumber, toSafeDayNumber } from '../utils/date-utils';
 import {
-  biasedRandomCount,
   secureRandom,
   secureShuffle,
   urgencyWeight,
@@ -63,7 +62,6 @@ import {
   type DiverseTopicSuggestion,
   getTopicDiversityService,
 } from './topic-diversity-service';
-import { articleFrequencyService } from './article-frequency-service';
 
 const LOOKAHEAD_MINUTES = 15; // Generate 15 minutes ahead
 const GENERATION_BATCH_MINUTES = 5; // Generate in 5-minute batches
@@ -71,6 +69,30 @@ const DIVERSITY_QUOTA = 0.2; // 20% of posts should cover diverse topics
 const ORGANIC_POST_RATIO = 0.15; // 15% of posts should be organic (no topic)
 const RIVALRY_POST_RATIO = 0.1; // 10% of posts should be rivalry-driven
 const ACTOR_POST_RATIO = 0.95; // 95% of posts should be from actors (NPCs)
+
+// Posts per 5-min window by hour (0-23): [min, max]. Biased toward lower end.
+const POSTS_BY_HOUR: [number, number][] = [
+  [2, 5], [2, 4], [1, 3], [1, 3], [2, 4], [3, 6],  // 0-5 overnight
+  [5, 8], [6, 10], [8, 12],                         // 6-8 morning
+  [10, 15], [10, 15], [10, 14], [8, 12],           // 9-12 peak
+  [10, 14], [10, 15], [10, 15], [10, 14], [8, 12], // 13-17 afternoon
+  [6, 10], [6, 10], [5, 8], [4, 7],                // 18-21 evening
+  [3, 6], [3, 5],                                   // 22-23 night
+];
+
+// Article probability scales with active market count
+const ARTICLE_PROB = [0.05, 0.12, 0.18, 0.25, 0.30, 0.35];
+
+/** Get natural post count for hour (biased toward lower end) */
+function getPostCount(hour: number): number {
+  const [min, max] = POSTS_BY_HOUR[hour] ?? [5, 10];
+  return Math.floor(min + secureRandom() * secureRandom() * (max - min));
+}
+
+/** Get article probability based on active markets */
+function getArticleProb(marketCount: number): number {
+  return ARTICLE_PROB[Math.min(marketCount, ARTICLE_PROB.length - 1)] ?? 0.05;
+}
 
 /**
  * Check how far ahead content is generated
@@ -335,9 +357,8 @@ async function generateContentWindow(
     return;
   }
 
-  // Target 5-10 NPC posts per minute = 25-50 per 5-minute window
-  // Using biased random for natural distribution
-  const numPosts = biasedRandomCount(25, 50);
+  // Natural posting rhythm - varies by time of day (1-3 posts/min vs old 5-10)
+  const numPosts = getPostCount(windowStart.getUTCHours());
   const windowDuration = windowEnd.getTime() - windowStart.getTime();
 
   // Generate events probabilistically using secure random
@@ -475,9 +496,9 @@ async function generateContentWindow(
 
   // Generate posts in parallel for better performance
   const postPromises = Array.from({ length: numPosts }, async (_, i) => {
-    // Distribute timestamps naturally across window using secure random
-    const randomOffset = secureRandom() * windowDuration;
-    const postTimestamp = new Date(windowStart.getTime() + randomOffset);
+    // Distribute timestamps randomly across window
+    const offset = Math.floor(secureRandom() * windowDuration);
+    const postTimestamp = new Date(windowStart.getTime() + offset);
     const postDayNumber = dayNumberForTimestamp(postTimestamp);
 
     // Check if this should be an organic post (personality-driven, no topic)
@@ -715,24 +736,12 @@ async function generateContentWindow(
       }
     }
 
-    // Dynamic article probability based on active markets and timeframes
-    // Flash/intraday markets increase article frequency significantly
-    const articleResult = await articleFrequencyService.shouldGenerateArticle({
-      now: postTimestamp,
-    });
-    const shouldCreateArticle = articleResult.shouldGenerate;
+    // Article probability scales with active market count (5% baseline, up to 35%)
+    const articleProb = getArticleProb(activeQuestions.length);
+    const shouldCreateArticle = secureRandom() < articleProb;
     let success = false;
 
     if (shouldCreateArticle) {
-      logger.debug(
-        'Generating article',
-        {
-          probability: (articleResult.probability * 100).toFixed(1) + '%',
-          reason: articleResult.reason,
-          activeMarkets: articleResult.activeMarkets,
-        },
-        'LookaheadGeneration'
-      );
       success = await generateOrgArticle(
         llmClient,
         org,

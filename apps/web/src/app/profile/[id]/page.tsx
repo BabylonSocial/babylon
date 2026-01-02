@@ -200,7 +200,7 @@ export default function ActorProfilePage() {
           description: user.bio || '',
           role: user.isActor ? 'Actor' : 'User',
           type: user.isActor ? 'actor' : ('user' as const),
-          isUser: true,
+          isUser: true, // Show ProfileWidget for all users including actors/NPCs
           username: user.username,
           profileImageUrl: user.profileImageUrl,
           coverImageUrl: user.coverImageUrl,
@@ -246,7 +246,7 @@ export default function ActorProfilePage() {
             description: user.bio || '',
             role: user.isActor ? 'Actor' : 'User',
             type: user.isActor ? 'actor' : ('user' as const),
-            isUser: true,
+            isUser: true, // Show ProfileWidget for all users including actors/NPCs
             username: user.username,
             profileImageUrl: user.profileImageUrl,
             coverImageUrl: user.coverImageUrl,
@@ -333,6 +333,7 @@ export default function ActorProfilePage() {
         affiliations: actor.affiliations,
         role: actor.role || actor.tier || 'Actor',
         type: 'actor' as const,
+        isUser: true, // Show ProfileWidget for actors
         game: gameId ? { id: gameId } : undefined,
         username: ('username' in actor
           ? (actor.username as string)
@@ -375,6 +376,7 @@ export default function ActorProfilePage() {
         description: org.description,
         profileDescription: org.profileDescription,
         type: 'organization' as const,
+        isUser: true, // Show ProfileWidget for organizations
         role: 'Organization',
         stats,
       });

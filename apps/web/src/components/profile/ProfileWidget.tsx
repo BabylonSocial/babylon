@@ -53,6 +53,9 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
   const [loading, setLoading] = useState(true);
   const widgetCache = useWidgetCacheStore();
 
+  // Check if viewing own profile
+  const isOwnProfile = user?.id === userId;
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'prediction' | 'perp'>(
@@ -66,8 +69,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
     if (!userId) return;
 
     // Skip fetching profile if current user needs onboarding
-    const isCurrentUser = user?.id === userId;
-    if (isCurrentUser && needsOnboarding) {
+    if (isOwnProfile && needsOnboarding) {
       setLoading(false);
       return;
     }
@@ -93,7 +95,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
 
       setLoading(true);
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel (balance is public for all users)
       const [balanceRes, positionsRes, profileRes] = await Promise.all([
         fetch(`/api/users/${encodeURIComponent(userId)}/balance`),
         fetch(`/api/markets/positions/${encodeURIComponent(userId)}`),
@@ -163,7 +165,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
     // Refresh every 30 seconds (skip cache to get fresh data)
     const interval = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(interval);
-  }, [userId, needsOnboarding, user?.id, widgetCache]);
+  }, [userId, needsOnboarding, isOwnProfile, widgetCache]);
 
   const formatPoints = (points: number) => {
     return points.toLocaleString('en-US', {
@@ -407,22 +409,27 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
         data={selectedPosition}
         userId={userId}
         onSuccess={async () => {
+          // Refresh both balance and positions
           const [balanceRes, positionsRes] = await Promise.all([
             fetch(`/api/users/${encodeURIComponent(userId)}/balance`),
             fetch(`/api/markets/positions/${encodeURIComponent(userId)}`),
           ]);
 
-          const balanceJson = await balanceRes.json();
-          setBalance({
-            balance: Number(balanceJson.balance),
-            totalDeposited: Number(balanceJson.totalDeposited),
-            totalWithdrawn: Number(balanceJson.totalWithdrawn),
-            lifetimePnL: Number(balanceJson.lifetimePnL),
-          });
+          if (balanceRes.ok) {
+            const balanceJson = await balanceRes.json();
+            setBalance({
+              balance: Number(balanceJson.balance),
+              totalDeposited: Number(balanceJson.totalDeposited),
+              totalWithdrawn: Number(balanceJson.totalWithdrawn),
+              lifetimePnL: Number(balanceJson.lifetimePnL),
+            });
+          }
 
-          const positionsJson = await positionsRes.json();
-          setPredictions(positionsJson.predictions.positions);
-          setPerps(positionsJson.perpetuals.positions);
+          if (positionsRes.ok) {
+            const positionsJson = await positionsRes.json();
+            setPredictions(positionsJson.predictions.positions);
+            setPerps(positionsJson.perpetuals.positions);
+          }
         }}
       />
     </div>
