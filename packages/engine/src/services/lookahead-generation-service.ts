@@ -72,16 +72,34 @@ const ACTOR_POST_RATIO = 0.95; // 95% of posts should be from actors (NPCs)
 
 // Posts per 5-min window by hour (0-23): [min, max]. Biased toward lower end.
 const POSTS_BY_HOUR: [number, number][] = [
-  [2, 5], [2, 4], [1, 3], [1, 3], [2, 4], [3, 6],  // 0-5 overnight
-  [5, 8], [6, 10], [8, 12],                         // 6-8 morning
-  [10, 15], [10, 15], [10, 14], [8, 12],           // 9-12 peak
-  [10, 14], [10, 15], [10, 15], [10, 14], [8, 12], // 13-17 afternoon
-  [6, 10], [6, 10], [5, 8], [4, 7],                // 18-21 evening
-  [3, 6], [3, 5],                                   // 22-23 night
+  [2, 5],
+  [2, 4],
+  [1, 3],
+  [1, 3],
+  [2, 4],
+  [3, 6], // 0-5 overnight
+  [5, 8],
+  [6, 10],
+  [8, 12], // 6-8 morning
+  [10, 15],
+  [10, 15],
+  [10, 14],
+  [8, 12], // 9-12 peak
+  [10, 14],
+  [10, 15],
+  [10, 15],
+  [10, 14],
+  [8, 12], // 13-17 afternoon
+  [6, 10],
+  [6, 10],
+  [5, 8],
+  [4, 7], // 18-21 evening
+  [3, 6],
+  [3, 5], // 22-23 night
 ];
 
 // Article probability scales with active market count
-const ARTICLE_PROB = [0.05, 0.12, 0.18, 0.25, 0.30, 0.35];
+const ARTICLE_PROB = [0.05, 0.12, 0.18, 0.25, 0.3, 0.35];
 
 /** Get natural post count for hour (biased toward lower end) */
 function getPostCount(hour: number): number {
