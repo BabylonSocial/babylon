@@ -42,6 +42,11 @@ export const NpcMemorySchema = z.object({
 export const NpcMemoriesSchema = z.array(NpcMemorySchema);
 
 /**
+ * Partial memory schema for creation (without id)
+ */
+export const PartialMemorySchema = NpcMemorySchema.omit({ id: true });
+
+/**
  * Relationship State schema - validates against RelationshipState interface from @babylon/db
  */
 export const RelationshipStateSchema = z.object({
@@ -98,12 +103,30 @@ export function parseMemoriesSafe(
   // Try to salvage valid memories from the array
   if (Array.isArray(data)) {
     const validMemories: NpcMemory[] = [];
+    let discardedCount = 0;
     for (const item of data) {
       const itemResult = NpcMemorySchema.safeParse(item);
       if (itemResult.success) {
         validMemories.push(itemResult.data);
+      } else {
+        discardedCount++;
       }
     }
+
+    // Log salvage statistics
+    if (discardedCount > 0) {
+      logger.info(
+        'Salvaged partial memories from corrupted data',
+        {
+          actorId: context?.actorId,
+          salvaged: validMemories.length,
+          discarded: discardedCount,
+          total: data.length,
+        },
+        'JSONBValidation'
+      );
+    }
+
     return validMemories;
   }
 
@@ -140,12 +163,31 @@ export function parseRelationshipsSafe(
   // Try to salvage valid relationships from the object
   if (typeof data === 'object' && data !== null) {
     const validRelationships: Record<string, RelationshipState> = {};
-    for (const [key, value] of Object.entries(data)) {
+    let discardedCount = 0;
+    const entries = Object.entries(data);
+    for (const [key, value] of entries) {
       const itemResult = RelationshipStateSchema.safeParse(value);
       if (itemResult.success) {
         validRelationships[key] = itemResult.data;
+      } else {
+        discardedCount++;
       }
     }
+
+    // Log salvage statistics
+    if (discardedCount > 0) {
+      logger.info(
+        'Salvaged partial relationships from corrupted data',
+        {
+          actorId: context?.actorId,
+          salvaged: Object.keys(validRelationships).length,
+          discarded: discardedCount,
+          total: entries.length,
+        },
+        'JSONBValidation'
+      );
+    }
+
     return validRelationships;
   }
 
@@ -159,8 +201,6 @@ export function parseRelationshipsSafe(
 export function validateMemory(
   memory: unknown
 ): asserts memory is Omit<NpcMemory, 'id'> {
-  // Allow partial memory without id for creation
-  const PartialMemorySchema = NpcMemorySchema.omit({ id: true });
   PartialMemorySchema.parse(memory);
 }
 

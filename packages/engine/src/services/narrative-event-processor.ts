@@ -6,11 +6,13 @@
  */
 
 import {
+  and,
   type ArcState,
   type ArcStateType,
   arcStates,
   db,
   eq,
+  type LongTermArcState,
   type MarketImpact,
   type PendingTransition,
   questionArcPlans,
@@ -20,9 +22,9 @@ import {
 import { generateSnowflakeId, logger } from '@babylon/shared';
 
 /**
- * Day ranges for each arc state
+ * Day ranges for each arc state (for 30-day long-term arcs)
  */
-const STATE_DAY_RANGES: Record<ArcStateType, [number, number]> = {
+const STATE_DAY_RANGES: Record<LongTermArcState, [number, number]> = {
   setup: [1, 3],
   tension: [4, 10],
   escalation: [11, 18],
@@ -37,12 +39,12 @@ const STATE_DAY_RANGES: Record<ArcStateType, [number, number]> = {
 const EVENT_COOLDOWN_HOURS = 2;
 
 /**
- * Get the expected arc state for a given day number
+ * Get the expected arc state for a given day number (long-term arcs only)
  */
-export function getExpectedState(dayNumber: number): ArcStateType {
+export function getExpectedState(dayNumber: number): LongTermArcState {
   for (const [state, [start, end]] of Object.entries(STATE_DAY_RANGES)) {
     if (dayNumber >= start && dayNumber <= end) {
-      return state as ArcStateType;
+      return state as LongTermArcState;
     }
   }
   // After day 30, remain in resolution
@@ -50,12 +52,12 @@ export function getExpectedState(dayNumber: number): ArcStateType {
 }
 
 /**
- * Check if a state transition should occur
+ * Check if a state transition should occur (long-term arcs only)
  */
 export function evaluateStateTransition(
   arc: ArcState,
   dayNumber: number
-): ArcStateType | null {
+): LongTermArcState | null {
   const expectedState = getExpectedState(dayNumber);
 
   if (expectedState !== arc.currentState) {
@@ -72,7 +74,7 @@ export function evaluateStateTransition(
         transition.probability === undefined ||
         Math.random() < transition.probability
       ) {
-        return transition.targetState;
+        return transition.targetState as LongTermArcState;
       }
     }
   }
@@ -81,11 +83,11 @@ export function evaluateStateTransition(
 }
 
 /**
- * Transition an arc to a new state
+ * Transition an arc to a new state (long-term arcs only)
  */
 export async function transitionArcState(
   arcId: string,
-  newState: ArcStateType
+  newState: LongTermArcState
 ): Promise<void> {
   const now = new Date();
 
@@ -108,14 +110,14 @@ export async function transitionArcState(
 }
 
 /**
- * Check if an event should be generated for this arc
+ * Check if an event should be generated for this arc (long-term arcs only)
  */
 export function shouldGenerateEvent(
   arc: ArcState,
   _dayNumber: number
 ): boolean {
   // Event generation probability based on state
-  const probabilities: Record<ArcStateType, number> = {
+  const probabilities: Record<LongTermArcState, number> = {
     setup: 0.3, // 30% chance per tick
     tension: 0.4,
     escalation: 0.5,
@@ -124,7 +126,7 @@ export function shouldGenerateEvent(
     resolution: 0.2,
   };
 
-  const prob = probabilities[arc.currentState] ?? 0.3;
+  const prob = probabilities[arc.currentState as LongTermArcState] ?? 0.3;
 
   // Reduce probability if we recently generated an event
   if (arc.lastEventAt) {
@@ -145,8 +147,8 @@ export async function generateStructuredEvent(
   arc: ArcState,
   arcPlan: { insiderActorIds: string[]; deceiverActorIds: string[] } | null
 ): Promise<StructuredEventData> {
-  // Event types appropriate for each state
-  const stateEventTypes: Record<ArcStateType, StructuredEventData['type'][]> = {
+  // Event types appropriate for each state (long-term arcs only)
+  const stateEventTypes: Record<LongTermArcState, StructuredEventData['type'][]> = {
     setup: ['rumor'],
     tension: ['rumor', 'leak', 'denial'],
     escalation: ['leak', 'denial', 'confirmation'],
@@ -155,12 +157,12 @@ export async function generateStructuredEvent(
     resolution: ['proof'],
   };
 
-  const possibleTypes = stateEventTypes[arc.currentState] ?? ['rumor'];
+  const possibleTypes = stateEventTypes[arc.currentState as LongTermArcState] ?? ['rumor'];
   const eventType =
     possibleTypes[Math.floor(Math.random() * possibleTypes.length)]!;
 
   // Severity increases as arc progresses
-  const severityByState: Record<ArcStateType, number> = {
+  const severityByState: Record<LongTermArcState, number> = {
     setup: 1,
     tension: 2,
     escalation: 3,
@@ -168,7 +170,7 @@ export async function generateStructuredEvent(
     revelation: 4,
     resolution: 5,
   };
-  const baseSeverity = severityByState[arc.currentState] ?? 2;
+  const baseSeverity = severityByState[arc.currentState as LongTermArcState] ?? 2;
   const severity = Math.min(5, baseSeverity + Math.floor(Math.random() * 2)) as
     | 1
     | 2
@@ -374,15 +376,29 @@ export async function processArcTick(
       );
     }
 
-    // Update arc state
-    await db
+    // Update arc state with optimistic locking
+    const now = new Date();
+    const updateResult = await db
       .update(arcStates)
       .set({
         eventsGenerated: (arc.eventsGenerated ?? 0) + 1,
-        lastEventAt: new Date(),
-        updatedAt: new Date(),
+        lastEventAt: now,
+        updatedAt: now,
       })
-      .where(eq(arcStates.id, arcId));
+      .where(
+        and(eq(arcStates.id, arcId), eq(arcStates.updatedAt, arc.updatedAt))
+      )
+      .returning({ id: arcStates.id });
+
+    if (updateResult.length === 0) {
+      // Optimistic lock conflict - another process updated the arc
+      logger.warn(
+        `Optimistic lock conflict for arc ${arcId}, skipping event`,
+        { arcId },
+        'NarrativeEventProcessor'
+      );
+      return { transitioned, eventGenerated: false, newState: newState ?? undefined };
+    }
 
     eventGenerated = true;
 
@@ -406,30 +422,71 @@ export async function processArcTick(
 }
 
 /**
- * Create an arc state for a question
+ * Create an arc state for a question.
+ * Returns existing arc ID if one already exists (unique constraint).
  */
 export async function createArcState(questionId: string): Promise<string> {
+  // First check if arc already exists (idempotent)
+  const [existing] = await db
+    .select({ id: arcStates.id })
+    .from(arcStates)
+    .where(eq(arcStates.questionId, questionId))
+    .limit(1);
+
+  if (existing) {
+    logger.debug(
+      `Arc state already exists for question ${questionId}`,
+      { arcId: existing.id, questionId },
+      'NarrativeEventProcessor'
+    );
+    return existing.id;
+  }
+
   const id = await generateSnowflakeId();
   const now = new Date();
 
-  await db.insert(arcStates).values({
-    id,
-    questionId,
-    currentState: 'setup',
-    stateEnteredAt: now,
-    eventsGenerated: 0,
-    pendingTransitions: [],
-    createdAt: now,
-    updatedAt: now,
-  });
+  try {
+    await db.insert(arcStates).values({
+      id,
+      questionId,
+      currentState: 'setup',
+      stateEnteredAt: now,
+      eventsGenerated: 0,
+      pendingTransitions: [],
+      createdAt: now,
+      updatedAt: now,
+    });
 
-  logger.info(
-    `Created arc state for question ${questionId}`,
-    { arcId: id, questionId },
-    'NarrativeEventProcessor'
-  );
+    logger.info(
+      `Created arc state for question ${questionId}`,
+      { arcId: id, questionId },
+      'NarrativeEventProcessor'
+    );
 
-  return id;
+    return id;
+  } catch (error) {
+    // Handle unique constraint violation (race condition)
+    if (
+      error instanceof Error &&
+      error.message.includes('unique constraint')
+    ) {
+      const [racedExisting] = await db
+        .select({ id: arcStates.id })
+        .from(arcStates)
+        .where(eq(arcStates.questionId, questionId))
+        .limit(1);
+
+      if (racedExisting) {
+        logger.debug(
+          `Arc state created by another process for question ${questionId}`,
+          { arcId: racedExisting.id, questionId },
+          'NarrativeEventProcessor'
+        );
+        return racedExisting.id;
+      }
+    }
+    throw error;
+  }
 }
 
 /**

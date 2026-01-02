@@ -20,6 +20,7 @@ import {
   ONBOARDING_STEP_ORDER,
   ONBOARDING_STEP_POINTS,
 } from '@babylon/shared';
+import { EarnedPointsService } from './earned-points-service';
 
 /**
  * Create or get onboarding record for a user
@@ -126,8 +127,28 @@ export async function completeOnboardingStep(
     'GameOnboarding'
   );
 
-  // TODO: Award points to user balance (integrate with points service)
-  // await pointsService.awardPoints(userId, points, `onboarding_${step}`);
+  // Award bonus points to user balance
+  if (points > 0) {
+    try {
+      await EarnedPointsService.awardBonusPoints(
+        userId,
+        points,
+        `onboarding_${step}`
+      );
+    } catch (error) {
+      // Log but don't fail - onboarding completion is more important
+      logger.warn(
+        `Failed to award bonus points for onboarding step`,
+        {
+          userId,
+          step,
+          points,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'GameOnboarding'
+      );
+    }
+  }
 
   return {
     success: true,

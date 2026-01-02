@@ -106,18 +106,21 @@ export function GameOnboardingProvider({
         };
 
         if (data.success) {
-          setStatus((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  completedSteps: [...prev.completedSteps, step],
-                  currentStep: data.nextStep,
-                  totalPointsEarned:
-                    prev.totalPointsEarned + data.pointsAwarded,
-                  isComplete: data.isComplete,
-                }
-              : null
-          );
+          setStatus((prev) => {
+            if (!prev) return null;
+            // Guard against duplicate step additions
+            if (prev.completedSteps.includes(step)) {
+              return prev;
+            }
+            return {
+              ...prev,
+              completedSteps: [...prev.completedSteps, step],
+              currentStep: data.nextStep,
+              totalPointsEarned:
+                prev.totalPointsEarned + data.pointsAwarded,
+              isComplete: data.isComplete,
+            };
+          });
         }
       }
     } catch (error) {

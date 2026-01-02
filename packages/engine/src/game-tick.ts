@@ -70,6 +70,7 @@ import {
   createArcState,
   processArcTick,
 } from './services/narrative-event-processor';
+import { timeframeArcProcessor } from './services/timeframe-arc-processor';
 import { NPCGroupDynamicsService } from './services/npc-group-dynamics-service';
 import { getOracleService } from './services/oracle/oracle-service';
 import { createParodyHeadlineGenerator } from './services/parody-headline-generator';
@@ -154,6 +155,14 @@ export interface GameTickResult {
     arcsProcessed: number;
     transitioned: number;
     eventsGenerated: number;
+  };
+  /** Timeframed market processing stats */
+  timeframedMarkets?: {
+    marketsProcessed: number;
+    transitionsOccurred: number;
+    eventsGenerated: number;
+    subMarketsSpawned: number;
+    errors: string[];
   };
   /** Token usage statistics for this tick */
   tokenStats?: {
@@ -692,6 +701,25 @@ export async function executeGameTick(
     result.narrativeArcs = narrativeStats;
     if (narrativeStats.transitioned > 0 || narrativeStats.eventsGenerated > 0) {
       logger.info('Narrative arcs processed', narrativeStats, 'GameTick');
+    }
+  }
+
+  // Process timeframed markets (multi-timeframe arcs: flash, intraday, daily, etc.)
+  // These use timestamp-based progression rather than day-based
+  if (Date.now() < deadline) {
+    const timeframeStats = await timeframeArcProcessor.processTick(timestamp);
+    result.timeframedMarkets = timeframeStats;
+    if (timeframeStats.marketsProcessed > 0) {
+      logger.info(
+        'Timeframed markets processed',
+        {
+          processed: timeframeStats.marketsProcessed,
+          transitions: timeframeStats.transitionsOccurred,
+          events: timeframeStats.eventsGenerated,
+          spawns: timeframeStats.subMarketsSpawned,
+        },
+        'GameTick'
+      );
     }
   }
 

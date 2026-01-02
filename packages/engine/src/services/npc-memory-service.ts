@@ -14,7 +14,6 @@ import {
   and,
   db,
   eq,
-  inArray,
   type NpcMemory,
   type RelationshipState,
 } from '@babylon/db';
@@ -483,88 +482,39 @@ export class NpcMemoryService {
       return 1;
     }
 
-    try {
-      // Fetch all actor states in one query
-      const states = await db
-        .select({
-          id: actorState.id,
-          recentMemories: actorState.recentMemories,
-          updatedAt: actorState.updatedAt,
-        })
-        .from(actorState)
-        .where(inArray(actorState.id, actorIds));
+    // Delegate to addMemory which has retry logic built in
+    // Use Promise.allSettled for isolation between actors
+    const updateResults = await Promise.allSettled(
+      actorIds.map(async (actorId) => {
+        try {
+          await this.addMemory(actorId, memory);
+          return true;
+        } catch (error) {
+          logger.warn(
+            `Failed to add batch memory for actor ${actorId}`,
+            {
+              actorId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'NpcMemoryService'
+          );
+          return false;
+        }
+      })
+    );
 
-      const stateMap = new Map(states.map((s) => [s.id, s]));
+    // Count successes
+    const successCount = updateResults.filter(
+      (r) => r.status === 'fulfilled' && r.value === true
+    ).length;
 
-      // Update each actor in parallel (using Promise.allSettled for isolation)
-      const updateResults = await Promise.allSettled(
-        actorIds.map(async (actorId) => {
-          const state = stateMap.get(actorId);
-          if (!state) {
-            logger.warn(
-              `Cannot add batch memory: ActorState not found for ${actorId}`,
-              { actorId },
-              'NpcMemoryService'
-            );
-            return false;
-          }
+    logger.debug(
+      `Batch memory added to ${successCount}/${actorIds.length} actors`,
+      { memoryType: memory.type, successCount, totalActors: actorIds.length },
+      'NpcMemoryService'
+    );
 
-          // Parse memories with Zod validation
-          const memories = parseMemoriesSafe(state.recentMemories, { actorId });
-
-          // Create new memory with unique ID
-          const newMemory: NpcMemory = {
-            id: await generateSnowflakeId(),
-            ...memory,
-          };
-
-          // Add and enforce cap
-          memories.push(newMemory);
-          while (memories.length > MAX_MEMORIES) {
-            memories.shift();
-          }
-
-          const now = new Date();
-
-          // Update with optimistic locking
-          const result = await db
-            .update(actorState)
-            .set({
-              recentMemories: memories,
-              updatedAt: now,
-            })
-            .where(
-              and(
-                eq(actorState.id, actorId),
-                eq(actorState.updatedAt, state.updatedAt)
-              )
-            )
-            .returning({ id: actorState.id });
-
-          return result.length > 0;
-        })
-      );
-
-      // Count successes
-      const successCount = updateResults.filter(
-        (r) => r.status === 'fulfilled' && r.value === true
-      ).length;
-
-      logger.debug(
-        `Batch memory added to ${successCount}/${actorIds.length} actors`,
-        { memoryType: memory.type, successCount, totalActors: actorIds.length },
-        'NpcMemoryService'
-      );
-
-      return successCount;
-    } catch (error) {
-      logger.error(
-        `Failed to add batch memory`,
-        { error: error instanceof Error ? error.message : String(error) },
-        'NpcMemoryService'
-      );
-      return 0;
-    }
+    return successCount;
   }
 
   /**

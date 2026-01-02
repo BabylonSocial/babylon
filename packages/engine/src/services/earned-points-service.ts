@@ -242,6 +242,89 @@ export class EarnedPointsService {
   }
 
   /**
+   * Award bonus points to a user
+   *
+   * @description Awards bonus points for actions like onboarding completion,
+   * referrals, special events, etc. Updates bonusPoints and recalculates
+   * total reputationPoints.
+   *
+   * @param {string} userId - User ID to award points to
+   * @param {number} points - Number of bonus points to award
+   * @param {string} reason - Reason for the bonus (e.g., 'onboarding_welcome')
+   * @param {Transaction} [database] - Optional transaction for atomic operations
+   * @returns {Promise<number>} New total bonus points
+   */
+  static async awardBonusPoints(
+    userId: string,
+    points: number,
+    reason: string,
+    database: Transaction | typeof db = db
+  ): Promise<number> {
+    const result = await database
+      .select({
+        earnedPoints: users.earnedPoints,
+        invitePoints: users.invitePoints,
+        bonusPoints: users.bonusPoints,
+        reputationPoints: users.reputationPoints,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const user = result[0];
+
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
+    }
+
+    const newBonusPoints = user.bonusPoints + points;
+
+    // Calculate new total reputation points
+    // Total = Invite Points + Earned Points + Bonus Points + Base (100)
+    const basePoints = 100;
+    const newReputationPoints =
+      basePoints + user.invitePoints + user.earnedPoints + newBonusPoints;
+
+    // Update user
+    await database
+      .update(users)
+      .set({
+        bonusPoints: newBonusPoints,
+        reputationPoints: newReputationPoints,
+      })
+      .where(eq(users.id, userId));
+
+    // Create transaction record
+    await database.insert(pointsTransactions).values({
+      id: await generateSnowflakeId(),
+      userId,
+      amount: points,
+      pointsBefore: user.reputationPoints,
+      pointsAfter: newReputationPoints,
+      reason,
+      metadata: JSON.stringify({
+        pointsAwarded: points,
+        previousBonusPoints: user.bonusPoints,
+        newBonusPoints,
+      }),
+    });
+
+    logger.info(
+      'Awarded bonus points',
+      {
+        userId,
+        points,
+        reason,
+        totalBonusPoints: newBonusPoints,
+        totalReputationPoints: newReputationPoints,
+      },
+      'EarnedPointsService'
+    );
+
+    return newBonusPoints;
+  }
+
+  /**
    * Bulk sync earned points for all users
    * Useful for migration or recalculation
    * Note: Individual user errors are caught to allow continuation

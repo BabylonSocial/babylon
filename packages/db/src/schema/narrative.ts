@@ -1,24 +1,92 @@
 import { relations, sql } from 'drizzle-orm';
 import {
+  boolean,
   index,
   integer,
   jsonb,
   pgTable,
   text,
   timestamp,
+  unique,
 } from 'drizzle-orm/pg-core';
 import { questions } from './markets';
 
 /**
- * Arc state types for narrative state machine
+ * Market timeframe category
+ * Defines the resolution duration for markets
  */
-export type ArcStateType =
+export type MarketTimeframe =
+  | 'flash' // 15-30 minutes
+  | 'intraday' // 1-6 hours
+  | 'daily' // 12-48 hours
+  | 'weekly' // 3-7 days
+  | 'monthly' // 2-4 weeks
+  | 'quarterly' // 1-3 months
+  | 'longterm'; // 3+ months
+
+/**
+ * Market category for thematic grouping
+ */
+export type MarketCategory =
+  | 'tech'
+  | 'crypto'
+  | 'politics'
+  | 'sports'
+  | 'business'
+  | 'entertainment'
+  | 'science'
+  | 'general';
+
+/**
+ * Arc state types for long-term narrative state machine (30 days)
+ */
+export type LongTermArcState =
   | 'setup' // Days 1-3: Introduce question
   | 'tension' // Days 4-10: Early signals, misdirection
   | 'escalation' // Days 11-18: Conflicting signals
   | 'crisis' // Days 19-24: Peak uncertainty
   | 'revelation' // Days 25-27: Truth emerges
   | 'resolution'; // Days 28-30: Definitive answer
+
+/**
+ * Arc state types for weekly markets (3-7 days)
+ */
+export type WeeklyArcState =
+  | 'setup'
+  | 'tension'
+  | 'escalation'
+  | 'crisis'
+  | 'resolution';
+
+/**
+ * Arc state types for daily markets (12-48 hours)
+ */
+export type DailyArcState =
+  | 'morning'
+  | 'midday'
+  | 'afternoon'
+  | 'evening'
+  | 'resolution';
+
+/**
+ * Arc state types for intraday markets (1-6 hours)
+ */
+export type IntradayArcState = 'setup' | 'active' | 'climax' | 'resolution';
+
+/**
+ * Arc state types for flash markets (15-30 minutes)
+ */
+export type FlashArcState = 'live' | 'resolving';
+
+/**
+ * Generic arc state type (union of all)
+ */
+export type ArcStateType =
+  | LongTermArcState
+  | WeeklyArcState
+  | DailyArcState
+  | IntradayArcState
+  | FlashArcState;
 
 /**
  * Pending state transition
@@ -139,6 +207,7 @@ export const arcStates = pgTable(
   (t) => [
     index('ArcState_questionId_idx').on(t.questionId),
     index('ArcState_currentState_idx').on(t.currentState),
+    unique('ArcState_questionId_unique').on(t.questionId),
   ]
 );
 
@@ -151,3 +220,158 @@ export const arcStatesRelations = relations(arcStates, ({ one }) => ({
 
 export type ArcState = typeof arcStates.$inferSelect;
 export type NewArcState = typeof arcStates.$inferInsert;
+
+// =============================================================================
+// TIMEFRAMED MARKETS
+// =============================================================================
+
+/**
+ * Sub-market trigger metadata
+ */
+export interface SubMarketTriggerData {
+  eventType: string;
+  questionTemplate: string;
+  spawnedAt: string; // ISO date
+  parentEventId?: string;
+}
+
+/**
+ * TimeframedMarket - Markets with explicit timeframe and hierarchy support.
+ * Can be standalone or part of a parent/child hierarchy.
+ */
+export const timeframedMarkets = pgTable(
+  'TimeframedMarket',
+  {
+    id: text('id').primaryKey(),
+
+    // Link to question/market
+    questionId: text('questionId').references(() => questions.id, {
+      onDelete: 'cascade',
+    }),
+
+    // Timeframe configuration
+    timeframe: text('timeframe').$type<MarketTimeframe>().notNull(),
+    category: text('category').$type<MarketCategory>().notNull().default('general'),
+
+    // Hierarchy
+    parentMarketId: text('parentMarketId'),
+    rootMarketId: text('rootMarketId'), // Top-level parent for nested hierarchies
+
+    // Timing
+    startTime: timestamp('startTime', { mode: 'date' }).notNull(),
+    endTime: timestamp('endTime', { mode: 'date' }).notNull(),
+
+    // Arc state
+    arcState: text('arcState').notNull().default('setup'),
+    arcStateEnteredAt: timestamp('arcStateEnteredAt', { mode: 'date' }).notNull(),
+
+    // Status
+    isActive: boolean('isActive').notNull().default(true),
+    isResolved: boolean('isResolved').notNull().default(false),
+    resolvedAt: timestamp('resolvedAt', { mode: 'date' }),
+
+    // Metadata
+    triggerData: jsonb('triggerData').$type<SubMarketTriggerData>(),
+    affiliatedOrgIds: jsonb('affiliatedOrgIds').$type<string[]>().default([]),
+    affiliatedActorIds: jsonb('affiliatedActorIds').$type<string[]>().default([]),
+
+    // Stats
+    childMarketCount: integer('childMarketCount').notNull().default(0),
+    eventsGenerated: integer('eventsGenerated').notNull().default(0),
+    lastEventAt: timestamp('lastEventAt', { mode: 'date' }),
+
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).notNull(),
+  },
+  (t) => [
+    index('TimeframedMarket_questionId_idx').on(t.questionId),
+    index('TimeframedMarket_parentMarketId_idx').on(t.parentMarketId),
+    index('TimeframedMarket_rootMarketId_idx').on(t.rootMarketId),
+    index('TimeframedMarket_timeframe_idx').on(t.timeframe),
+    index('TimeframedMarket_category_idx').on(t.category),
+    index('TimeframedMarket_isActive_idx').on(t.isActive),
+    index('TimeframedMarket_endTime_idx').on(t.endTime),
+    index('TimeframedMarket_startTime_endTime_idx').on(t.startTime, t.endTime),
+  ]
+);
+
+export const timeframedMarketsRelations = relations(
+  timeframedMarkets,
+  ({ one, many }) => ({
+    question: one(questions, {
+      fields: [timeframedMarkets.questionId],
+      references: [questions.id],
+    }),
+    parentMarket: one(timeframedMarkets, {
+      fields: [timeframedMarkets.parentMarketId],
+      references: [timeframedMarkets.id],
+      relationName: 'parentChild',
+    }),
+    childMarkets: many(timeframedMarkets, {
+      relationName: 'parentChild',
+    }),
+  })
+);
+
+export type TimeframedMarket = typeof timeframedMarkets.$inferSelect;
+export type NewTimeframedMarket = typeof timeframedMarkets.$inferInsert;
+
+// =============================================================================
+// SUB-MARKET SPAWN LOG
+// =============================================================================
+
+/**
+ * SubMarketSpawnLog - Tracks sub-market creation from narrative events.
+ * Used for analytics and preventing duplicate spawns.
+ */
+export const subMarketSpawnLogs = pgTable(
+  'SubMarketSpawnLog',
+  {
+    id: text('id').primaryKey(),
+
+    // Source
+    parentMarketId: text('parentMarketId')
+      .notNull()
+      .references(() => timeframedMarkets.id, { onDelete: 'cascade' }),
+    sourceEventId: text('sourceEventId'),
+    eventType: text('eventType').notNull(),
+
+    // Result
+    spawnedMarketId: text('spawnedMarketId').references(
+      () => timeframedMarkets.id,
+      { onDelete: 'set null' }
+    ),
+    wasSpawned: boolean('wasSpawned').notNull(),
+    skipReason: text('skipReason'), // If not spawned, why
+
+    // Details
+    questionTemplate: text('questionTemplate'),
+    generatedQuestion: text('generatedQuestion'),
+    childTimeframe: text('childTimeframe').$type<MarketTimeframe>(),
+
+    createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('SubMarketSpawnLog_parentMarketId_idx').on(t.parentMarketId),
+    index('SubMarketSpawnLog_spawnedMarketId_idx').on(t.spawnedMarketId),
+    index('SubMarketSpawnLog_eventType_idx').on(t.eventType),
+    index('SubMarketSpawnLog_createdAt_idx').on(t.createdAt),
+  ]
+);
+
+export const subMarketSpawnLogsRelations = relations(
+  subMarketSpawnLogs,
+  ({ one }) => ({
+    parentMarket: one(timeframedMarkets, {
+      fields: [subMarketSpawnLogs.parentMarketId],
+      references: [timeframedMarkets.id],
+    }),
+    spawnedMarket: one(timeframedMarkets, {
+      fields: [subMarketSpawnLogs.spawnedMarketId],
+      references: [timeframedMarkets.id],
+    }),
+  })
+);
+
+export type SubMarketSpawnLog = typeof subMarketSpawnLogs.$inferSelect;
+export type NewSubMarketSpawnLog = typeof subMarketSpawnLogs.$inferInsert;
