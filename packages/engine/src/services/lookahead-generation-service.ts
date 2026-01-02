@@ -63,6 +63,7 @@ import {
   type DiverseTopicSuggestion,
   getTopicDiversityService,
 } from './topic-diversity-service';
+import { articleFrequencyService } from './article-frequency-service';
 
 const LOOKAHEAD_MINUTES = 15; // Generate 15 minutes ahead
 const GENERATION_BATCH_MINUTES = 5; // Generate in 5-minute batches
@@ -714,12 +715,24 @@ async function generateContentWindow(
       }
     }
 
-    // 5% chance to generate a full article (reduced from 10%)
-    // Articles are primarily event-driven, but orgs can still publish occasional articles
-    const shouldCreateArticle = secureRandom() < 0.05;
+    // Dynamic article probability based on active markets and timeframes
+    // Flash/intraday markets increase article frequency significantly
+    const articleResult = await articleFrequencyService.shouldGenerateArticle({
+      now: postTimestamp,
+    });
+    const shouldCreateArticle = articleResult.shouldGenerate;
     let success = false;
 
     if (shouldCreateArticle) {
+      logger.debug(
+        'Generating article',
+        {
+          probability: (articleResult.probability * 100).toFixed(1) + '%',
+          reason: articleResult.reason,
+          activeMarkets: articleResult.activeMarkets,
+        },
+        'LookaheadGeneration'
+      );
       success = await generateOrgArticle(
         llmClient,
         org,

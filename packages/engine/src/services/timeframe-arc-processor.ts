@@ -65,6 +65,13 @@ export interface TimeframeTickResult {
   eventsGenerated: number;
   subMarketsSpawned: number;
   errors: string[];
+  /** Events that can trigger article generation */
+  eventTriggers: Array<{
+    marketId: string;
+    eventType: string;
+    timeframe: string;
+    arcState: string;
+  }>;
 }
 
 // =============================================================================
@@ -129,6 +136,7 @@ export class TimeframeArcProcessor {
       eventsGenerated: 0,
       subMarketsSpawned: 0,
       errors: [],
+      eventTriggers: [],
     };
 
     try {
@@ -166,8 +174,16 @@ export class TimeframeArcProcessor {
           if (event.generated) {
             result.eventsGenerated++;
 
-            // Check for sub-market spawning
+            // Record event trigger for article generation
             if (event.eventType) {
+              result.eventTriggers.push({
+                marketId: market.id,
+                eventType: event.eventType,
+                timeframe: market.timeframe,
+                arcState: market.arcState,
+              });
+
+              // Check for sub-market spawning
               const spawned = await this.trySpawnSubMarket(
                 market,
                 event.eventType

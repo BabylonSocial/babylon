@@ -163,6 +163,12 @@ export interface GameTickResult {
     eventsGenerated: number;
     subMarketsSpawned: number;
     errors: string[];
+    eventTriggers: Array<{
+      marketId: string;
+      eventType: string;
+      timeframe: string;
+      arcState: string;
+    }>;
   };
   /** Token usage statistics for this tick */
   tokenStats?: {
