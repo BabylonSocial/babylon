@@ -251,7 +251,10 @@ export const timeframedMarkets = pgTable(
 
     // Timeframe configuration
     timeframe: text('timeframe').$type<MarketTimeframe>().notNull(),
-    category: text('category').$type<MarketCategory>().notNull().default('general'),
+    category: text('category')
+      .$type<MarketCategory>()
+      .notNull()
+      .default('general'),
 
     // Hierarchy
     parentMarketId: text('parentMarketId'),
@@ -263,7 +266,9 @@ export const timeframedMarkets = pgTable(
 
     // Arc state
     arcState: text('arcState').notNull().default('setup'),
-    arcStateEnteredAt: timestamp('arcStateEnteredAt', { mode: 'date' }).notNull(),
+    arcStateEnteredAt: timestamp('arcStateEnteredAt', {
+      mode: 'date',
+    }).notNull(),
 
     // Status
     isActive: boolean('isActive').notNull().default(true),
@@ -273,7 +278,9 @@ export const timeframedMarkets = pgTable(
     // Metadata
     triggerData: jsonb('triggerData').$type<SubMarketTriggerData>(),
     affiliatedOrgIds: jsonb('affiliatedOrgIds').$type<string[]>().default([]),
-    affiliatedActorIds: jsonb('affiliatedActorIds').$type<string[]>().default([]),
+    affiliatedActorIds: jsonb('affiliatedActorIds')
+      .$type<string[]>()
+      .default([]),
 
     // Stats
     childMarketCount: integer('childMarketCount').notNull().default(0),

@@ -18,22 +18,22 @@
 import {
   db,
   eq,
-  organizations,
-  sql,
-  subMarketSpawnLogs,
-  timeframedMarkets,
   type MarketCategory,
   type MarketTimeframe,
   type NewSubMarketSpawnLog,
   type NewTimeframedMarket,
+  organizations,
+  sql,
+  subMarketSpawnLogs,
   type TimeframedMarket,
+  timeframedMarkets,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import {
   calculateEndTime,
+  type SubMarketTrigger,
   shouldSpawnSubMarket,
   TIMEFRAME_CONFIGS,
-  type SubMarketTrigger,
 } from './market-timeframes';
 import { StaticDataRegistry } from './static-data-registry';
 
@@ -143,7 +143,12 @@ export class SubMarketService {
       );
 
       // Log spawn
-      await this.logSpawnSuccess(context, trigger, childMarket.id, question.text);
+      await this.logSpawnSuccess(
+        context,
+        trigger,
+        childMarket.id,
+        question.text
+      );
 
       logger.info(
         `Spawned sub-market`,
@@ -203,18 +208,16 @@ export class SubMarketService {
   /**
    * Create a new timeframed market (can be standalone or part of hierarchy)
    */
-  async createMarket(
-    params: {
-      questionId?: string;
-      timeframe: MarketTimeframe;
-      category: MarketCategory;
-      parentMarketId?: string;
-      startTime?: Date;
-      durationModifier?: number;
-      affiliatedOrgIds?: string[];
-      affiliatedActorIds?: string[];
-    }
-  ): Promise<TimeframedMarket> {
+  async createMarket(params: {
+    questionId?: string;
+    timeframe: MarketTimeframe;
+    category: MarketCategory;
+    parentMarketId?: string;
+    startTime?: Date;
+    durationModifier?: number;
+    affiliatedOrgIds?: string[];
+    affiliatedActorIds?: string[];
+  }): Promise<TimeframedMarket> {
     const now = new Date();
     const startTime = params.startTime ?? now;
     const endTime = calculateEndTime(
@@ -227,7 +230,10 @@ export class SubMarketService {
     let rootMarketId: string | null = null;
     if (params.parentMarketId) {
       const [parent] = await db
-        .select({ rootMarketId: timeframedMarkets.rootMarketId, id: timeframedMarkets.id })
+        .select({
+          rootMarketId: timeframedMarkets.rootMarketId,
+          id: timeframedMarkets.id,
+        })
         .from(timeframedMarkets)
         .where(eq(timeframedMarkets.id, params.parentMarketId))
         .limit(1);
@@ -284,10 +290,7 @@ export class SubMarketService {
   /**
    * Update arc state for a market
    */
-  async updateArcState(
-    marketId: string,
-    newState: string
-  ): Promise<void> {
+  async updateArcState(marketId: string, newState: string): Promise<void> {
     const now = new Date();
     await db
       .update(timeframedMarkets)
@@ -327,9 +330,7 @@ export class SubMarketService {
       .from(timeframedMarkets)
       .where(eq(timeframedMarkets.isActive, true));
 
-    return active.filter(
-      (m) => m.endTime <= now && !m.isResolved
-    );
+    return active.filter((m) => m.endTime <= now && !m.isResolved);
   }
 
   // ===========================================================================
@@ -441,8 +442,7 @@ export class SubMarketService {
       const actorName = vars.actor;
       const actor = actors.find(
         (a) =>
-          a.name.toLowerCase() === actorName.toLowerCase() ||
-          a.id === actorName
+          a.name.toLowerCase() === actorName.toLowerCase() || a.id === actorName
       );
       if (actor) {
         affiliatedActorIds.push(actor.id);

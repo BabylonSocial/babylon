@@ -70,7 +70,6 @@ import {
   createArcState,
   processArcTick,
 } from './services/narrative-event-processor';
-import { timeframeArcProcessor } from './services/timeframe-arc-processor';
 import { NPCGroupDynamicsService } from './services/npc-group-dynamics-service';
 import { getOracleService } from './services/oracle/oracle-service';
 import { createParodyHeadlineGenerator } from './services/parody-headline-generator';
@@ -86,6 +85,7 @@ import {
 import { rssFeedService } from './services/rss-feed-service';
 import { StaticDataRegistry } from './services/static-data-registry';
 import { getStorySeedService } from './services/story-seed-service';
+import { timeframeArcProcessor } from './services/timeframe-arc-processor';
 import { TokenStatsService } from './services/token-stats-service';
 import { getTopicDiversityService } from './services/topic-diversity-service';
 // Migrated services - local imports

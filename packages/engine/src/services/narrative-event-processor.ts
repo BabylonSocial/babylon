@@ -6,9 +6,9 @@
  */
 
 import {
-  and,
   type ArcState,
   type ArcStateType,
+  and,
   arcStates,
   db,
   eq,
@@ -148,7 +148,10 @@ export async function generateStructuredEvent(
   arcPlan: { insiderActorIds: string[]; deceiverActorIds: string[] } | null
 ): Promise<StructuredEventData> {
   // Event types appropriate for each state (long-term arcs only)
-  const stateEventTypes: Record<LongTermArcState, StructuredEventData['type'][]> = {
+  const stateEventTypes: Record<
+    LongTermArcState,
+    StructuredEventData['type'][]
+  > = {
     setup: ['rumor'],
     tension: ['rumor', 'leak', 'denial'],
     escalation: ['leak', 'denial', 'confirmation'],
@@ -157,7 +160,9 @@ export async function generateStructuredEvent(
     resolution: ['proof'],
   };
 
-  const possibleTypes = stateEventTypes[arc.currentState as LongTermArcState] ?? ['rumor'];
+  const possibleTypes = stateEventTypes[
+    arc.currentState as LongTermArcState
+  ] ?? ['rumor'];
   const eventType =
     possibleTypes[Math.floor(Math.random() * possibleTypes.length)]!;
 
@@ -170,7 +175,8 @@ export async function generateStructuredEvent(
     revelation: 4,
     resolution: 5,
   };
-  const baseSeverity = severityByState[arc.currentState as LongTermArcState] ?? 2;
+  const baseSeverity =
+    severityByState[arc.currentState as LongTermArcState] ?? 2;
   const severity = Math.min(5, baseSeverity + Math.floor(Math.random() * 2)) as
     | 1
     | 2
@@ -397,7 +403,11 @@ export async function processArcTick(
         { arcId },
         'NarrativeEventProcessor'
       );
-      return { transitioned, eventGenerated: false, newState: newState ?? undefined };
+      return {
+        transitioned,
+        eventGenerated: false,
+        newState: newState ?? undefined,
+      };
     }
 
     eventGenerated = true;
@@ -466,10 +476,7 @@ export async function createArcState(questionId: string): Promise<string> {
     return id;
   } catch (error) {
     // Handle unique constraint violation (race condition)
-    if (
-      error instanceof Error &&
-      error.message.includes('unique constraint')
-    ) {
+    if (error instanceof Error && error.message.includes('unique constraint')) {
       const [racedExisting] = await db
         .select({ id: arcStates.id })
         .from(arcStates)

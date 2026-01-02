@@ -30,12 +30,7 @@
  *   └── Full 6-phase narrative arc
  */
 
-import {
-  db,
-  eq,
-  timeframedMarkets,
-  type TimeframedMarket,
-} from '@babylon/db';
+import { db, eq, type TimeframedMarket, timeframedMarkets } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import {
   getCurrentArcState,
@@ -173,7 +168,10 @@ export class TimeframeArcProcessor {
 
             // Check for sub-market spawning
             if (event.eventType) {
-              const spawned = await this.trySpawnSubMarket(market, event.eventType);
+              const spawned = await this.trySpawnSubMarket(
+                market,
+                event.eventType
+              );
               if (spawned) {
                 result.subMarketsSpawned++;
               }
@@ -359,7 +357,10 @@ export class TimeframeArcProcessor {
     } catch (error) {
       logger.warn(
         `Failed to spawn sub-market`,
-        { marketId: market.id, error: error instanceof Error ? error.message : String(error) },
+        {
+          marketId: market.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
         'TimeframeArcProcessor'
       );
       return false;
@@ -426,7 +427,10 @@ export class TimeframeArcProcessor {
   /**
    * Format time remaining as human-readable string
    */
-  formatTimeRemaining(market: TimeframedMarket, now: Date = new Date()): string {
+  formatTimeRemaining(
+    market: TimeframedMarket,
+    now: Date = new Date()
+  ): string {
     const ms = this.getTimeRemaining(market, now);
 
     if (ms <= 0) return 'Resolved';

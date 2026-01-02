@@ -116,8 +116,7 @@ export function GameOnboardingProvider({
               ...prev,
               completedSteps: [...prev.completedSteps, step],
               currentStep: data.nextStep,
-              totalPointsEarned:
-                prev.totalPointsEarned + data.pointsAwarded,
+              totalPointsEarned: prev.totalPointsEarned + data.pointsAwarded,
               isComplete: data.isComplete,
             };
           });

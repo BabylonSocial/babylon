@@ -340,8 +340,7 @@ export const SUB_MARKET_TRIGGERS: Record<MarketCategory, SubMarketTrigger[]> = {
       eventType: 'whale_movement',
       spawnProbability: 0.5,
       childTimeframe: 'intraday',
-      questionTemplate:
-        'Will {ticker} move more than 5% in the next 4 hours?',
+      questionTemplate: 'Will {ticker} move more than 5% in the next 4 hours?',
     },
     {
       eventType: 'protocol_upgrade',
@@ -413,8 +412,7 @@ export const SUB_MARKET_TRIGGERS: Record<MarketCategory, SubMarketTrigger[]> = {
       eventType: 'ceo_resignation',
       spawnProbability: 0.6,
       childTimeframe: 'daily',
-      questionTemplate:
-        'Will {org} announce a replacement within 48 hours?',
+      questionTemplate: 'Will {org} announce a replacement within 48 hours?',
     },
   ],
 
@@ -429,7 +427,8 @@ export const SUB_MARKET_TRIGGERS: Record<MarketCategory, SubMarketTrigger[]> = {
       eventType: 'release_weekend',
       spawnProbability: 0.8,
       childTimeframe: 'intraday',
-      questionTemplate: 'Will {movie} gross over ${amount}M in opening weekend?',
+      questionTemplate:
+        'Will {movie} gross over ${amount}M in opening weekend?',
     },
   ],
 
