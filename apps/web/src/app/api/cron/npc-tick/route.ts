@@ -29,6 +29,7 @@ import {
 } from '@babylon/api';
 import { db, eq, games } from '@babylon/db';
 import {
+  getActiveEventsForPosting,
   getRecentlyMentionedActorIds,
   isActiveHour,
   npcMemoryService,
@@ -192,20 +193,31 @@ export async function POST(_req: NextRequest) {
 
   // Get recently mentioned actor IDs from player influence tracking
   // This boosts posting probability for NPCs that were mentioned by players
-  const recentlyMentionedActorIds = await getRecentlyMentionedActorIds();
+  const [recentlyMentionedActorIds, activeEventsData] = await Promise.all([
+    getRecentlyMentionedActorIds(),
+    getActiveEventsForPosting(),
+  ]);
 
   const postingContext: PostingContext = {
     currentHour,
     currentTime: now,
     recentlyMentionedActorIds,
-    activeEventQuestionIds: [],
-    activeEvents: [],
+    activeEventQuestionIds: activeEventsData.activeEventQuestionIds,
+    activeEvents: activeEventsData.activeEvents,
   };
 
   if (recentlyMentionedActorIds.length > 0) {
     logger.info(
       `${recentlyMentionedActorIds.length} NPCs were recently mentioned`,
       { recentlyMentionedActorIds },
+      'NPCTick'
+    );
+  }
+
+  if (activeEventsData.activeEvents.length > 0) {
+    logger.info(
+      `${activeEventsData.activeEvents.length} active events affecting NPC probability`,
+      { activeEventCount: activeEventsData.activeEvents.length },
       'NPCTick'
     );
   }

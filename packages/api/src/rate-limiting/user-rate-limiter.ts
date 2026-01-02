@@ -124,6 +124,13 @@ export const RATE_LIMIT_CONFIGS = {
     actionType: 'admin_stats',
   }, // 30 stats queries per minute (expensive database operations)
 
+  // Public endpoints (IP-based rate limiting)
+  PUBLIC_BALANCE_FETCH: {
+    maxRequests: 60,
+    windowMs: 60000,
+    actionType: 'public_balance_fetch',
+  }, // 60 balance fetches per minute per IP (prevent enumeration)
+
   // Default fallback
   DEFAULT: { maxRequests: 30, windowMs: 60000, actionType: 'default' }, // 30 requests per minute
 } as const;

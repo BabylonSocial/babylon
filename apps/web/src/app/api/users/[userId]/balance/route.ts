@@ -58,7 +58,10 @@
 import {
   BusinessLogicError,
   cachedDb,
+  checkRateLimit,
   findUserByIdentifier,
+  getClientIp,
+  RATE_LIMIT_CONFIGS,
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
@@ -69,6 +72,7 @@ import {
   UserIdParamSchema,
 } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * GET Handler for User Balance
@@ -101,9 +105,31 @@ import type { NextRequest } from 'next/server';
  */
 export const GET = withErrorHandling(
   async (
-    _request: NextRequest,
+    request: NextRequest,
     context: { params: Promise<{ userId: string }> }
   ) => {
+    // IP-based rate limiting for public endpoint (prevents enumeration attacks)
+    const clientIp = getClientIp(request.headers) || 'anonymous';
+    const rateLimit = checkRateLimit(
+      `ip:${clientIp}`,
+      RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many requests',
+          retryAfter: rateLimit.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((rateLimit.retryAfter || 60000) / 1000)),
+          },
+        }
+      );
+    }
+
     const { userId } = UserIdParamSchema.parse(await context.params);
 
     // Ensure user exists in database

@@ -6,8 +6,18 @@
  * Entropy > elaborate probability math.
  */
 
-import { type ActorStateRow, actorState, db, eq, inArray } from '@babylon/db';
+import {
+  type ActorStateRow,
+  actorState,
+  db,
+  desc,
+  eq,
+  gte,
+  inArray,
+  worldEvents,
+} from '@babylon/db';
 import { type ActorTier } from '@babylon/shared';
+import { StaticDataRegistry } from './static-data-registry';
 
 /**
  * Minimal actor interface for posting probability.
@@ -66,12 +76,54 @@ const MIN_HOURS_BETWEEN_POSTS = 1;
 const MENTION_BOOST = 1.5;
 
 /**
+ * Boost when actor is affiliated with an active event
+ * (e.g., their org's stock is being affected by narrative events)
+ */
+const AFFILIATION_BOOST = 1.5;
+
+/**
+ * Check if an actor has an affiliated event in the current context.
+ * Returns true if:
+ * - Actor is directly listed in an event's affectedActorIds
+ * - Actor's affiliations overlap with affected stocks
+ */
+function hasAffiliatedEvent(actor: PostingActor, context: PostingContext): boolean {
+  if (context.activeEvents.length === 0) {
+    return false;
+  }
+
+  for (const event of context.activeEvents) {
+    // Check if actor is directly affected by the event
+    if (event.affectedActorIds.includes(actor.id)) {
+      return true;
+    }
+
+    // Check if actor's affiliations overlap with affected stocks
+    if (actor.affiliations && event.affectedStocks) {
+      for (const affiliation of actor.affiliations) {
+        // Affiliations are org IDs, and affected stocks are tickers
+        // We check if any affectedStock matches (simplified check)
+        if (event.affectedStocks.some((stock) => 
+          affiliation.toLowerCase().includes(stock.toLowerCase()) ||
+          stock.toLowerCase().includes(affiliation.toLowerCase())
+        )) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Calculate posting probability for an NPC.
  *
- * SIMPLIFIED formula:
- *   base × spam_check × mention_boost
+ * Formula:
+ *   base × spam_check × mention_boost × affiliation_boost
  *
  * All NPCs have equal base chance. Spam prevention keeps it fair.
+ * Boosts apply for player mentions and active narrative events.
  */
 export function calculatePostingProbability(
   actor: PostingActor,
@@ -100,6 +152,11 @@ export function calculatePostingProbability(
   // Mention boost - keep this for player engagement reactivity
   if (context.recentlyMentionedActorIds.includes(actor.id)) {
     prob *= MENTION_BOOST;
+  }
+
+  // Affiliation boost - NPCs related to active events are more likely to post
+  if (hasAffiliatedEvent(actor, context)) {
+    prob *= AFFILIATION_BOOST;
   }
 
   return Math.min(prob, 1.0);
@@ -199,3 +256,82 @@ export class PostingProbabilityService {
 
 // Singleton instance
 export const postingProbabilityService = new PostingProbabilityService();
+
+/**
+ * How many hours to look back for "recent" events
+ */
+const RECENT_EVENTS_HOURS = 6;
+
+/**
+ * Fetch active events for use in PostingContext.
+ * Returns events from the last RECENT_EVENTS_HOURS hours.
+ * 
+ * @returns Object with activeEventQuestionIds and activeEvents arrays
+ */
+export async function getActiveEventsForPosting(): Promise<{
+  activeEventQuestionIds: string[];
+  activeEvents: PostingContext['activeEvents'];
+}> {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - RECENT_EVENTS_HOURS * 60 * 60 * 1000);
+
+  // Fetch recent world events
+  const recentEvents = await db
+    .select()
+    .from(worldEvents)
+    .where(
+      gte(worldEvents.timestamp, cutoff)
+    )
+    .orderBy(desc(worldEvents.timestamp))
+    .limit(50);
+
+  // Build active events for posting context
+  const activeEvents: PostingContext['activeEvents'] = [];
+  const activeEventQuestionIds = new Set<string>();
+
+  // Get all organizations to map actors to stocks
+  const allOrgs = StaticDataRegistry.getAllOrganizations();
+  const allActors = StaticDataRegistry.getAllActors();
+
+  // Build a map of actor ID -> affiliated stock tickers
+  const actorToStocks = new Map<string, string[]>();
+  for (const actor of allActors) {
+    if (actor.affiliations) {
+      const tickers = actor.affiliations
+        .map((affId) => {
+          const org = allOrgs.find((o) => o.id === affId);
+          return org?.ticker;
+        })
+        .filter((t): t is string => t !== undefined);
+      actorToStocks.set(actor.id, tickers);
+    }
+  }
+
+  for (const event of recentEvents) {
+    const actorIds = (event.actors || []) as string[];
+    
+    // Collect affected stocks from affiliated actors
+    const affectedStocks = new Set<string>();
+    for (const actorId of actorIds) {
+      const stocks = actorToStocks.get(actorId) || [];
+      for (const stock of stocks) {
+        affectedStocks.add(stock);
+      }
+    }
+
+    activeEvents.push({
+      questionId: event.relatedQuestion?.toString() || '',
+      affectedActorIds: actorIds,
+      affectedStocks: Array.from(affectedStocks),
+    });
+
+    if (event.relatedQuestion) {
+      activeEventQuestionIds.add(event.relatedQuestion.toString());
+    }
+  }
+
+  return {
+    activeEventQuestionIds: Array.from(activeEventQuestionIds),
+    activeEvents,
+  };
+}
