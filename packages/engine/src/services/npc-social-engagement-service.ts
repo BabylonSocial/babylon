@@ -11,6 +11,7 @@
 import {
   and,
   comments,
+  count,
   db,
   desc,
   gte,
@@ -366,41 +367,29 @@ export async function getEngagementStats(): Promise<EngagementStats> {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const [
-    allLikes,
-    allShares,
-    allComments,
-    recentLikes,
-    recentShares,
-    recentComments,
+    [totalLikesResult],
+    [totalSharesResult],
+    [totalCommentsResult],
+    [recentLikesResult],
+    [recentSharesResult],
+    [recentCommentsResult],
   ] = await Promise.all([
-    db.select({ id: reactions.id }).from(reactions),
-    db.select({ id: shares.id }).from(shares),
-    db
-      .select({ id: comments.id })
-      .from(comments)
-      .where(isNull(comments.deletedAt)),
-    db
-      .select({ id: reactions.id })
-      .from(reactions)
-      .where(gte(reactions.createdAt, oneDayAgo)),
-    db
-      .select({ id: shares.id })
-      .from(shares)
-      .where(gte(shares.createdAt, oneDayAgo)),
-    db
-      .select({ id: comments.id })
-      .from(comments)
-      .where(
-        and(isNull(comments.deletedAt), gte(comments.createdAt, oneDayAgo))
-      ),
+    db.select({ count: count() }).from(reactions),
+    db.select({ count: count() }).from(shares),
+    db.select({ count: count() }).from(comments).where(isNull(comments.deletedAt)),
+    db.select({ count: count() }).from(reactions).where(gte(reactions.createdAt, oneDayAgo)),
+    db.select({ count: count() }).from(shares).where(gte(shares.createdAt, oneDayAgo)),
+    db.select({ count: count() }).from(comments).where(
+      and(isNull(comments.deletedAt), gte(comments.createdAt, oneDayAgo))
+    ),
   ]);
 
   return {
-    totalLikes: allLikes.length,
-    totalShares: allShares.length,
-    totalComments: allComments.length,
-    last24hLikes: recentLikes.length,
-    last24hShares: recentShares.length,
-    last24hComments: recentComments.length,
+    totalLikes: totalLikesResult?.count ?? 0,
+    totalShares: totalSharesResult?.count ?? 0,
+    totalComments: totalCommentsResult?.count ?? 0,
+    last24hLikes: recentLikesResult?.count ?? 0,
+    last24hShares: recentSharesResult?.count ?? 0,
+    last24hComments: recentCommentsResult?.count ?? 0,
   };
 }
