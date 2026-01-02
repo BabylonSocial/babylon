@@ -297,7 +297,10 @@ async function getAffectedStocksForQuestion(
   } catch (error) {
     logger.warn(
       'Failed to get affected stocks for question',
-      { questionId, error: error instanceof Error ? error.message : String(error) },
+      {
+        questionId,
+        error: error instanceof Error ? error.message : String(error),
+      },
       'NarrativeEventProcessor'
     );
     return [];
