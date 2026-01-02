@@ -43,7 +43,7 @@ import {
   weightedPick,
 } from '../utils/entropy';
 import { worldFactsService } from '../world-facts-service';
-import { generateEvents } from './event-generation-helpers';
+// generateEvents is now consolidated in game-tick and narrative-event-processor
 import {
   getActorRivals,
   shouldGenerateOrganicPost,
@@ -71,31 +71,33 @@ const RIVALRY_POST_RATIO = 0.1; // 10% of posts should be rivalry-driven
 const ACTOR_POST_RATIO = 0.95; // 95% of posts should be from actors (NPCs)
 
 // Posts per 5-min window by hour (0-23): [min, max]. Biased toward lower end.
+// Target: ~2-3 posts per minute = 10-15 posts per 5-min window at peak
+// Values use secureRandom()^2 bias toward min, so effective average is closer to min
 const POSTS_BY_HOUR: [number, number][] = [
-  [2, 5],
   [2, 4],
   [1, 3],
   [1, 3],
+  [1, 3],
   [2, 4],
-  [3, 6], // 0-5 overnight
-  [5, 8],
-  [6, 10],
-  [8, 12], // 6-8 morning
-  [10, 15],
-  [10, 15],
-  [10, 14],
-  [8, 12], // 9-12 peak
-  [10, 14],
-  [10, 15],
-  [10, 15],
-  [10, 14],
-  [8, 12], // 13-17 afternoon
-  [6, 10],
-  [6, 10],
-  [5, 8],
-  [4, 7], // 18-21 evening
+  [2, 5], // 0-5 overnight (very quiet)
   [3, 6],
-  [3, 5], // 22-23 night
+  [4, 7],
+  [5, 8], // 6-8 morning ramp up
+  [6, 10],
+  [6, 10],
+  [5, 9],
+  [5, 8], // 9-12 peak hours (~1-2 posts/min)
+  [5, 9],
+  [6, 10],
+  [6, 10],
+  [5, 9],
+  [5, 8], // 13-17 afternoon
+  [4, 7],
+  [4, 6],
+  [3, 5],
+  [3, 5], // 18-21 evening wind down
+  [2, 4],
+  [2, 4], // 22-23 night
 ];
 
 // Article probability scales with active market count
@@ -379,30 +381,8 @@ async function generateContentWindow(
   const numPosts = getPostCount(windowStart.getUTCHours());
   const windowDuration = windowEnd.getTime() - windowStart.getTime();
 
-  // Generate events probabilistically using secure random
-  const shouldGenerateEvents = secureRandom() < 0.3;
-  if (shouldGenerateEvents && activeQuestions.length > 0) {
-    // Generate events at random times within the window
-    const randomOffset = secureRandom() * windowDuration;
-    const eventTimestamp = new Date(windowStart.getTime() + randomOffset);
-
-    // Pass currentDay for arc plan phase detection and signal direction
-    const eventsCreated = await generateEvents(
-      activeQuestions,
-      eventTimestamp,
-      dayNumberForTimestamp(eventTimestamp)
-    );
-    if (eventsCreated > 0) {
-      logger.info(
-        `Generated ${eventsCreated} events in lookahead window`,
-        {
-          timestamp: eventTimestamp.toISOString(),
-          currentDay: dayNumberForTimestamp(eventTimestamp),
-        },
-        'LookaheadGeneration'
-      );
-    }
-  }
+  // Event generation is now consolidated in game-tick and narrative-event-processor
+  // This prevents duplicate events and ties event generation to arc state
 
   // Get actors, organizations, world facts, shared post context, AND diverse topic suggestions in parallel
   // Loading shared context ONCE eliminates N+1 queries during parallel post generation

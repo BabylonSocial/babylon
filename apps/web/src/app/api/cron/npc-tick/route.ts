@@ -54,9 +54,10 @@ export const dynamic = 'force-dynamic';
 /**
  * Number of NPCs to process per tick (rotates through all).
  * Configurable via NPC_TICK_BATCH_SIZE environment variable.
- * Default increased to 40 for better coverage across 140+ NPCs.
+ * Target: 2-3 posts per minute total from NPCs.
+ * Reduced from 40 to prevent overwhelming the feed.
  */
-const NPCS_PER_TICK = Number(process.env.NPC_TICK_BATCH_SIZE) || 40;
+const NPCS_PER_TICK = Number(process.env.NPC_TICK_BATCH_SIZE) || 3;
 
 /**
  * Maximum consecutive errors before aborting the tick (circuit breaker).

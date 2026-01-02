@@ -350,6 +350,10 @@ export default function ActorProfilePage() {
         username: ('username' in actor
           ? (actor.username as string)
           : actor.id) as string | undefined, // Use username if available, fallback to ID
+        // Explicitly set profile image URL with fallback to static actor image
+        profileImageUrl:
+          ('profileImageUrl' in actor && actor.profileImageUrl) ||
+          `/images/actors/${actor.id}.jpg`,
         stats,
       });
       setLoading(false);
@@ -389,6 +393,8 @@ export default function ActorProfilePage() {
         profileDescription: org.profileDescription,
         type: 'organization' as const,
         role: 'Organization',
+        // Use static organization image path
+        profileImageUrl: `/images/organizations/${org.id}.jpg`,
         stats,
       });
       setLoading(false);

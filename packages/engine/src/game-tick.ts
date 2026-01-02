@@ -69,6 +69,7 @@ import { MarketContextService } from './services/market-context-service';
 import {
   createArcState,
   processArcTick,
+  setNarrativeProcessorLLMClient,
 } from './services/narrative-event-processor';
 import { NPCGroupDynamicsService } from './services/npc-group-dynamics-service';
 import { getOracleService } from './services/oracle/oracle-service';
@@ -554,7 +555,7 @@ export async function executeGameTick(
       );
     }
 
-    // Generate world events
+    // Generate world events based on active questions
     const eventsGenerated = await generateEvents(
       currentActiveQuestions.slice(0, 3),
       timestamp,
@@ -699,7 +700,11 @@ export async function executeGameTick(
 
   // Process narrative arcs for active questions
   // Each question can have an arc that progresses through phases
+  // Arc events now create world events and can trigger article generation
   if (Date.now() < deadline) {
+    // Set LLM client for article generation during arc processing
+    setNarrativeProcessorLLMClient(llmClient);
+
     const narrativeStats = await processNarrativeArcs(
       currentActiveQuestions,
       dayNumberForTimestamp(timestamp) ?? 1
@@ -1275,7 +1280,7 @@ async function generateOrganizationContent(
   deadlineMs: number,
   dayNumberForTimestamp: (t: Date) => number | undefined
 ): Promise<{ posts: number; articles: number }> {
-  const postsToGenerate = 4; // Organization posts/articles per tick
+  const postsToGenerate = 1; // Organization posts/articles per tick (reduced from 4)
 
   if (questions.length === 0) {
     logger.warn(
@@ -3247,6 +3252,7 @@ async function updateWorldFactsIfNeeded(): Promise<{
 /**
  * Process narrative arcs for active questions.
  * Each question can have an arc that progresses through phases based on game day.
+ * Arc events now create world events and can trigger article generation.
  */
 async function processNarrativeArcs(
   activeQuestions: Array<{ id: string }>,
@@ -3288,9 +3294,6 @@ async function processNarrativeArcs(
       }
       if (result.eventGenerated) {
         eventsGenerated++;
-
-        // Apply market impacts for events (if any stocks are affected)
-        // This is handled by the narrative event processor internally
       }
     } catch (error) {
       logger.error(

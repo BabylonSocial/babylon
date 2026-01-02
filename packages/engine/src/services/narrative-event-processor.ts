@@ -1,8 +1,13 @@
 /**
  * Narrative Event Processor
  *
- * Processes arc state transitions and generates structured events
- * that drive both narrative and market movements.
+ * Unified arc event system that:
+ * 1. Processes arc state transitions for prediction questions
+ * 2. Generates structured events that drive narrative and market movements
+ * 3. Creates world events for feed content
+ * 4. Triggers article generation for significant events
+ *
+ * This is the single source of truth for arc-driven content generation.
  */
 
 import {
@@ -16,10 +21,26 @@ import {
   type MarketImpact,
   type PendingTransition,
   questionArcPlans,
+  questions,
   type StructuredEventData,
   sql,
+  worldEvents,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
+import type { BabylonLLMClient } from '../llm/openai-client';
+import { toSafeDayNumber } from '../utils/date-utils';
+import { generateArticlesForArcEvent } from './event-generation-helpers';
+
+// LLM client reference for article generation
+let llmClientRef: BabylonLLMClient | null = null;
+
+/**
+ * Set the LLM client for article generation.
+ * Called from game-tick before processing arcs.
+ */
+export function setNarrativeProcessorLLMClient(client: BabylonLLMClient): void {
+  llmClientRef = client;
+}
 
 /**
  * Day ranges for each arc state (for 30-day long-term arcs)
@@ -242,6 +263,102 @@ export async function generateStructuredEvent(
 }
 
 /**
+ * Create a world event from a structured arc event.
+ * This makes the event visible in the feed and can trigger article generation.
+ */
+export async function createWorldEventFromArcEvent(
+  structuredEvent: StructuredEventData,
+  questionText: string,
+  timestamp: Date,
+  dayNumber?: number
+): Promise<string> {
+  // Map structured event type to world event description
+  const descriptionTemplates: Record<StructuredEventData['type'], string[]> = {
+    rumor: [
+      'Unconfirmed reports suggest developments regarding {topic}',
+      'Sources claim new information about {topic}',
+      'Speculation grows around {topic}',
+    ],
+    leak: [
+      'Leaked documents reveal details about {topic}',
+      'Anonymous source exposes information on {topic}',
+      'Internal memo surfaces regarding {topic}',
+    ],
+    denial: [
+      'Officials deny reports about {topic}',
+      'Spokesperson refutes claims regarding {topic}',
+      'Strong denial issued concerning {topic}',
+    ],
+    confirmation: [
+      'Sources confirm developments in {topic}',
+      'Official statement verifies {topic}',
+      'Breaking: Confirmation on {topic}',
+    ],
+    reversal: [
+      'Unexpected reversal in {topic}',
+      'Major shift reported on {topic}',
+      'Surprise development contradicts earlier reports on {topic}',
+    ],
+    proof: [
+      'Definitive evidence emerges on {topic}',
+      'Documentation confirms outcome of {topic}',
+      'Final proof released regarding {topic}',
+    ],
+  };
+
+  const templates = descriptionTemplates[structuredEvent.type];
+  const template = templates[Math.floor(Math.random() * templates.length)]!;
+  const topic =
+    questionText.length > 80 ? questionText.slice(0, 80) + '...' : questionText;
+  const description = template.replace('{topic}', topic);
+
+  const eventId = await generateSnowflakeId();
+  const safeDayNumber =
+    typeof dayNumber === 'number' ? toSafeDayNumber(dayNumber) : undefined;
+
+  await db.insert(worldEvents).values({
+    id: eventId,
+    eventType: structuredEvent.type,
+    description,
+    actors: structuredEvent.affectedActors,
+    relatedQuestion: undefined, // Question number not available here
+    visibility: structuredEvent.type === 'leak' ? 'leaked' : 'public',
+    gameId: 'continuous',
+    dayNumber: safeDayNumber,
+    timestamp,
+    pointsToward:
+      structuredEvent.signalDirection === 'NEUTRAL'
+        ? null
+        : structuredEvent.signalDirection,
+  });
+
+  logger.info(
+    'Created world event from arc event',
+    {
+      eventId,
+      arcId: structuredEvent.arcId,
+      type: structuredEvent.type,
+      severity: structuredEvent.severity,
+    },
+    'NarrativeEventProcessor'
+  );
+
+  return eventId;
+}
+
+/**
+ * Get question text by ID for world event creation
+ */
+async function getQuestionText(questionId: string): Promise<string> {
+  const [question] = await db
+    .select({ text: questions.text })
+    .from(questions)
+    .where(eq(questions.id, questionId))
+    .limit(1);
+  return question?.text ?? 'Unknown question';
+}
+
+/**
  * Get affected stock tickers for a question.
  * Parses the question text for organization mentions and returns their tickers.
  */
@@ -369,12 +486,12 @@ export async function processArcTick(
           deceiverActorIds: arcPlan.deceiverActorIds ?? [],
         }
       : null;
-    const event = await generateStructuredEvent(arc, normalizedArcPlan);
+    const structuredEvent = await generateStructuredEvent(arc, normalizedArcPlan);
 
     // Apply market impacts if event affects stocks
-    if (event.marketImpacts.length > 0) {
+    if (structuredEvent.marketImpacts.length > 0) {
       const { applyEventToMarkets } = await import('./event-market-pipeline');
-      const modifiersApplied = await applyEventToMarkets(event);
+      const modifiersApplied = await applyEventToMarkets(structuredEvent);
       logger.info(
         `Applied ${modifiersApplied} market modifiers from event`,
         { arcId, modifiersApplied },
@@ -382,8 +499,57 @@ export async function processArcTick(
       );
     }
 
-    // Update arc state with optimistic locking
+    // Create a world event so it appears in the feed
     const now = new Date();
+    const questionText = await getQuestionText(arc.questionId);
+    const worldEventId = await createWorldEventFromArcEvent(
+      structuredEvent,
+      questionText,
+      now,
+      dayNumber
+    );
+
+    // Trigger article generation for significant events (severity >= 3)
+    if (structuredEvent.severity >= 3 && llmClientRef) {
+      try {
+        // Get question details for article context
+        const [question] = await db
+          .select({ id: questions.id, text: questions.text, questionNumber: questions.questionNumber })
+          .from(questions)
+          .where(eq(questions.id, arc.questionId))
+          .limit(1);
+
+        if (question) {
+          const articlesGenerated = await generateArticlesForArcEvent(
+            worldEventId,
+            'created', // Arc events are 'created' status
+            question,
+            llmClientRef,
+            now,
+            dayNumber
+          );
+
+          if (articlesGenerated > 0) {
+            logger.info(
+              `Generated ${articlesGenerated} articles for arc event`,
+              { arcId, worldEventId, severity: structuredEvent.severity },
+              'NarrativeEventProcessor'
+            );
+          }
+        }
+      } catch (articleError) {
+        logger.warn(
+          'Failed to generate articles for arc event',
+          {
+            arcId,
+            worldEventId,
+            error: articleError instanceof Error ? articleError.message : String(articleError),
+          },
+          'NarrativeEventProcessor'
+        );
+      }
+    }
+
     const updateResult = await db
       .update(arcStates)
       .set({
@@ -413,12 +579,12 @@ export async function processArcTick(
     eventGenerated = true;
 
     logger.info(
-      `Generated ${event.type} event for arc ${arcId}`,
+      `Generated ${structuredEvent.type} event for arc ${arcId}`,
       {
         arcId,
-        eventType: event.type,
-        severity: event.severity,
-        signalDirection: event.signalDirection,
+        eventType: structuredEvent.type,
+        severity: structuredEvent.severity,
+        signalDirection: structuredEvent.signalDirection,
       },
       'NarrativeEventProcessor'
     );
