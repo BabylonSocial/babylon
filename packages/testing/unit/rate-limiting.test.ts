@@ -243,9 +243,9 @@ describe('Rate Limiting', () => {
     it('should have stricter limits for anonymous IP requests vs identified IPs', () => {
       // Anonymous requests should have much stricter limits
       // since they share a single bucket
-      expect(RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH_ANONYMOUS.maxRequests).toBe(
-        10
-      );
+      expect(
+        RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH_ANONYMOUS.maxRequests
+      ).toBe(10);
       expect(RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH.maxRequests).toBe(60);
 
       // Anonymous limit should be significantly lower than identified IP limit
