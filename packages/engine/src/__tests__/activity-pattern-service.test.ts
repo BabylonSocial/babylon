@@ -165,7 +165,9 @@ describe('Activity Pattern Service - Activity Multiplier', () => {
 
     // Create a date during one of the peak hours
     const activeHour = pattern.peakHours[0]!;
-    const date = new Date(`2026-01-05T${String(activeHour).padStart(2, '0')}:00:00Z`);
+    const date = new Date(
+      `2026-01-05T${String(activeHour).padStart(2, '0')}:00:00Z`
+    );
     const multiplier = getActivityMultiplier(actor, date, 0);
 
     expect(multiplier).toBe(1.0);
@@ -180,7 +182,9 @@ describe('Activity Pattern Service - Activity Multiplier', () => {
 
     if (inactiveHours.length > 0) {
       const inactiveHour = inactiveHours[0]!;
-      const date = new Date(`2026-01-05T${String(inactiveHour).padStart(2, '0')}:00:00Z`);
+      const date = new Date(
+        `2026-01-05T${String(inactiveHour).padStart(2, '0')}:00:00Z`
+      );
       const multiplier = getActivityMultiplier(actor, date, 0);
 
       expect(multiplier).toBe(0.0);
