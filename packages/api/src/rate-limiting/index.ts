@@ -23,9 +23,11 @@ export {
   rateLimitError,
 } from './middleware';
 // Rate limiting (moved from @babylon/shared)
+// Redis-backed for production serverless, with in-memory fallback
 export {
   checkRateLimit,
-  cleanupRateLimits,
+  checkRateLimitAsync,
+  cleanupMemoryRateLimits,
   clearAllRateLimits,
   getRateLimitStatus,
   RATE_LIMIT_CONFIGS,

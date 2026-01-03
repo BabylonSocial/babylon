@@ -58,7 +58,7 @@
 import {
   BusinessLogicError,
   cachedDb,
-  checkRateLimit,
+  checkRateLimitAsync,
   findUserByIdentifier,
   getClientIp,
   RATE_LIMIT_CONFIGS,
@@ -109,8 +109,9 @@ export const GET = withErrorHandling(
     context: { params: Promise<{ userId: string }> }
   ) => {
     // IP-based rate limiting for public endpoint (prevents enumeration attacks)
+    // Uses Redis-backed rate limiting for serverless compatibility
     const clientIp = getClientIp(request.headers) || 'anonymous';
-    const rateLimit = checkRateLimit(
+    const rateLimit = await checkRateLimitAsync(
       `ip:${clientIp}`,
       RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH
     );

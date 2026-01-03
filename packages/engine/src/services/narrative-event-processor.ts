@@ -23,7 +23,6 @@ import {
   questionArcPlans,
   questions,
   type StructuredEventData,
-  sql,
   worldEvents,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
@@ -32,16 +31,8 @@ import { toSafeDayNumber } from '../utils/date-utils';
 import { secureRandom } from '../utils/entropy';
 import { generateArticlesForArcEvent } from './event-generation-helpers';
 
-// LLM client reference for article generation
-let llmClientRef: BabylonLLMClient | null = null;
-
-/**
- * Set the LLM client for article generation.
- * Called from game-tick before processing arcs.
- */
-export function setNarrativeProcessorLLMClient(client: BabylonLLMClient): void {
-  llmClientRef = client;
-}
+// Re-export the BabylonLLMClient type for callers
+export type { BabylonLLMClient } from '../llm/openai-client';
 
 /**
  * Day ranges for each arc state (for 30-day long-term arcs)
@@ -395,8 +386,7 @@ async function getAffectedStocksForQuestion(
   questionId: string
 ): Promise<string[]> {
   try {
-    // Dynamic imports to avoid circular dependencies
-    const { organizations } = await import('@babylon/db');
+    // Dynamic import to avoid circular dependencies
     const { StaticDataRegistry } = await import('./static-data-registry');
 
     // First, get the question text
@@ -435,17 +425,62 @@ async function getAffectedStocksForQuestion(
       .map((org) => org.ticker)
       .filter((t): t is string => t !== undefined && t !== null);
 
-    // If no specific orgs found, fall back to getting some default stocks
+    // If no specific orgs found from question text, try to find relevant orgs
+    // from the arc plan's associated actors
     if (tickers.length === 0) {
-      const defaultOrgs = await db
-        .select({ ticker: organizations.ticker })
-        .from(organizations)
-        .where(sql`${organizations.ticker} IS NOT NULL`)
-        .limit(2);
+      // Get the arc plan for this question to find associated actors
+      const arcPlanResult = await db
+        .select({
+          insiderActorIds: questionArcPlans.insiderActorIds,
+          deceiverActorIds: questionArcPlans.deceiverActorIds,
+        })
+        .from(questionArcPlans)
+        .where(eq(questionArcPlans.questionId, questionId))
+        .limit(1);
 
-      return defaultOrgs
-        .map((o) => o.ticker)
-        .filter((t): t is string => t !== null);
+      const arcPlan = arcPlanResult[0];
+      if (arcPlan) {
+        const actorIds = [
+          ...(arcPlan.insiderActorIds || []),
+          ...(arcPlan.deceiverActorIds || []),
+        ];
+
+          // Find organizations these actors are affiliated with
+          const affiliatedTickers = new Set<string>();
+          for (const actorId of actorIds) {
+            const actor = StaticDataRegistry.getActor(actorId);
+            if (actor?.affiliations) {
+              for (const affId of actor.affiliations) {
+                const org = allOrgs.find((o) => o.id === affId);
+                if (org?.ticker) {
+                  affiliatedTickers.add(org.ticker);
+                }
+              }
+            }
+          }
+
+        if (affiliatedTickers.size > 0) {
+          logger.debug(
+            'Found affected stocks from arc actors',
+            {
+              questionId,
+              tickers: Array.from(affiliatedTickers),
+              actorCount: actorIds.length,
+            },
+            'NarrativeEventProcessor'
+          );
+          return Array.from(affiliatedTickers);
+        }
+      }
+
+      // Last resort: return empty array instead of random stocks
+      // Random stocks would create misleading market effects
+      logger.debug(
+        'No affected stocks found for question',
+        { questionId },
+        'NarrativeEventProcessor'
+      );
+      return [];
     }
 
     return tickers;
@@ -464,10 +499,15 @@ async function getAffectedStocksForQuestion(
 
 /**
  * Process a single arc tick - check for transitions and event generation
+ *
+ * @param arcId - The arc state ID to process
+ * @param dayNumber - The current game day number
+ * @param llmClient - Optional LLM client for generating articles on significant events
  */
 export async function processArcTick(
   arcId: string,
-  dayNumber: number
+  dayNumber: number,
+  llmClient?: BabylonLLMClient | null
 ): Promise<{
   transitioned: boolean;
   eventGenerated: boolean;
@@ -573,7 +613,7 @@ export async function processArcTick(
     );
 
     // Trigger article generation for significant events (severity >= 3)
-    if (structuredEvent.severity >= 3 && llmClientRef) {
+    if (structuredEvent.severity >= 3 && llmClient) {
       try {
         // Get question details for article context
         const [question] = await db
@@ -591,7 +631,7 @@ export async function processArcTick(
             worldEventId,
             'created', // Arc events are 'created' status
             question,
-            llmClientRef,
+            llmClient,
             now,
             dayNumber
           );

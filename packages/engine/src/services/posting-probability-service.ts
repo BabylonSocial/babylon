@@ -131,11 +131,35 @@ function getActorToStocksMap(): Map<string, string[]> {
 
 /**
  * Clear the static data caches.
- * Useful for testing or when actor/org data is known to have changed.
+ * Should be called when StaticDataRegistry.clearCache() is called,
+ * or during hot reload in development, or in tests.
+ *
+ * Note: These caches derive from StaticDataRegistry data. If StaticDataRegistry
+ * is reloaded/cleared, this should be called too for consistency.
  */
 export function clearStaticDataCaches(): void {
   orgIdToTickerMap = null;
   actorToStocksMap = null;
+}
+
+// In development mode, automatically clear caches periodically to handle hot reload
+// This ensures stale data doesn't persist during development
+if (process.env.NODE_ENV === 'development') {
+  const DEV_CACHE_TTL_MS = 60000; // 1 minute in dev
+  let lastCacheTime = Date.now();
+
+  // Wrap the getters to check cache age in dev
+  const originalGetOrgIdToTickerMap = getOrgIdToTickerMap;
+  // @ts-expect-error - Reassigning function for dev hot reload support
+  getOrgIdToTickerMap = function (): Map<string, string> {
+    const now = Date.now();
+    if (now - lastCacheTime > DEV_CACHE_TTL_MS) {
+      orgIdToTickerMap = null;
+      actorToStocksMap = null;
+      lastCacheTime = now;
+    }
+    return originalGetOrgIdToTickerMap();
+  };
 }
 
 /**

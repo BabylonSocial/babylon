@@ -84,7 +84,6 @@ import {
   ReputationService,
   rssFeedService,
   StaticDataRegistry,
-  setNarrativeProcessorLLMClient,
   setSocialEngagementLLMClient,
   syncReputationIfAvailable,
   TokenStatsService,
@@ -833,12 +832,10 @@ export async function executeGameTick(
   // Each question can have an arc that progresses through phases
   // Arc events now create world events and can trigger article generation
   if (Date.now() < deadline) {
-    // Set LLM client for article generation during arc processing
-    setNarrativeProcessorLLMClient(llmClient);
-
     const narrativeStats = await processNarrativeArcs(
       currentActiveQuestions,
-      dayNumberForTimestamp(timestamp) ?? 1
+      dayNumberForTimestamp(timestamp) ?? 1,
+      llmClient
     );
     result.narrativeArcs = narrativeStats;
     if (narrativeStats.transitioned > 0 || narrativeStats.eventsGenerated > 0) {
@@ -3384,10 +3381,15 @@ async function updateWorldFactsIfNeeded(): Promise<{
  * Process narrative arcs for active questions.
  * Each question can have an arc that progresses through phases based on game day.
  * Arc events now create world events and can trigger article generation.
+ *
+ * @param activeQuestions - Questions with active arcs to process
+ * @param dayNumber - Current game day number
+ * @param llmClient - LLM client for generating articles on significant events
  */
 async function processNarrativeArcs(
   activeQuestions: Array<{ id: string }>,
-  dayNumber: number
+  dayNumber: number,
+  llmClient: BabylonLLMClient
 ): Promise<{
   arcsProcessed: number;
   transitioned: number;
@@ -3416,8 +3418,8 @@ async function processNarrativeArcs(
         arcId = existingArc.id;
       }
 
-      // Process the arc tick
-      const result = await processArcTick(arcId, dayNumber);
+      // Process the arc tick, passing LLM client for article generation
+      const result = await processArcTick(arcId, dayNumber, llmClient);
       arcsProcessed++;
 
       if (result.transitioned) {

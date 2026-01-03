@@ -88,7 +88,7 @@ describe('Rate Limiting', () => {
       expect(result.remaining).toBe(9); // 10 max - 1 used
     });
 
-    it('should provide accurate rate limit status', () => {
+    it('should provide accurate rate limit status', async () => {
       const userId = 'test-user-6';
       const config = RATE_LIMIT_CONFIGS.CREATE_POST;
 
@@ -96,8 +96,8 @@ describe('Rate Limiting', () => {
       checkRateLimit(userId, config);
       checkRateLimit(userId, config);
 
-      // Check status
-      const status = getRateLimitStatus(userId, config);
+      // Check status (async now for Redis support)
+      const status = await getRateLimitStatus(userId, config);
       expect(status.count).toBe(2);
       expect(status.remaining).toBe(1);
       expect(status.resetAt).toBeInstanceOf(Date);

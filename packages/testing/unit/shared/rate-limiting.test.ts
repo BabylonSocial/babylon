@@ -65,14 +65,14 @@ describe('Rate Limiting (Shared)', () => {
       expect(result.remaining).toBe(2);
     });
 
-    it('should provide accurate rate limit status', () => {
+    it('should provide accurate rate limit status', async () => {
       const userId = 'shared-test-user-5';
       const config = RATE_LIMIT_CONFIGS.CREATE_POST;
 
       checkRateLimit(userId, config);
       checkRateLimit(userId, config);
 
-      const status = getRateLimitStatus(userId, config);
+      const status = await getRateLimitStatus(userId, config);
       expect(status.count).toBe(2);
       expect(status.remaining).toBe(1);
       expect(status.resetAt).toBeInstanceOf(Date);

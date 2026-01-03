@@ -196,8 +196,9 @@ export {
 export {
   checkDuplicate,
   checkRateLimit,
+  checkRateLimitAsync,
   cleanupDuplicates,
-  cleanupRateLimits,
+  cleanupMemoryRateLimits,
   clearAllDuplicates,
   clearAllRateLimits,
   clearDuplicates,
