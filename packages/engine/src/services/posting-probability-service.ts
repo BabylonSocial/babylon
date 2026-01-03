@@ -85,12 +85,36 @@ const MENTION_BOOST = 1.5;
 const AFFILIATION_BOOST = 1.5;
 
 /**
+ * Development mode cache invalidation.
+ * In dev, caches are cleared after DEV_CACHE_TTL_MS to handle hot reload.
+ */
+const DEV_CACHE_TTL_MS = 60000; // 1 minute in dev
+let lastDevCacheTime = 0;
+
+/**
+ * Invalidate static data caches if TTL has expired in development mode.
+ * Called at the top of cache getter functions.
+ */
+function maybeInvalidateDevCaches(): void {
+  if (process.env.NODE_ENV === 'development') {
+    const now = Date.now();
+    if (now - lastDevCacheTime > DEV_CACHE_TTL_MS) {
+      orgIdToTickerMap = null;
+      actorToStocksMap = null;
+      lastDevCacheTime = now;
+    }
+  }
+}
+
+/**
  * Build a map of org ID -> ticker for efficient lookup.
  * Cached at module level since org data is static.
  */
 let orgIdToTickerMap: Map<string, string> | null = null;
 
 function getOrgIdToTickerMap(): Map<string, string> {
+  maybeInvalidateDevCaches();
+
   if (!orgIdToTickerMap) {
     orgIdToTickerMap = new Map();
     const allOrgs = StaticDataRegistry.getAllOrganizations();
@@ -110,6 +134,8 @@ function getOrgIdToTickerMap(): Map<string, string> {
 let actorToStocksMap: Map<string, string[]> | null = null;
 
 function getActorToStocksMap(): Map<string, string[]> {
+  maybeInvalidateDevCaches();
+
   if (!actorToStocksMap) {
     actorToStocksMap = new Map();
     const allActors = StaticDataRegistry.getAllActors();
@@ -140,26 +166,6 @@ function getActorToStocksMap(): Map<string, string[]> {
 export function clearStaticDataCaches(): void {
   orgIdToTickerMap = null;
   actorToStocksMap = null;
-}
-
-// In development mode, automatically clear caches periodically to handle hot reload
-// This ensures stale data doesn't persist during development
-if (process.env.NODE_ENV === 'development') {
-  const DEV_CACHE_TTL_MS = 60000; // 1 minute in dev
-  let lastCacheTime = Date.now();
-
-  // Wrap the getters to check cache age in dev
-  const originalGetOrgIdToTickerMap = getOrgIdToTickerMap;
-  // @ts-expect-error - Reassigning function for dev hot reload support
-  getOrgIdToTickerMap = function (): Map<string, string> {
-    const now = Date.now();
-    if (now - lastCacheTime > DEV_CACHE_TTL_MS) {
-      orgIdToTickerMap = null;
-      actorToStocksMap = null;
-      lastCacheTime = now;
-    }
-    return originalGetOrgIdToTickerMap();
-  };
 }
 
 /**

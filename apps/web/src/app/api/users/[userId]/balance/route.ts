@@ -110,11 +110,19 @@ export const GET = withErrorHandling(
   ) => {
     // IP-based rate limiting for public endpoint (prevents enumeration attacks)
     // Uses Redis-backed rate limiting for serverless compatibility
-    const clientIp = getClientIp(request.headers) || 'anonymous';
-    const rateLimit = await checkRateLimitAsync(
-      `ip:${clientIp}`,
-      RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH
-    );
+    const clientIp = getClientIp(request.headers);
+
+    // Use tiered rate limiting:
+    // - Identified IPs get normal rate limits (60/min)
+    // - Anonymous/unknown IPs get stricter limits (10/min) since they share a bucket
+    // This prevents the shared 'anonymous' bucket from being easily exhausted
+    // while still allowing legitimate requests through
+    const rateLimitConfig = clientIp
+      ? RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH
+      : RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH_ANONYMOUS;
+
+    const rateLimitKey = clientIp ? `ip:${clientIp}` : 'ip:anonymous';
+    const rateLimit = await checkRateLimitAsync(rateLimitKey, rateLimitConfig);
 
     if (!rateLimit.allowed) {
       // retryAfter is already in seconds from checkRateLimit

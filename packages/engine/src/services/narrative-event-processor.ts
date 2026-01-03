@@ -290,7 +290,8 @@ export async function createWorldEventFromArcEvent(
   structuredEvent: StructuredEventData,
   questionText: string,
   timestamp: Date,
-  dayNumber?: number
+  dayNumber?: number,
+  questionNumber?: number | null
 ): Promise<string> {
   // Map structured event type to world event description
   const descriptionTemplates: Record<StructuredEventData['type'], string[]> = {
@@ -341,7 +342,7 @@ export async function createWorldEventFromArcEvent(
     eventType: structuredEvent.type,
     description,
     actors: structuredEvent.affectedActors,
-    relatedQuestion: undefined, // Question number not available here
+    relatedQuestion: questionNumber ?? undefined,
     visibility: structuredEvent.type === 'leak' ? 'leaked' : 'public',
     gameId: 'continuous',
     dayNumber: safeDayNumber,
@@ -367,15 +368,20 @@ export async function createWorldEventFromArcEvent(
 }
 
 /**
- * Get question text by ID for world event creation
+ * Get question text and number by ID for world event creation
  */
-async function getQuestionText(questionId: string): Promise<string> {
+async function getQuestionDetails(
+  questionId: string
+): Promise<{ text: string; questionNumber: number | null }> {
   const [question] = await db
-    .select({ text: questions.text })
+    .select({ text: questions.text, questionNumber: questions.questionNumber })
     .from(questions)
     .where(eq(questions.id, questionId))
     .limit(1);
-  return question?.text ?? 'Unknown question';
+  return {
+    text: question?.text ?? 'Unknown question',
+    questionNumber: question?.questionNumber ?? null,
+  };
 }
 
 /**
@@ -604,12 +610,13 @@ export async function processArcTick(
     }
 
     // Create a world event so it appears in the feed
-    const questionText = await getQuestionText(arc.questionId);
+    const questionDetails = await getQuestionDetails(arc.questionId);
     const worldEventId = await createWorldEventFromArcEvent(
       structuredEvent,
-      questionText,
+      questionDetails.text,
       now,
-      dayNumber
+      dayNumber,
+      questionDetails.questionNumber
     );
 
     // Trigger article generation for significant events (severity >= 3)

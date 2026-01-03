@@ -133,6 +133,14 @@ export const RATE_LIMIT_CONFIGS = {
     actionType: 'public_balance_fetch',
   }, // 60 balance fetches per minute per IP (prevent enumeration)
 
+  // Anonymous/unknown IP requests get stricter limits to prevent abuse
+  // when IP detection fails (e.g., certain proxies, spoofed headers)
+  PUBLIC_BALANCE_FETCH_ANONYMOUS: {
+    maxRequests: 10,
+    windowMs: 60000,
+    actionType: 'public_balance_fetch_anonymous',
+  }, // 10 fetches per minute for anonymous bucket (shared, stricter)
+
   // Default fallback
   DEFAULT: { maxRequests: 30, windowMs: 60000, actionType: 'default' }, // 30 requests per minute
 } as const;

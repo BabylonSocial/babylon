@@ -240,6 +240,25 @@ describe('Rate Limiting', () => {
       expect(RATE_LIMIT_CONFIGS.UPLOAD_IMAGE.maxRequests).toBe(5);
     });
 
+    it('should have stricter limits for anonymous IP requests vs identified IPs', () => {
+      // Anonymous requests should have much stricter limits
+      // since they share a single bucket
+      expect(RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH_ANONYMOUS.maxRequests).toBe(
+        10
+      );
+      expect(RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH.maxRequests).toBe(60);
+
+      // Anonymous limit should be significantly lower than identified IP limit
+      expect(
+        RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH_ANONYMOUS.maxRequests
+      ).toBeLessThan(RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH.maxRequests);
+
+      // Both should use the same time window
+      expect(RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH_ANONYMOUS.windowMs).toBe(
+        RATE_LIMIT_CONFIGS.PUBLIC_BALANCE_FETCH.windowMs
+      );
+    });
+
     it('should use 1-minute windows for all actions', () => {
       const oneMinute = 60_000;
 
