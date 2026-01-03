@@ -445,19 +445,19 @@ async function getAffectedStocksForQuestion(
           ...(arcPlan.deceiverActorIds || []),
         ];
 
-          // Find organizations these actors are affiliated with
-          const affiliatedTickers = new Set<string>();
-          for (const actorId of actorIds) {
-            const actor = StaticDataRegistry.getActor(actorId);
-            if (actor?.affiliations) {
-              for (const affId of actor.affiliations) {
-                const org = allOrgs.find((o) => o.id === affId);
-                if (org?.ticker) {
-                  affiliatedTickers.add(org.ticker);
-                }
+        // Find organizations these actors are affiliated with
+        const affiliatedTickers = new Set<string>();
+        for (const actorId of actorIds) {
+          const actor = StaticDataRegistry.getActor(actorId);
+          if (actor?.affiliations) {
+            for (const affId of actor.affiliations) {
+              const org = allOrgs.find((o) => o.id === affId);
+              if (org?.ticker) {
+                affiliatedTickers.add(org.ticker);
               }
             }
           }
+        }
 
         if (affiliatedTickers.size > 0) {
           logger.debug(

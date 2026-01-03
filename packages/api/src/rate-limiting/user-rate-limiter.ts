@@ -233,18 +233,14 @@ async function checkRateLimitRedis(
     // results[1] is the zcard result: [error, count]
     const countResult = results[1];
     const count =
-      countResult && countResult[1] !== null
-        ? (countResult[1] as number)
-        : 0;
+      countResult && countResult[1] !== null ? (countResult[1] as number) : 0;
 
     // Check if limit exceeded
     if (count >= config.maxRequests) {
       // results[2] is the zrange result: [error, [[timestamp, score]]]
       const oldestResult = results[2];
       const oldestEntries =
-        oldestResult && oldestResult[1]
-          ? (oldestResult[1] as string[])
-          : [];
+        oldestResult && oldestResult[1] ? (oldestResult[1] as string[]) : [];
       const oldestTimestampStr = oldestEntries[1];
       const oldestTimestamp =
         oldestTimestampStr !== undefined
