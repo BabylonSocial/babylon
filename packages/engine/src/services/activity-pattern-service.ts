@@ -158,7 +158,11 @@ export class ActivityPatternService {
     return deriveActivityPattern(actor, gameDay);
   }
 
-  isActiveHour(actor: ActivityActor, utcHour: number, gameDay?: number): boolean {
+  isActiveHour(
+    actor: ActivityActor,
+    utcHour: number,
+    gameDay?: number
+  ): boolean {
     return isActiveHour(actor, utcHour, gameDay);
   }
 
