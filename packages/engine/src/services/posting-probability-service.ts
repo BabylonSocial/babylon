@@ -104,6 +104,41 @@ function getOrgIdToTickerMap(): Map<string, string> {
 }
 
 /**
+ * Build a map of actor ID -> affiliated stock tickers.
+ * Cached at module level since actor affiliations are static.
+ */
+let actorToStocksMap: Map<string, string[]> | null = null;
+
+function getActorToStocksMap(): Map<string, string[]> {
+  if (!actorToStocksMap) {
+    actorToStocksMap = new Map();
+    const allActors = StaticDataRegistry.getAllActors();
+    const orgToTicker = getOrgIdToTickerMap();
+
+    for (const actor of allActors) {
+      if (actor.affiliations && actor.affiliations.length > 0) {
+        const tickers = actor.affiliations
+          .map((affId) => orgToTicker.get(affId.toLowerCase()))
+          .filter((t): t is string => t !== undefined);
+        if (tickers.length > 0) {
+          actorToStocksMap.set(actor.id, tickers);
+        }
+      }
+    }
+  }
+  return actorToStocksMap;
+}
+
+/**
+ * Clear the static data caches.
+ * Useful for testing or when actor/org data is known to have changed.
+ */
+export function clearStaticDataCaches(): void {
+  orgIdToTickerMap = null;
+  actorToStocksMap = null;
+}
+
+/**
  * Check if an actor has an affiliated event in the current context.
  * Returns true if:
  * - Actor is directly listed in an event's affectedActorIds
@@ -353,23 +388,8 @@ export async function getActiveEventsForPosting(): Promise<{
   const activeEvents: PostingContext['activeEvents'] = [];
   const activeEventQuestionIds = new Set<string>();
 
-  // Get all organizations to map actors to stocks
-  const allOrgs = StaticDataRegistry.getAllOrganizations();
-  const allActors = StaticDataRegistry.getAllActors();
-
-  // Build a map of actor ID -> affiliated stock tickers
-  const actorToStocks = new Map<string, string[]>();
-  for (const actor of allActors) {
-    if (actor.affiliations) {
-      const tickers = actor.affiliations
-        .map((affId) => {
-          const org = allOrgs.find((o) => o.id === affId);
-          return org?.ticker;
-        })
-        .filter((t): t is string => t !== undefined);
-      actorToStocks.set(actor.id, tickers);
-    }
-  }
+  // Use cached actor -> stocks mapping (built from static data)
+  const actorToStocks = getActorToStocksMap();
 
   for (const event of recentEvents) {
     const actorIds = (event.actors || []) as string[];

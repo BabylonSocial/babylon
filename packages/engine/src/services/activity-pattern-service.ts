@@ -39,8 +39,9 @@ export interface ActivityPattern {
 /**
  * Hours each actor is active per day.
  * 8 hours = 1/3 of actors active at any time = ~47 actors from 140.
+ * Exported for use in UI/metrics if needed.
  */
-const ACTIVE_HOURS_PER_DAY = 8;
+export const ACTIVE_HOURS_PER_DAY = 8;
 
 /**
  * Simple hash function to get a number from actor ID.
@@ -126,9 +127,20 @@ export function isActiveHour(
 }
 
 /**
- * Check if today is a weekend.
+ * Check if the current day is a weekend.
+ *
+ * @param gameDay - Optional game day number. If provided, uses game-relative week (gameDay % 7).
+ *                  If not provided, falls back to real-world calendar.
+ * @param date - Fallback date for real-world weekend check (only used if gameDay not provided).
  */
-export function isWeekend(date: Date = new Date()): boolean {
+export function isWeekend(gameDay?: number, date: Date = new Date()): boolean {
+  if (gameDay !== undefined) {
+    // Game-relative weekend: days 5 and 6 of each 7-day cycle (0-indexed)
+    // This keeps game time independent of real-world calendar
+    const dayOfWeek = gameDay % 7;
+    return dayOfWeek === 5 || dayOfWeek === 6;
+  }
+  // Fallback to real-world calendar
   const day = date.getUTCDay();
   return day === 0 || day === 6;
 }

@@ -145,6 +145,12 @@ export function buildMultiStepDecisionPrompt(params: {
     (r) => r.actionType === 'POST' && r.success
   );
 
+  // Hard-enforce one-post-per-tick by filtering POST from enabled features
+  // This ensures POST is not even offered as an option after posting
+  const effectiveFeatures = hasPostedThisTick
+    ? context.enabledFeatures.filter((f) => f !== 'posting')
+    : context.enabledFeatures;
+
   // NPC-specific sections
   const npcContextSection =
     isNpc && npcGameContext
@@ -173,25 +179,27 @@ ${NPC_POST_QUALITY_RULES}
 `
     : '';
 
-  // Action priority guidance for NPCs to encourage variety over posting
+  // Determine enabled features for conditional sections
+  // Use effectiveFeatures (which excludes 'posting' if already posted this tick)
+  const canTrade = effectiveFeatures.includes('trading');
+  const canComment = effectiveFeatures.includes('commenting');
+  const canRespondDMs = effectiveFeatures.includes('DMs');
+  const canEngage = effectiveFeatures.includes('engaging');
+  const canPost = effectiveFeatures.includes('posting');
+
+  // Action priority guidance for NPCs - only mention available actions
   const npcActionPrioritySection = isNpc
     ? `
 # Action Priority (prefer engagement over broadcasting)
 1. RESPOND to pending interactions first (if any)
-2. COMMENT on interesting posts in the feed
-3. LIKE posts you agree with
-4. TRADE if you have market conviction
-5. POST only if you have something unique to say
+${canComment ? '2. COMMENT on interesting posts in the feed' : ''}
+${canEngage ? '3. LIKE posts you agree with' : ''}
+${canTrade ? '4. TRADE if you have market conviction' : ''}
+${canPost ? '5. POST only if you have something unique to say' : ''}
 6. FINISH if nothing compelling
 
 `
     : '';
-
-  // Determine enabled features for conditional sections
-  const canTrade = context.enabledFeatures.includes('trading');
-  const canComment = context.enabledFeatures.includes('commenting');
-  const canRespondDMs = context.enabledFeatures.includes('DMs');
-  const canEngage = context.enabledFeatures.includes('engaging');
 
   // Build conditional sections (only show context for enabled features)
   const tradingSection = canTrade
@@ -237,7 +245,7 @@ ${dmsSection}
 ${actionsCompletedText}
 
 # Available Actions
-${formatAvailableActions(context.enabledFeatures)}
+${formatAvailableActions(effectiveFeatures)}
 
 ${context.diversityInstructions ? `${context.diversityInstructions}` : ''}
 ${context.assignedMarketId && canTrade ? `# YOUR FOCUS MARKET: ${context.assignedMarketId}\nConsider this market for trades or posts. Bring your ${context.personality || 'unique'} perspective.\n` : ''}
@@ -248,18 +256,18 @@ ${context.assignedMarketId && canTrade ? `# YOUR FOCUS MARKET: ${context.assigne
 3. **No Duplicates**: Don't repeat the same action on the same target
 4. **Know When to Stop**: Set isFinish=true after 2-3 meaningful actions or when done
 ${canComment ? '5. **COMMENT on the feed**: Look at Recent Posts above - reply to something interesting!' : ''}
-${hasPostedThisTick ? '6. **ONE POST ONLY**: You already posted this tick. Choose COMMENT, LIKE, TRADE, REPOST, or FINISH instead.' : ''}
+${hasPostedThisTick ? `6. **ONE POST ONLY**: You already posted this tick. Choose ${[canComment ? 'COMMENT' : '', canEngage ? 'LIKE' : '', canTrade ? 'TRADE' : '', canEngage ? 'REPOST' : '', 'FINISH'].filter(Boolean).join(', ')} instead.` : ''}
 
 # Action Ideas
 ${canTrade ? '- **TRADE**: Take a position on a market' : ''}
-${context.enabledFeatures.includes('posting') ? '- **POST**: Share your take on events, markets, or anything' : ''}
+${canPost ? '- **POST**: Share your take on events, markets, or anything' : ''}
 ${canComment ? "- **COMMENT**: Reply to someone's post from the feed above (use postId)" : ''}
 ${canEngage ? '- **LIKE**: Show appreciation for a post you agree with or find interesting' : ''}
 ${canEngage ? "- **REPOST**: Share someone else's post (optionally with your own take)" : ''}
 ${canRespondDMs ? '- **RESPOND**: Reply to pending DMs/mentions if you have any' : ''}
 
 ${
-  context.enabledFeatures.includes('posting') || canComment
+  canPost || canComment
     ? `# Post/Comment Ideas:
 - React to what someone else posted
 - Events happening in the game world
@@ -287,7 +295,7 @@ Examples:
 # Output Format (JSON only, no markdown)
 {
   "thought": "Brief reasoning for this decision",
-  "action": "${[canTrade ? 'TRADE' : '', context.enabledFeatures.includes('posting') ? 'POST' : '', canComment ? 'COMMENT' : '', canEngage ? 'LIKE' : '', canEngage ? 'REPOST' : '', canRespondDMs ? 'RESPOND' : '', '""'].filter(Boolean).join(' | ')}",
+  "action": "${[canTrade ? 'TRADE' : '', canPost ? 'POST' : '', canComment ? 'COMMENT' : '', canEngage ? 'LIKE' : '', canEngage ? 'REPOST' : '', canRespondDMs ? 'RESPOND' : '', '""'].filter(Boolean).join(' | ')}",
   "parameters": { /* action-specific, see below */ },
   "isFinish": false
 }
@@ -316,7 +324,7 @@ TRADE (perp):
     : ''
 }
 ${
-  context.enabledFeatures.includes('posting')
+  canPost
     ? `
 POST:
 {
