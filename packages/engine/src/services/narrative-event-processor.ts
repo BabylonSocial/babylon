@@ -151,17 +151,9 @@ export async function transitionArcState(
 }
 
 /**
- * Check if an event should be generated for this arc (long-term arcs only).
- *
- * Note: dayNumber is accepted for API consistency and future extensibility,
- * but currently probability is determined by arc.currentState (which is itself
- * derived from dayNumber in evaluateStateTransition). This keeps the logic
- * centralized in the state machine.
+ * Check if an event should be generated for this arc (long-term arcs only)
  */
-export function shouldGenerateEvent(
-  arc: ArcState,
-  _dayNumber: number
-): boolean {
+export function shouldGenerateEvent(arc: ArcState): boolean {
   // Event generation probability based on state
   const probabilities: Record<LongTermArcState, number> = {
     setup: 0.3, // 30% chance per tick
@@ -545,7 +537,7 @@ export async function processArcTick(
   }
 
   // Check if event should be generated
-  const shouldGenerate = shouldGenerateEvent(arc, dayNumber);
+  const shouldGenerate = shouldGenerateEvent(arc);
   let eventGenerated = false;
 
   if (shouldGenerate) {

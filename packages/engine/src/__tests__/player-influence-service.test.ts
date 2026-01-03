@@ -71,9 +71,8 @@ describe('Player Influence Service - Service Singleton', () => {
   });
 
   test('wasMentionedRecentlySync method works correctly', () => {
-    const result = playerInfluenceService.wasMentionedRecentlySync(
-      'unknown-actor-xyz'
-    );
+    const result =
+      playerInfluenceService.wasMentionedRecentlySync('unknown-actor-xyz');
     expect(result).toBe(false);
   });
 });

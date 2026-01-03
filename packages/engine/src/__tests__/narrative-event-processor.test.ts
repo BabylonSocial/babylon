@@ -159,7 +159,7 @@ describe('Narrative Event Processor - Event Generation Decision', () => {
     });
 
     // Cooldown is 2 hours, so should not generate
-    expect(shouldGenerateEvent(arc, 5)).toBe(false);
+    expect(shouldGenerateEvent(arc)).toBe(false);
   });
 
   test('may generate event after cooldown period', () => {
@@ -172,7 +172,7 @@ describe('Narrative Event Processor - Event Generation Decision', () => {
     // Run multiple times to check it can return true
     let generatedAtLeastOnce = false;
     for (let i = 0; i < 50; i++) {
-      if (shouldGenerateEvent(arc, 20)) {
+      if (shouldGenerateEvent(arc)) {
         generatedAtLeastOnce = true;
         break;
       }
@@ -191,7 +191,7 @@ describe('Narrative Event Processor - Event Generation Decision', () => {
     // Without previous event, no cooldown applies
     let generatedAtLeastOnce = false;
     for (let i = 0; i < 50; i++) {
-      if (shouldGenerateEvent(arc, 15)) {
+      if (shouldGenerateEvent(arc)) {
         generatedAtLeastOnce = true;
         break;
       }
@@ -216,8 +216,8 @@ describe('Narrative Event Processor - Event Generation Decision', () => {
     const iterations = 100;
 
     for (let i = 0; i < iterations; i++) {
-      if (shouldGenerateEvent(arcCrisis, 20)) crisisCount++;
-      if (shouldGenerateEvent(arcResolution, 29)) resolutionCount++;
+      if (shouldGenerateEvent(arcCrisis)) crisisCount++;
+      if (shouldGenerateEvent(arcResolution)) resolutionCount++;
     }
 
     // Crisis (0.6) should generate more than resolution (0.2)
