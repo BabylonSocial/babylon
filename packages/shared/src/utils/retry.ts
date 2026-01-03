@@ -202,8 +202,9 @@ export interface FireAndForgetRetryOptions {
  * Fire-and-forget async operation with retry
  *
  * @description Executes an async operation in the background with retry logic.
- * Logs errors after all retries are exhausted. Does not throw - meant for
- * non-critical side effects that shouldn't block the main flow.
+ * Only retries on retryable errors (network errors, 5xx, 429). Logs errors
+ * after all retries are exhausted. Does not throw - meant for non-critical
+ * side effects that shouldn't block the main flow.
  *
  * @param {() => Promise<void>} operation - Async operation to execute
  * @param {FireAndForgetRetryOptions} options - Configuration options
@@ -236,6 +237,21 @@ export function fireAndForgetWithRetry(
         return; // Success
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Check if error is retryable - if not, log and exit immediately
+        if (!isRetryableError(error)) {
+          logger.error(
+            'Fire-and-forget operation failed with non-retryable error',
+            {
+              error: lastError.message,
+              attempt: attempt + 1,
+              ...metadata,
+            },
+            logContext
+          );
+          return; // Don't retry non-retryable errors
+        }
+
         if (attempt < maxAttempts - 1) {
           // Exponential backoff
           await new Promise((r) =>
@@ -245,7 +261,7 @@ export function fireAndForgetWithRetry(
       }
     }
 
-    // All retries failed - log as error for monitoring
+    // All retries exhausted - log as error for monitoring
     logger.error(
       'Fire-and-forget operation failed after retries',
       {

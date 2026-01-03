@@ -261,8 +261,8 @@ export default function ActorProfilePage() {
             const cleanUsername = user.username.startsWith('@')
               ? user.username.slice(1)
               : user.username;
-            // Only redirect if we're not already on the target URL
-            if (cleanUsername !== actorId) {
+            // Only redirect if we're not already on the target URL (case-insensitive comparison)
+            if (cleanUsername.toLowerCase() !== actorId.toLowerCase()) {
               router.replace(`/profile/${cleanUsername}`);
               return;
             }

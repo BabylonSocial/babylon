@@ -151,7 +151,12 @@ export async function transitionArcState(
 }
 
 /**
- * Check if an event should be generated for this arc (long-term arcs only)
+ * Check if an event should be generated for this arc (long-term arcs only).
+ *
+ * Note: dayNumber is accepted for API consistency and future extensibility,
+ * but currently probability is determined by arc.currentState (which is itself
+ * derived from dayNumber in evaluateStateTransition). This keeps the logic
+ * centralized in the state machine.
  */
 export function shouldGenerateEvent(
   arc: ArcState,

@@ -358,8 +358,24 @@ export async function handlePlayerTrade(
 /**
  * Get NPC IDs affiliated with a stock ticker's organization.
  * Uses StaticDataRegistry to find actors whose affiliations include the organization.
+ *
+ * Note: Returns empty array if StaticDataRegistry is not yet initialized,
+ * which can happen during early startup. This is intentional - player influence
+ * is a non-critical enhancement and should not block or fail.
  */
 async function getNpcsAffiliatedWith(stockTicker: string): Promise<string[]> {
+  // Check if StaticDataRegistry is initialized
+  // getAllActors() returns empty array if not initialized
+  const allActors = StaticDataRegistry.getAllActors();
+  if (allActors.length === 0) {
+    logger.debug(
+      'StaticDataRegistry not yet initialized, skipping NPC affiliation lookup',
+      { stockTicker },
+      'PlayerInfluence'
+    );
+    return [];
+  }
+
   // Get the organization for this ticker
   const [org] = await db
     .select({ id: organizations.id })
@@ -372,7 +388,6 @@ async function getNpcsAffiliatedWith(stockTicker: string): Promise<string[]> {
   }
 
   // Find actors affiliated with this organization using static data
-  const allActors = StaticDataRegistry.getAllActors();
   const affiliatedActorIds = allActors
     .filter((actor) => actor.affiliations.includes(org.id))
     .map((actor) => actor.id);

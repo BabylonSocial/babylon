@@ -1,9 +1,10 @@
 /**
- * Retry Utilities Unit Tests
- * Tests for async retry logic with exponential backoff
+ * Retry Utility Test Suite
+ *
+ * Tests for retry logic with exponential backoff.
  */
 
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   isRetryableError,
   retryIfRetryable,
@@ -11,158 +12,194 @@ import {
   sleep,
 } from '@babylon/shared';
 
-describe('Retry Utilities', () => {
-  describe('sleep', () => {
-    it('should delay for specified time', async () => {
-      const start = Date.now();
-      await sleep(50);
-      const elapsed = Date.now() - start;
-      expect(elapsed).toBeGreaterThanOrEqual(40); // Allow some variance
-      expect(elapsed).toBeLessThan(150);
-    });
-
-    it('should resolve without value', async () => {
-      const result = await sleep(10);
-      expect(result).toBeUndefined();
-    });
+describe('Retry Utility - isRetryableError', () => {
+  test('returns true for fetch network errors', () => {
+    const error = new TypeError('Failed to fetch');
+    expect(isRetryableError(error)).toBe(true);
   });
 
-  describe('isRetryableError', () => {
-    it('should return true for network errors', () => {
-      const error = new TypeError('Failed to fetch');
-      expect(isRetryableError(error)).toBe(true);
-    });
-
-    it('should return true for 5xx status errors', () => {
-      expect(isRetryableError({ status: 500 })).toBe(true);
-      expect(isRetryableError({ status: 502 })).toBe(true);
-      expect(isRetryableError({ status: 503 })).toBe(true);
-    });
-
-    it('should return true for 429 rate limit errors', () => {
-      expect(isRetryableError({ status: 429 })).toBe(true);
-    });
-
-    it('should return false for 4xx client errors', () => {
-      expect(isRetryableError({ status: 400 })).toBe(false);
-      expect(isRetryableError({ status: 401 })).toBe(false);
-      expect(isRetryableError({ status: 404 })).toBe(false);
-    });
-
-    it('should return false for non-error objects', () => {
-      expect(isRetryableError(null)).toBe(false);
-      expect(isRetryableError(undefined)).toBe(false);
-      expect(isRetryableError('error')).toBe(false);
-    });
+  test('returns true for 500 errors', () => {
+    const error = { status: 500 };
+    expect(isRetryableError(error)).toBe(true);
   });
 
-  describe('retryIfRetryable', () => {
-    it('should succeed on first attempt', async () => {
-      let attempts = 0;
-      const result = await retryIfRetryable(async () => {
+  test('returns true for 502 errors', () => {
+    const error = { status: 502 };
+    expect(isRetryableError(error)).toBe(true);
+  });
+
+  test('returns true for 503 errors', () => {
+    const error = { status: 503 };
+    expect(isRetryableError(error)).toBe(true);
+  });
+
+  test('returns true for 429 rate limit errors', () => {
+    const error = { status: 429 };
+    expect(isRetryableError(error)).toBe(true);
+  });
+
+  test('returns false for 400 errors', () => {
+    const error = { status: 400 };
+    expect(isRetryableError(error)).toBe(false);
+  });
+
+  test('returns false for 404 errors', () => {
+    const error = { status: 404 };
+    expect(isRetryableError(error)).toBe(false);
+  });
+
+  test('returns false for generic errors', () => {
+    const error = new Error('Something went wrong');
+    expect(isRetryableError(error)).toBe(false);
+  });
+
+  test('returns false for null', () => {
+    expect(isRetryableError(null)).toBe(false);
+  });
+
+  test('returns false for undefined', () => {
+    expect(isRetryableError(undefined)).toBe(false);
+  });
+});
+
+describe('Retry Utility - sleep', () => {
+  test('resolves after specified time', async () => {
+    const start = Date.now();
+    await sleep(50);
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeGreaterThanOrEqual(45); // Allow some tolerance
+    expect(elapsed).toBeLessThan(100);
+  });
+});
+
+describe('Retry Utility - retryIfRetryable', () => {
+  test('returns result on first success', async () => {
+    let attempts = 0;
+    const result = await retryIfRetryable(async () => {
+      attempts++;
+      return 'success';
+    });
+
+    expect(result).toBe('success');
+    expect(attempts).toBe(1);
+  });
+
+  test('retries on retryable error then succeeds', async () => {
+    let attempts = 0;
+    const result = await retryIfRetryable(
+      async () => {
         attempts++;
+        if (attempts < 2) {
+          const error = { status: 500, message: 'Server error' };
+          throw error;
+        }
         return 'success';
-      });
-      expect(result).toBe('success');
-      expect(attempts).toBe(1);
-    });
+      },
+      { initialDelayMs: 10 }
+    );
 
-    it('should retry on retryable errors', async () => {
-      let attempts = 0;
-      const result = await retryIfRetryable(
+    expect(result).toBe('success');
+    expect(attempts).toBe(2);
+  });
+
+  test('throws immediately on non-retryable error', async () => {
+    let attempts = 0;
+
+    await expect(
+      retryIfRetryable(async () => {
+        attempts++;
+        throw new Error('Not retryable');
+      })
+    ).rejects.toThrow('Not retryable');
+
+    expect(attempts).toBe(1);
+  });
+
+  test('throws after max attempts', async () => {
+    let attempts = 0;
+
+    await expect(
+      retryIfRetryable(
         async () => {
           attempts++;
-          if (attempts < 3) {
-            const error = { status: 500 };
-            throw error;
-          }
-          return 'success';
+          const error = { status: 500, message: 'Server error' };
+          throw error;
         },
-        { maxAttempts: 5, initialDelayMs: 10 }
-      );
-      expect(result).toBe('success');
-      expect(attempts).toBe(3);
-    });
+        { maxAttempts: 3, initialDelayMs: 10 }
+      )
+    ).rejects.toMatchObject({ status: 500 });
 
-    it('should not retry on non-retryable errors', async () => {
-      let attempts = 0;
-      await expect(
-        retryIfRetryable(async () => {
-          attempts++;
-          throw { status: 400 }; // Client error - not retryable
-        })
-      ).rejects.toEqual({ status: 400 });
-      expect(attempts).toBe(1);
-    });
+    expect(attempts).toBe(3);
+  });
 
-    it('should throw after max attempts', async () => {
-      let attempts = 0;
-      await expect(
-        retryIfRetryable(
-          async () => {
-            attempts++;
-            throw { status: 500 };
-          },
-          { maxAttempts: 3, initialDelayMs: 10 }
-        )
-      ).rejects.toEqual({ status: 500 });
-      expect(attempts).toBe(3);
-    });
+  test('calls onRetry callback', async () => {
+    const retryCalls: Array<{
+      attempt: number;
+      error: Error;
+      delay: number;
+    }> = [];
 
-    it('should call onRetry callback', async () => {
-      const retries: number[] = [];
-      let attempts = 0;
-
-      await retryIfRetryable(
+    await expect(
+      retryIfRetryable(
         async () => {
-          attempts++;
-          if (attempts < 3) {
-            throw { status: 500 };
-          }
-          return 'success';
+          const error = { status: 500, message: 'Server error' };
+          throw error;
         },
         {
-          maxAttempts: 5,
+          maxAttempts: 3,
           initialDelayMs: 10,
-          onRetry: (attempt) => retries.push(attempt),
+          onRetry: (attempt, error, delay) => {
+            retryCalls.push({ attempt, error, delay });
+          },
         }
-      );
+      )
+    ).rejects.toMatchObject({ status: 500 });
 
-      expect(retries).toEqual([1, 2]);
-    });
+    expect(retryCalls.length).toBe(2); // 2 retries before final failure
+    expect(retryCalls[0]?.attempt).toBe(1);
+    expect(retryCalls[1]?.attempt).toBe(2);
+  });
+});
+
+describe('Retry Utility - retryWithCondition', () => {
+  test('retries based on custom condition', async () => {
+    let attempts = 0;
+    const customError = { code: 'RETRY_ME' };
+
+    const result = await retryWithCondition(
+      async () => {
+        attempts++;
+        if (attempts < 2) {
+          throw customError;
+        }
+        return 'success';
+      },
+      (error) =>
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code: string }).code === 'RETRY_ME',
+      { initialDelayMs: 10 }
+    );
+
+    expect(result).toBe('success');
+    expect(attempts).toBe(2);
   });
 
-  describe('retryWithCondition', () => {
-    it('should retry based on custom condition', async () => {
-      let attempts = 0;
-      const result = await retryWithCondition(
+  test('throws immediately when condition returns false', async () => {
+    let attempts = 0;
+
+    await expect(
+      retryWithCondition(
         async () => {
           attempts++;
-          if (attempts < 3) {
-            throw new Error('RETRY_ME');
-          }
-          return 'success';
+          throw new Error('No retry');
         },
-        (error) => error instanceof Error && error.message === 'RETRY_ME',
-        { maxAttempts: 5, initialDelayMs: 10 }
-      );
-      expect(result).toBe('success');
-      expect(attempts).toBe(3);
-    });
+        () => false,
+        { initialDelayMs: 10 }
+      )
+    ).rejects.toThrow('No retry');
 
-    it('should not retry when condition returns false', async () => {
-      let attempts = 0;
-      await expect(
-        retryWithCondition(
-          async () => {
-            attempts++;
-            throw new Error('DO_NOT_RETRY');
-          },
-          (error) => error instanceof Error && error.message === 'RETRY_ME',
-          { maxAttempts: 5, initialDelayMs: 10 }
-        )
-      ).rejects.toThrow('DO_NOT_RETRY');
-      expect(attempts).toBe(1);
-    });
+    expect(attempts).toBe(1);
   });
 });
