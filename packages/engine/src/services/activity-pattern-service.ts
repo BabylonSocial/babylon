@@ -5,6 +5,9 @@
  * Each actor is assigned to a "shift" based on their ID hash.
  * Active for 8 hours, rotating through 24 hours.
  * This ensures all 140+ actors get fair coverage without timezone complexity.
+ *
+ * Game day is used for daily rotation - different actors are active on different
+ * game days, keeping the narrative fresh while maintaining determinism within a day.
  */
 
 /**
@@ -54,12 +57,16 @@ function hashActorId(id: string): number {
 }
 
 /**
- * Get the hours an actor is active based on their ID.
+ * Get the hours an actor is active based on their ID and game day.
  * Spreads actors evenly across the 24-hour day.
+ *
+ * @param actorId - The actor's unique identifier
+ * @param gameDay - The current game day (from games.currentDay). Defaults to 0 for backwards compatibility.
  */
-function getActorActiveHours(actorId: string): number[] {
-  // Hash ID to get starting hour (0-23)
-  const startHour = hashActorId(actorId) % 24;
+function getActorActiveHours(actorId: string, gameDay = 0): number[] {
+  // Combine actor ID hash with game day for daily rotation
+  // Different actors will be active on different game days
+  const startHour = (hashActorId(actorId) + gameDay) % 24;
 
   // Generate 8 consecutive hours (wrapping around midnight)
   const hours: number[] = [];
@@ -84,11 +91,17 @@ export function convertToLocalHour(
 /**
  * Derive activity pattern from actor data.
  * Uses actor ID to determine their active hours.
+ *
+ * @param actor - The actor to derive pattern for
+ * @param gameDay - The current game day for rotation. Defaults to 0.
  */
-export function deriveActivityPattern(actor: ActivityActor): ActivityPattern {
+export function deriveActivityPattern(
+  actor: ActivityActor,
+  gameDay = 0
+): ActivityPattern {
   return {
     timezone: 'UTC',
-    peakHours: getActorActiveHours(actor.id),
+    peakHours: getActorActiveHours(actor.id, gameDay),
     nightOwl: true,
     workaholic: true,
     weekendActive: true,
@@ -97,14 +110,18 @@ export function deriveActivityPattern(actor: ActivityActor): ActivityPattern {
 
 /**
  * Check if an NPC is in their active hours right now.
- * Based on simple hour rotation from actor ID hash.
+ * Based on simple hour rotation from actor ID hash combined with game day.
+ *
+ * @param actor - The actor to check
+ * @param utcHour - Current UTC hour (0-23)
+ * @param gameDay - The current game day for rotation. Defaults to 0.
  */
 export function isActiveHour(
   actor: ActivityActor,
   utcHour: number,
-  _date: Date = new Date()
+  gameDay = 0
 ): boolean {
-  const activeHours = getActorActiveHours(actor.id);
+  const activeHours = getActorActiveHours(actor.id, gameDay);
   return activeHours.includes(utcHour);
 }
 
@@ -119,29 +136,34 @@ export function isWeekend(date: Date = new Date()): boolean {
 /**
  * Get activity multiplier for an NPC at current time.
  * Returns 1.0 if in active hours, 0.0 otherwise.
+ *
+ * @param actor - The actor to check
+ * @param date - The date to check (for extracting UTC hour)
+ * @param gameDay - The current game day for rotation. Defaults to 0.
  */
 export function getActivityMultiplier(
   actor: ActivityActor,
-  date: Date = new Date()
+  date: Date = new Date(),
+  gameDay = 0
 ): number {
   const utcHour = date.getUTCHours();
-  return isActiveHour(actor, utcHour, date) ? 1.0 : 0.0;
+  return isActiveHour(actor, utcHour, gameDay) ? 1.0 : 0.0;
 }
 
 /**
  * Activity Pattern Service class for dependency injection.
  */
 export class ActivityPatternService {
-  derivePattern(actor: ActivityActor): ActivityPattern {
-    return deriveActivityPattern(actor);
+  derivePattern(actor: ActivityActor, gameDay?: number): ActivityPattern {
+    return deriveActivityPattern(actor, gameDay);
   }
 
-  isActiveHour(actor: ActivityActor, utcHour: number, date?: Date): boolean {
-    return isActiveHour(actor, utcHour, date);
+  isActiveHour(actor: ActivityActor, utcHour: number, gameDay?: number): boolean {
+    return isActiveHour(actor, utcHour, gameDay);
   }
 
-  getMultiplier(actor: ActivityActor, date?: Date): number {
-    return getActivityMultiplier(actor, date);
+  getMultiplier(actor: ActivityActor, date?: Date, gameDay?: number): number {
+    return getActivityMultiplier(actor, date, gameDay);
   }
 }
 

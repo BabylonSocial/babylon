@@ -46,6 +46,7 @@ interface GameState {
   id: string;
   isRunning: boolean;
   isContinuous: boolean;
+  currentDay: number | null;
 }
 
 // Vercel function configuration
@@ -136,6 +137,7 @@ export async function POST(_req: NextRequest) {
           id: games.id,
           isRunning: games.isRunning,
           isContinuous: games.isContinuous,
+          currentDay: games.currentDay,
         })
         .from(games)
         .where(eq(games.isContinuous, true))
@@ -227,7 +229,9 @@ export async function POST(_req: NextRequest) {
   const stateMap = await postingProbabilityService.getStateMap(actorIds);
 
   // Filter to NPCs in their active hours (simple ID-based rotation, ~1/3 active at any time)
-  const activeNpcs = allNpcs.filter((npc) => isActiveHour(npc, currentHour));
+  // Game day is used for daily rotation - different actors active on different game days
+  const gameDay = gameState.currentDay ?? 0;
+  const activeNpcs = allNpcs.filter((npc) => isActiveHour(npc, currentHour, gameDay));
 
   logger.info(
     `${activeNpcs.length}/${allNpcs.length} NPCs active this hour (ID-based rotation)`,

@@ -140,6 +140,11 @@ export function buildMultiStepDecisionPrompt(params: {
           .join('\n')
       : 'No actions taken yet this tick.';
 
+  // Check if already posted this tick to enforce one-post-per-tick rule
+  const hasPostedThisTick = traceActionResults.some(
+    (r) => r.actionType === 'POST' && r.success
+  );
+
   // NPC-specific sections
   const npcContextSection =
     isNpc && npcGameContext
@@ -164,6 +169,20 @@ ${NPC_POST_QUALITY_RULES}
 - React naturally, don't analyze
 - Have opinions, don't hedge
 - Sound like a PERSON on social media, not an AI
+
+`
+    : '';
+
+  // Action priority guidance for NPCs to encourage variety over posting
+  const npcActionPrioritySection = isNpc
+    ? `
+# Action Priority (prefer engagement over broadcasting)
+1. RESPOND to pending interactions first (if any)
+2. COMMENT on interesting posts in the feed
+3. LIKE posts you agree with
+4. TRADE if you have market conviction
+5. POST only if you have something unique to say
+6. FINISH if nothing compelling
 
 `
     : '';
@@ -229,6 +248,7 @@ ${context.assignedMarketId && canTrade ? `# YOUR FOCUS MARKET: ${context.assigne
 3. **No Duplicates**: Don't repeat the same action on the same target
 4. **Know When to Stop**: Set isFinish=true after 2-3 meaningful actions or when done
 ${canComment ? '5. **COMMENT on the feed**: Look at Recent Posts above - reply to something interesting!' : ''}
+${hasPostedThisTick ? '6. **ONE POST ONLY**: You already posted this tick. Choose COMMENT, LIKE, TRADE, REPOST, or FINISH instead.' : ''}
 
 # Action Ideas
 ${canTrade ? '- **TRADE**: Take a position on a market' : ''}
@@ -255,7 +275,7 @@ ${
 - Meme language is good ("lfg", "ngmi", "gm", slang is fine)
 - SHORT summaries of markets, not full question text
 - DON'T include raw IDs in post content
-${qualityRulesSection}${npcVoiceRulesSection}
+${qualityRulesSection}${npcVoiceRulesSection}${npcActionPrioritySection}
 Examples:
   ❌ BAD: "Buying YES on 'Will Polymarket deploy its Sentient Market-Making AIs to artificially lower the price of BitcAIn below $120,000 within 5 days?'"
   ✅ GOOD: "The BitcAIn manipulation rumors are getting spicy"
