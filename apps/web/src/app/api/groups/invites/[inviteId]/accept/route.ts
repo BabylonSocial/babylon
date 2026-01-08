@@ -51,32 +51,42 @@ export const POST = withErrorHandling(
         throw new ApiError('This invite has already been processed', 400);
       }
 
-      // Check if user is at the NPC group limit (only NPC groups count toward the limit)
-      const activeMemberships = await db.groupMember.findMany({
-        where: {
-          userId: user.userId,
-          isActive: true,
-        },
+      // Check if the invited group is an NPC group
+      const invitedGroup = await db.group.findUnique({
+        where: { id: invite.groupId },
+        select: { type: true },
       });
 
-      // Fetch all groups in one query to avoid N+1
-      const groupIds = activeMemberships.map((m) => m.groupId);
-      const memberGroups =
-        groupIds.length > 0
-          ? await db.group.findMany({
-              where: { id: { in: groupIds } },
-              select: { id: true, type: true },
-            })
-          : [];
+      // Only check NPC group limit if the invited group is an NPC group
+      if (invitedGroup?.type === 'npc') {
+        const activeMemberships = await db.groupMember.findMany({
+          where: {
+            userId: user.userId,
+            isActive: true,
+          },
+        });
 
-      // Count NPC groups
-      const npcGroupCount = memberGroups.filter((g) => g.type === 'npc').length;
+        // Fetch all groups in one query to avoid N+1
+        const groupIds = activeMemberships.map((m) => m.groupId);
+        const memberGroups =
+          groupIds.length > 0
+            ? await db.group.findMany({
+                where: { id: { in: groupIds } },
+                select: { id: true, type: true },
+              })
+            : [];
 
-      if (npcGroupCount >= GROUP_CONFIG.MAX_ACTIVE_USER_GROUPS) {
-        throw new ApiError(
-          `You can only be in ${GROUP_CONFIG.MAX_ACTIVE_USER_GROUPS} NPC groups at a time. Leave a group first.`,
-          400
-        );
+        // Count NPC groups
+        const npcGroupCount = memberGroups.filter(
+          (g) => g.type === 'npc'
+        ).length;
+
+        if (npcGroupCount >= GROUP_CONFIG.MAX_ACTIVE_USER_GROUPS) {
+          throw new ApiError(
+            `You can only be in ${GROUP_CONFIG.MAX_ACTIVE_USER_GROUPS} NPC groups at a time. Leave a group first.`,
+            400
+          );
+        }
       }
 
       // Check if user is already an active member (fail fast, no race condition here)
