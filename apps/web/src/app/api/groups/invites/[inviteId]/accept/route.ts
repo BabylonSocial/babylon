@@ -51,14 +51,18 @@ export const POST = withErrorHandling(
         throw new ApiError('This invite has already been processed', 400);
       }
 
-      // Check if the invited group is an NPC group
+      // Check if the invited group exists and get its type
       const invitedGroup = await db.group.findUnique({
         where: { id: invite.groupId },
         select: { type: true },
       });
 
+      if (!invitedGroup) {
+        throw new ApiError('Group not found', 404);
+      }
+
       // Only check NPC group limit if the invited group is an NPC group
-      if (invitedGroup?.type === 'npc') {
+      if (invitedGroup.type === 'npc') {
         const activeMemberships = await db.groupMember.findMany({
           where: {
             userId: user.userId,
