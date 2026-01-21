@@ -216,11 +216,12 @@ export function getPlanningHorizon(config: UserAgentConfig | null): string {
 
 /**
  * Helper to check if autonomous trading is enabled
+ * Defaults to true - agents trade by default unless explicitly disabled
  */
 export function isAutonomousTradingEnabled(
   config: UserAgentConfig | null
 ): boolean {
-  return config?.autonomousTrading ?? false;
+  return config?.autonomousTrading ?? true;
 }
 
 /**
