@@ -588,7 +588,11 @@ Your JSON response:`;
     const agent = agentResult[0];
     const tradingConfig = await getAgentConfig(agentUserId);
 
-    if (!agent || !agent.isAgent || !isAutonomousTradingEnabled(tradingConfig)) {
+    if (
+      !agent ||
+      !agent.isAgent ||
+      !isAutonomousTradingEnabled(tradingConfig)
+    ) {
       return { success: false, actionsTaken: 0 };
     }
 
