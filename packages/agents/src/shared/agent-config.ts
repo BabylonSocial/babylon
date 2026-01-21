@@ -220,12 +220,16 @@ export function getPlanningHorizon(config: UserAgentConfig | null): string {
 
 /**
  * Helper to check if autonomous trading is enabled
- * Defaults to true - agents trade by default unless explicitly disabled
+ * Defaults to true to match database schema (autonomousTrading defaults to true)
  */
 export function isAutonomousTradingEnabled(
   config: UserAgentConfig | null
 ): boolean {
-  return config?.autonomousTrading ?? true;
+  // Note: Database schema defaults autonomousTrading to true for new agents
+  // When config is null (no config exists), we default to false (agent not set up)
+  // When config exists but autonomousTrading is null/undefined (legacy), default to true
+  if (!config) return false;
+  return config.autonomousTrading ?? true;
 }
 
 /**

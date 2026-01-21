@@ -11,7 +11,10 @@ import { db, eq, users } from '@babylon/db';
 import type { IAgentRuntime } from '@elizaos/core';
 import type { BabylonRuntime } from '../plugins/babylon/types';
 import { agentPnLService } from '../services/AgentPnLService';
-import { getAgentConfig } from '../shared/agent-config';
+import {
+  getAgentConfig,
+  isAutonomousTradingEnabled,
+} from '../shared/agent-config';
 import { logger } from '../shared/logger';
 
 /**
@@ -105,7 +108,7 @@ export class AutonomousA2AService {
     const agent = agentResult[0];
     const config = await getAgentConfig(agentUserId);
 
-    if (!agent || !agent.isAgent || !config?.autonomousTrading) {
+    if (!agent || !agent.isAgent || !isAutonomousTradingEnabled(config)) {
       return {
         success: false,
         marketId: undefined,
@@ -585,7 +588,7 @@ Your JSON response:`;
     const agent = agentResult[0];
     const tradingConfig = await getAgentConfig(agentUserId);
 
-    if (!agent || !agent.isAgent || !tradingConfig?.autonomousTrading) {
+    if (!agent || !agent.isAgent || !isAutonomousTradingEnabled(tradingConfig)) {
       return { success: false, actionsTaken: 0 };
     }
 

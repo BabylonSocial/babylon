@@ -174,7 +174,11 @@
  * @see {@link /src/app/agents/[agentId]/page.tsx} Agent detail page
  */
 
-import { agentService, getAgentConfig } from '@babylon/agents';
+import {
+  agentService,
+  getAgentConfig,
+  isAutonomousTradingEnabled,
+} from '@babylon/agents';
 import { authenticateUser } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
@@ -253,8 +257,8 @@ export async function GET(
         })(),
       virtualBalance: Number(agent!.virtualBalance ?? 0),
       isActive: config?.status === 'active',
-      autonomousEnabled: config?.autonomousTrading ?? false,
-      autonomousTrading: config?.autonomousTrading ?? false,
+      autonomousEnabled: isAutonomousTradingEnabled(config),
+      autonomousTrading: isAutonomousTradingEnabled(config),
       autonomousPosting: config?.autonomousPosting ?? false,
       autonomousCommenting: config?.autonomousCommenting ?? false,
       autonomousDMs: config?.autonomousDMs ?? false,
@@ -347,7 +351,7 @@ export async function PUT(
       description: agent.bio,
       profileImageUrl: agent.profileImageUrl,
       virtualBalance: Number(agent.virtualBalance ?? 0),
-      autonomousTrading: updatedConfig?.autonomousTrading ?? false,
+      autonomousTrading: isAutonomousTradingEnabled(updatedConfig),
       autonomousPosting: updatedConfig?.autonomousPosting ?? false,
       modelTier: updatedConfig?.modelTier ?? 'lite',
       updatedAt: agent.updatedAt.toISOString(),

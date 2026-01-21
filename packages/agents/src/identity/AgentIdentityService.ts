@@ -20,7 +20,10 @@ import {
 } from '@babylon/db';
 import { getAgent0Client } from '../agent0/Agent0Client';
 import { syncAfterAgent0Registration } from '../agent0/reputation/agent0-reputation-sync';
-import { getAgentConfig } from '../shared/agent-config';
+import {
+  getAgentConfig,
+  isAutonomousTradingEnabled,
+} from '../shared/agent-config';
 import { logger } from '../shared/logger';
 import { generateSnowflakeId } from '../shared/snowflake';
 import { agentWalletService } from './AgentWalletService';
@@ -121,7 +124,7 @@ export class AgentIdentityService {
       userType: 'agent',
       x402Support: true,
       moderationEscrowSupport: true,
-      autonomousTrading: config?.autonomousTrading ?? false,
+      autonomousTrading: isAutonomousTradingEnabled(config),
       autonomousPosting: config?.autonomousPosting ?? false,
       skills: [],
       domains: [],

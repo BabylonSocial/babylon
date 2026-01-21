@@ -13,7 +13,10 @@ import { PrivyClient } from '@privy-io/server-auth';
 import { ethers } from 'ethers';
 import { v4 as uuidv4 } from 'uuid';
 import { getAgent0Client } from '../agent0/Agent0Client';
-import { getAgentConfig } from '../shared/agent-config';
+import {
+  getAgentConfig,
+  isAutonomousTradingEnabled,
+} from '../shared/agent-config';
 import { logger } from '../shared/logger';
 
 /**
@@ -270,7 +273,7 @@ export class AgentWalletService {
       userType: 'agent',
       x402Support: true,
       moderationEscrowSupport: true,
-      autonomousTrading: config?.autonomousTrading ?? false,
+      autonomousTrading: isAutonomousTradingEnabled(config),
       autonomousPosting: config?.autonomousPosting ?? false,
       skills: [],
       domains: [],

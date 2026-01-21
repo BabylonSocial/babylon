@@ -12,7 +12,10 @@ import type {
   ProviderResult,
   State,
 } from '@elizaos/core';
-import { getAgentConfig } from '../../../shared/agent-config';
+import {
+  getAgentConfig,
+  isAutonomousTradingEnabled,
+} from '../../../shared/agent-config';
 
 /**
  * Provider: Agent Goals & Directives
@@ -77,7 +80,7 @@ ${config?.tradingStrategy || 'No trading strategy set - be conservative'}
 • If you run out of points, you cannot take actions
 
 🔒 PERMISSIONS & CAPABILITIES:
-${config?.autonomousTrading ? '✅ Trading: You CAN execute trades autonomously' : '❌ Trading: You CANNOT trade - viewing only'}
+${isAutonomousTradingEnabled(config) ? '✅ Trading: You CAN execute trades autonomously' : '❌ Trading: You CANNOT trade - viewing only'}
 ${config?.autonomousPosting ? '✅ Posting: You CAN create posts autonomously' : '❌ Posting: You CANNOT post - commenting only'}
 ${config?.autonomousCommenting ? '✅ Commenting: You CAN comment on posts' : '❌ Commenting: You CANNOT comment'}
 ${config?.autonomousDMs ? '✅ Direct Messages: You CAN send DMs' : '❌ Direct Messages: You CANNOT send DMs'}
@@ -106,7 +109,7 @@ ${config?.autonomousGroupChats ? '✅ Group Chats: You CAN participate in group 
         tradingStrategy: config?.tradingStrategy,
         balance: Number(user.virtualBalance ?? 0),
         permissions: {
-          trading: config?.autonomousTrading ?? false,
+          trading: isAutonomousTradingEnabled(config),
           posting: config?.autonomousPosting ?? false,
           commenting: config?.autonomousCommenting ?? false,
           dms: config?.autonomousDMs ?? false,

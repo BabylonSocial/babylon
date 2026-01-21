@@ -155,7 +155,11 @@
  * @see {@link /src/app/agents/page.tsx} Agents management UI
  */
 
-import { agentService, getAgentConfig } from '@babylon/agents';
+import {
+  agentService,
+  getAgentConfig,
+  isAutonomousTradingEnabled,
+} from '@babylon/agents';
 import { authenticateUser } from '@babylon/api';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
@@ -230,7 +234,7 @@ export async function POST(req: NextRequest) {
       description: agentUser.bio,
       profileImageUrl: agentUser.profileImageUrl,
       virtualBalance: Number(agentUser.virtualBalance ?? 0),
-      autonomousTrading: config?.autonomousTrading ?? false,
+      autonomousTrading: isAutonomousTradingEnabled(config),
       autonomousPosting: config?.autonomousPosting ?? false,
       autonomousCommenting: config?.autonomousCommenting ?? false,
       autonomousDMs: config?.autonomousDMs ?? false,
@@ -270,8 +274,8 @@ export async function GET(req: NextRequest) {
         description: agent.bio,
         profileImageUrl: agent.profileImageUrl,
         virtualBalance: Number(agent.virtualBalance ?? 0),
-        autonomousEnabled: config?.autonomousTrading ?? false,
-        autonomousTrading: config?.autonomousTrading ?? false,
+        autonomousEnabled: isAutonomousTradingEnabled(config),
+        autonomousTrading: isAutonomousTradingEnabled(config),
         autonomousPosting: config?.autonomousPosting ?? false,
         autonomousCommenting: config?.autonomousCommenting ?? false,
         autonomousDMs: config?.autonomousDMs ?? false,
