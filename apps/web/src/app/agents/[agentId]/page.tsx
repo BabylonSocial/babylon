@@ -118,6 +118,8 @@ interface Agent {
   personality?: string;
   tradingStrategy?: string;
   virtualBalance?: number;
+  totalDeposited?: number;
+  totalWithdrawn?: number;
   isActive: boolean;
   autonomousEnabled: boolean;
   modelTier: 'free' | 'pro';

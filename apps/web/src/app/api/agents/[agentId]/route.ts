@@ -258,6 +258,8 @@ export async function GET(
           return tradingStrategyMatch ? tradingStrategyMatch[1]!.trim() : '';
         })(),
       virtualBalance: Number(agent!.virtualBalance ?? 0),
+      totalDeposited: Number(agent!.totalDeposited ?? 0),
+      totalWithdrawn: Number(agent!.totalWithdrawn ?? 0),
       isActive: config?.status === 'active',
       autonomousEnabled: tradingEnabled,
       autonomousTrading: tradingEnabled,

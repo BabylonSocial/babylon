@@ -3,24 +3,60 @@
 import { useMemo } from 'react';
 import { useUserPositions } from '@/hooks/useUserPositions';
 
+interface UseAgentTotalPnLOptions {
+  /** Agent ID to fetch positions for */
+  agentId: string | undefined;
+  /** Available balance (virtualBalance) */
+  availableBalance?: number;
+  /** Total amount deposited to the agent */
+  totalDeposited?: number;
+  /** Total amount withdrawn from the agent */
+  totalWithdrawn?: number;
+  /** Fallback: Realized P&L from the agent record (lifetimePnL field) - used if deposits not available */
+  realizedPnL?: string | number;
+}
+
 /**
- * Hook to calculate an agent's total P&L (realized + unrealized).
+ * Hook to calculate an agent's true P&L.
  *
- * Fetches positions for the agent and calculates unrealized P&L from open positions,
- * then combines with realized P&L to provide the true total.
+ * If totalDeposited is provided, calculates true P&L as:
+ *   truePnL = totalPortfolio - netContributions
+ *           = (availableBalance + pointsInPositions) - (totalDeposited - totalWithdrawn)
  *
- * @param agentId - Agent ID to fetch positions for
- * @param realizedPnL - Realized P&L from the agent record (lifetimePnL field)
+ * This gives the actual gain/loss regardless of trade accounting quirks.
+ * Falls back to realized + unrealized if deposit data isn't available.
  *
  * @example
  * ```tsx
- * const { totalPnL, unrealizedPnL, loading } = useAgentTotalPnL(agent.id, agent.lifetimePnL);
+ * const { totalPnL, loading } = useAgentTotalPnL({
+ *   agentId: agent.id,
+ *   availableBalance: agent.virtualBalance,
+ *   totalDeposited: agent.totalDeposited,
+ *   totalWithdrawn: agent.totalWithdrawn,
+ *   realizedPnL: agent.lifetimePnL,
+ * });
  * ```
  */
 export function useAgentTotalPnL(
-  agentId: string | undefined,
-  realizedPnL: string | number
+  optionsOrAgentId: UseAgentTotalPnLOptions | string | undefined,
+  legacyRealizedPnL?: string | number
 ) {
+  // Support both new object API and legacy (agentId, realizedPnL) signature
+  const options: UseAgentTotalPnLOptions =
+    typeof optionsOrAgentId === 'object' && optionsOrAgentId !== null
+      ? optionsOrAgentId
+      : {
+          agentId: optionsOrAgentId,
+          realizedPnL: legacyRealizedPnL,
+        };
+
+  const {
+    agentId,
+    availableBalance = 0,
+    totalDeposited,
+    totalWithdrawn = 0,
+    realizedPnL,
+  } = options;
   const {
     predictionPositions: predictions,
     perpPositions: perps,
@@ -77,23 +113,41 @@ export function useAgentTotalPnL(
   // Guard against non-finite numbers to prevent NaN propagation
   const realizedRaw =
     typeof realizedPnL === 'string'
-      ? parseFloat(realizedPnL)
-      : Number(realizedPnL);
+      ? parseFloat(realizedPnL ?? '0')
+      : Number(realizedPnL ?? 0);
   const realized = Number.isFinite(realizedRaw) ? realizedRaw : 0;
-  const totalPnL = realized + unrealizedPnL;
+
+  // Calculate total portfolio value
+  const totalPortfolio = availableBalance + pointsInPositions;
+
+  // Calculate net contributions (what was actually put in)
+  const netContributions =
+    totalDeposited !== undefined ? totalDeposited - totalWithdrawn : undefined;
+
+  // True P&L = Current Portfolio - Net Contributions
+  // This gives the actual gain/loss regardless of trade accounting quirks.
+  // Falls back to realized + unrealized if deposit data isn't available.
+  const totalPnL =
+    netContributions !== undefined
+      ? totalPortfolio - netContributions
+      : realized + unrealizedPnL;
 
   // Defer profitability determination until positions are loaded to avoid color flash
   const isProfitable = positionsLoading ? realized >= 0 : totalPnL >= 0;
 
   return {
-    /** Realized P&L (from closed trades) */
+    /** Realized P&L (from closed trades) - may be inaccurate, prefer totalPnL */
     realizedPnL: realized,
     /** Unrealized P&L (from open positions) */
     unrealizedPnL,
-    /** Total P&L (realized + unrealized) */
+    /** True total P&L (portfolio - contributions, or realized + unrealized as fallback) */
     totalPnL,
     /** Total value of open positions */
     pointsInPositions,
+    /** Total portfolio value (available + in positions) */
+    totalPortfolio,
+    /** Net contributions (deposited - withdrawn), undefined if not available */
+    netContributions,
     /** Whether total P&L is positive (defers to realized while loading) */
     isProfitable,
     /** Whether positions are still loading */

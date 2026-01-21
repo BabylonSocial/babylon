@@ -189,26 +189,17 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
     [balance?.balance, pointsInPositions]
   );
 
-  // Calculate total unrealized P&L from positions
-  const unrealizedPnL = useMemo(() => {
-    const predictionPnL = predictions.reduce(
-      (sum, pos) => sum + (pos.unrealizedPnL ?? 0),
-      0
-    );
-    const perpPnL = perps.reduce((sum, pos) => sum + pos.unrealizedPnL, 0);
-    return predictionPnL + perpPnL;
-  }, [predictions, perps]);
-
-  // Total P&L = lifetime realized P&L + unrealized P&L
-  const totalPnL = useMemo(
-    () => (balance?.lifetimePnL || 0) + unrealizedPnL,
-    [balance?.lifetimePnL, unrealizedPnL]
-  );
-
-  // P&L percentage based on net contributions (totalDeposited - totalWithdrawn)
+  // Net contributions = what user actually put in
   const netContributions = useMemo(
     () => (balance?.totalDeposited || 0) - (balance?.totalWithdrawn || 0),
     [balance?.totalDeposited, balance?.totalWithdrawn]
+  );
+
+  // True P&L = Current Portfolio Value - Net Contributions
+  // This gives the actual gain/loss regardless of trade accounting quirks
+  const totalPnL = useMemo(
+    () => totalPortfolio - netContributions,
+    [totalPortfolio, netContributions]
   );
 
   const pnlPercent = useMemo(

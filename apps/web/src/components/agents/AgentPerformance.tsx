@@ -29,28 +29,37 @@ interface AgentPerformanceProps {
     profitableTrades: number;
     winRate: number;
     virtualBalance?: number;
+    totalDeposited?: number;
+    totalWithdrawn?: number;
   };
 }
 
 export function AgentPerformance({ agent }: AgentPerformanceProps) {
   // Use shared hook for P&L calculation
+  // Pass deposit data to calculate true P&L (portfolio - contributions)
   const {
     realizedPnL,
     unrealizedPnL,
     totalPnL,
     pointsInPositions,
+    totalPortfolio,
     isProfitable,
     loading: positionsLoading,
     error: positionsError,
     predictions,
     perps,
-  } = useAgentTotalPnL(agent.id, agent.lifetimePnL);
+  } = useAgentTotalPnL({
+    agentId: agent.id,
+    availableBalance: agent.virtualBalance ?? 0,
+    totalDeposited: agent.totalDeposited,
+    totalWithdrawn: agent.totalWithdrawn,
+    realizedPnL: agent.lifetimePnL,
+  });
 
   const totalTrades = agent.totalTrades || 0;
   const profitableTrades = agent.profitableTrades || 0;
   const winRate = agent.winRate || 0;
   const availableBalance = agent.virtualBalance ?? 0;
-  const totalPortfolio = availableBalance + pointsInPositions;
 
   // Fetch Agent0 network reputation data
   const {
