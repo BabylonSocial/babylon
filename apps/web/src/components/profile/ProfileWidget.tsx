@@ -162,19 +162,23 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
   >(null);
 
   // Calculate points in positions from actual position data
-  // Sum of currentValue from predictions + margin from perpetuals
-  // For perps, we use size/leverage to get actual capital tied up (margin), not notional value
+  // Sum of currentValue from predictions + (margin + unrealized) from perpetuals
+  // For perps, include unrealized P&L for consistency with prediction currentValue
   const pointsInPositions = useMemo(() => {
     const predictionValue = predictions.reduce(
       (sum, pos) => sum + (pos.currentValue ?? pos.shares * pos.currentPrice),
       0
     );
-    // Use margin (size/leverage) for perps to represent actual capital at risk
+    // Use margin + unrealized P&L for perps to match prediction positions
+    // (prediction currentValue = cost + unrealized, so perp should be margin + unrealized)
     const perpValue = perps.reduce((sum, pos) => {
       const leverage = Number(pos.leverage);
       const effectiveLeverage =
         Number.isFinite(leverage) && leverage > 0 ? leverage : 1;
-      return sum + Math.abs(pos.size / effectiveLeverage);
+      const margin = Math.abs(pos.size / effectiveLeverage);
+      const unrealized = Number(pos.unrealizedPnL);
+      const unrealizedSafe = Number.isFinite(unrealized) ? unrealized : 0;
+      return sum + margin + unrealizedSafe;
     }, 0);
     return predictionValue + perpValue;
   }, [predictions, perps]);
