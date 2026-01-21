@@ -122,6 +122,7 @@ export class MultiStepExecutor {
       config?.systemPrompt ?? 'You are an autonomous trading agent on Babylon.';
 
     // Determine enabled features - NPCs have all features enabled by default
+    // For USER_CONTROLLED agents: trading defaults to true, others default to false
     const enabledFeatures: string[] = [];
     if (isNpc) {
       enabledFeatures.push(
@@ -133,15 +134,19 @@ export class MultiStepExecutor {
         Features.GROUP_CHATS
       );
     } else {
-      if (config?.autonomousTrading) enabledFeatures.push(Features.TRADING);
-      if (config?.autonomousPosting) enabledFeatures.push(Features.POSTING);
-      if (config?.autonomousCommenting)
-        enabledFeatures.push(Features.COMMENTING);
+      const hasAutonomousTrading = config?.autonomousTrading ?? true;
+      const hasAutonomousPosting = config?.autonomousPosting ?? false;
+      const hasAutonomousCommenting = config?.autonomousCommenting ?? false;
+      const hasAutonomousDMs = config?.autonomousDMs ?? false;
+      const hasAutonomousGroupChats = config?.autonomousGroupChats ?? false;
+
+      if (hasAutonomousTrading) enabledFeatures.push(Features.TRADING);
+      if (hasAutonomousPosting) enabledFeatures.push(Features.POSTING);
+      if (hasAutonomousCommenting) enabledFeatures.push(Features.COMMENTING);
       // User-controlled agents can also engage if they can comment
-      if (config?.autonomousCommenting) enabledFeatures.push(Features.ENGAGING);
-      if (config?.autonomousDMs) enabledFeatures.push(Features.DMS);
-      if (config?.autonomousGroupChats)
-        enabledFeatures.push(Features.GROUP_CHATS);
+      if (hasAutonomousCommenting) enabledFeatures.push(Features.ENGAGING);
+      if (hasAutonomousDMs) enabledFeatures.push(Features.DMS);
+      if (hasAutonomousGroupChats) enabledFeatures.push(Features.GROUP_CHATS);
     }
 
     // Get NPC game context ONCE before loop (arc awareness, world events)

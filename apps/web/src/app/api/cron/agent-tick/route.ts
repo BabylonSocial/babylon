@@ -316,11 +316,7 @@ export async function POST(_req: NextRequest) {
         hasAutonomousDMs ||
         hasAutonomousGroupChats;
 
-      if (
-        user.isAgent &&
-        hasEnoughBalance &&
-        hasAutonomousFeatures
-      ) {
+      if (user.isAgent && hasEnoughBalance && hasAutonomousFeatures) {
         eligibleAgents.push({
           agentId: agent.agentId,
           type: agent.type,
@@ -600,11 +596,9 @@ export async function POST(_req: NextRequest) {
       const agentsWithFeatures = eligibleAgents.filter((a) => {
         const hasAutonomousTrading = a.config?.autonomousTrading ?? true;
         const hasAutonomousPosting = a.config?.autonomousPosting ?? false;
-        const hasAutonomousCommenting =
-          a.config?.autonomousCommenting ?? false;
+        const hasAutonomousCommenting = a.config?.autonomousCommenting ?? false;
         const hasAutonomousDMs = a.config?.autonomousDMs ?? false;
-        const hasAutonomousGroupChats =
-          a.config?.autonomousGroupChats ?? false;
+        const hasAutonomousGroupChats = a.config?.autonomousGroupChats ?? false;
         return (
           hasAutonomousTrading ||
           hasAutonomousPosting ||
