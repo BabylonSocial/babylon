@@ -404,7 +404,7 @@ export default function AgentDetailPage() {
             </TabsContent>
 
             <TabsContent value="performance">
-              <AgentPerformance agent={agent} />
+              <AgentPerformance agent={agent} agentId={agent.id} />
             </TabsContent>
 
             <TabsContent value="logs">

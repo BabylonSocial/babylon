@@ -16,7 +16,6 @@
 import {
   agentLogs,
   agentMessages,
-  agentPerformanceMetrics,
   agentPointsTransactions,
   agentTrades,
   and,
@@ -941,46 +940,17 @@ export class AgentServiceV2 {
     const agent = agentResult[0];
     if (!agent || !agent.isAgent) throw new Error('Agent not found');
 
-    // Get pre-calculated performance metrics from agentPerformanceMetrics table
-    const metricsResult = await db
-      .select()
-      .from(agentPerformanceMetrics)
-      .where(eq(agentPerformanceMetrics.userId, agentUserId))
-      .limit(1);
-
-    const metrics = metricsResult[0];
-
-    // If metrics exist, use them; otherwise fall back to calculating from trades
-    if (metrics) {
-      // Get trades for avgTradeSize calculation
-      const trades = await db
-        .select()
-        .from(agentTrades)
-        .where(eq(agentTrades.agentUserId, agentUserId));
-
-      const tradesWithPnl = trades.filter((t) => t.pnl !== null);
-      const avgTradeSize =
-        tradesWithPnl.length > 0
-          ? tradesWithPnl.reduce((sum, t) => sum + t.amount, 0) /
-            tradesWithPnl.length
-          : 0;
-
-      return {
-        lifetimePnL: Number(agent.lifetimePnL),
-        totalTrades: metrics.totalTrades,
-        profitableTrades: metrics.profitableTrades,
-        winRate: metrics.winRate,
-        avgTradeSize,
-      };
-    }
-
-    // Fallback: calculate from agentTrades if no metrics record exists
+    // Always calculate trade stats from agentTrades (source of truth)
+    // agentPerformanceMetrics is for reputation scoring, not trade stats
     const trades = await db
       .select()
       .from(agentTrades)
       .where(eq(agentTrades.agentUserId, agentUserId));
 
     const closedTrades = trades.filter((t) => t.pnl !== null);
+    const profitableTrades = closedTrades.filter(
+      (t) => t.pnl && t.pnl > 0
+    ).length;
     const avgTradeSize =
       trades.length > 0
         ? trades.reduce((sum, t) => sum + t.amount, 0) / trades.length
@@ -989,12 +959,9 @@ export class AgentServiceV2 {
     return {
       lifetimePnL: Number(agent.lifetimePnL),
       totalTrades: trades.length,
-      profitableTrades: closedTrades.filter((t) => t.pnl && t.pnl > 0).length,
+      profitableTrades,
       winRate:
-        closedTrades.length > 0
-          ? closedTrades.filter((t) => t.pnl && t.pnl > 0).length /
-            closedTrades.length
-          : 0,
+        closedTrades.length > 0 ? profitableTrades / closedTrades.length : 0,
       avgTradeSize,
     };
   }
