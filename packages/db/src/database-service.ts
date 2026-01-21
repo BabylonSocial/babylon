@@ -24,6 +24,7 @@ import {
   isNull,
   lt,
   lte,
+  sql,
 } from 'drizzle-orm';
 import { db } from './db';
 import { logger } from './logger';
@@ -710,13 +711,18 @@ class DatabaseService {
    * Get all organization states with current prices ordered by price.
    * This replaces the old getCompanies() method.
    *
-   * @returns Array of organization states ordered by price descending
+   * NOTE: Uses NULLS LAST to ensure organizations with prices appear first.
+   * Without this, PostgreSQL's default DESC ordering puts NULL values first,
+   * causing agents to see no perp markets (since media outlets have NULL prices
+   * and get filtered out by the type='company' check).
+   *
+   * @returns Array of organization states ordered by price descending (NULLs last)
    */
   async getOrganizationsByPrice(): Promise<OrganizationStateRow[]> {
     return db
       .select()
       .from(organizationState)
-      .orderBy(desc(organizationState.currentPrice));
+      .orderBy(sql`${organizationState.currentPrice} DESC NULLS LAST`);
   }
 
   // ========== STOCK PRICES ==========
