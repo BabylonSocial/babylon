@@ -28,6 +28,24 @@ import type { SQL } from 'drizzle-orm';
 import { FEE_CONFIG, type FeeType } from '../config/fees';
 
 /**
+ * Transaction context type - either an existing transaction or the db client
+ * Used to avoid nested transactions which can cause deadlocks
+ */
+export type TransactionContext = Transaction | DrizzleClient;
+
+/**
+ * Execute a function within a transaction context
+ * If an existing transaction is provided, uses it directly; otherwise creates a new one
+ * This prevents nested transaction deadlocks
+ */
+async function runInTransaction<T>(
+  existingTx: TransactionContext | undefined,
+  fn: (tx: TransactionContext) => Promise<T>
+): Promise<T> {
+  return existingTx ? fn(existingTx) : withTransaction(fn);
+}
+
+/**
  * Fee calculation result
  *
  * @description Contains calculated fee amounts and distribution breakdown.
@@ -141,7 +159,7 @@ export class FeeService {
    * @param {number} tradeAmount - Trade amount
    * @param {string} [tradeId] - Optional trade ID for reference
    * @param {string} [marketId] - Optional market ID for reference
-   * @param {Transaction | DrizzleClient} [existingTx] - Optional existing transaction/client to reuse (avoids nested transactions)
+   * @param {TransactionContext} [existingTx] - Optional existing transaction/client to reuse (avoids nested transactions)
    * @returns {Promise<FeeDistributionResult>} Fee distribution result
    *
    * @example
@@ -161,7 +179,7 @@ export class FeeService {
     tradeAmount: number,
     tradeId?: string,
     marketId?: string,
-    existingTx?: Transaction | DrizzleClient
+    existingTx?: TransactionContext
   ): Promise<FeeDistributionResult> {
     const feeCalc = FeeService.calculateFee(tradeAmount);
 
@@ -191,7 +209,7 @@ export class FeeService {
       : await FeeService.getUserReferrer(userId);
 
     // Core fee processing logic
-    const processFee = async (tx: Transaction | DrizzleClient) => {
+    const processFee = async (tx: TransactionContext) => {
       // Create trading fee record
       await tx.insert(tradingFees).values({
         id: await generateSnowflakeId(),
@@ -246,11 +264,8 @@ export class FeeService {
       };
     };
 
-    // If an existing transaction is provided, use it directly to avoid nested transactions
-    // (which can cause deadlocks when the inner tx waits on locks held by the outer tx)
-    const result = existingTx
-      ? await processFee(existingTx)
-      : await withTransaction(processFee);
+    // Use existing transaction if provided, otherwise create a new one
+    const result = await runInTransaction(existingTx, processFee);
 
     logger.info(
       'Trading fee processed',
@@ -285,7 +300,7 @@ export class FeeService {
    */
   private static async getUserReferrerInTx(
     userId: string,
-    tx: Transaction | DrizzleClient
+    tx: TransactionContext
   ): Promise<string | null> {
     const [user] = await tx
       .select({ referredBy: users.referredBy })
@@ -303,7 +318,7 @@ export class FeeService {
     referrerId: string,
     feeAmount: number,
     traderId: string,
-    tx: Transaction | DrizzleClient
+    tx: TransactionContext
   ): Promise<void> {
     // Credit referrer's virtual balance
     const [referrer] = await tx
