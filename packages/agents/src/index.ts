@@ -55,6 +55,17 @@ export * from './services';
 export * from './templates-loader';
 // Training utilities (RL model fetching, config)
 export * from './training';
+// Shared utilities
+export {
+  getAgentConfig,
+  getAutonomousFeatures,
+  hasAnyAutonomousFeature,
+  isAutonomousCommentingEnabled,
+  isAutonomousDMsEnabled,
+  isAutonomousGroupChatsEnabled,
+  isAutonomousPostingEnabled,
+  isAutonomousTradingEnabled,
+} from './shared/agent-config';
 // Core types
 export * from './types';
 export * from './types/agent-template';

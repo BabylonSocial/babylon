@@ -14,7 +14,7 @@ import type { IAgentRuntime } from '@elizaos/core';
 import { callGroqDirect } from '../llm/direct-groq';
 import { getNpcGameContext } from '../plugins/babylon/providers/npc-game-context';
 import { agentService } from '../services/AgentService';
-import { getAgentConfig } from '../shared/agent-config';
+import { getAgentConfig, getAutonomousFeatures } from '../shared/agent-config';
 import { logger } from '../shared/logger';
 import {
   executeDirectComment,
@@ -134,19 +134,14 @@ export class MultiStepExecutor {
         Features.GROUP_CHATS
       );
     } else {
-      const hasAutonomousTrading = config?.autonomousTrading ?? true;
-      const hasAutonomousPosting = config?.autonomousPosting ?? false;
-      const hasAutonomousCommenting = config?.autonomousCommenting ?? false;
-      const hasAutonomousDMs = config?.autonomousDMs ?? false;
-      const hasAutonomousGroupChats = config?.autonomousGroupChats ?? false;
-
-      if (hasAutonomousTrading) enabledFeatures.push(Features.TRADING);
-      if (hasAutonomousPosting) enabledFeatures.push(Features.POSTING);
-      if (hasAutonomousCommenting) enabledFeatures.push(Features.COMMENTING);
+      const features = getAutonomousFeatures(config);
+      if (features.trading) enabledFeatures.push(Features.TRADING);
+      if (features.posting) enabledFeatures.push(Features.POSTING);
+      if (features.commenting) enabledFeatures.push(Features.COMMENTING);
       // User-controlled agents can also engage if they can comment
-      if (hasAutonomousCommenting) enabledFeatures.push(Features.ENGAGING);
-      if (hasAutonomousDMs) enabledFeatures.push(Features.DMS);
-      if (hasAutonomousGroupChats) enabledFeatures.push(Features.GROUP_CHATS);
+      if (features.commenting) enabledFeatures.push(Features.ENGAGING);
+      if (features.dms) enabledFeatures.push(Features.DMS);
+      if (features.groupChats) enabledFeatures.push(Features.GROUP_CHATS);
     }
 
     // Get NPC game context ONCE before loop (arc awareness, world events)

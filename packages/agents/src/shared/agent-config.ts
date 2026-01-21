@@ -261,6 +261,28 @@ export function isAutonomousGroupChatsEnabled(
 }
 
 /**
+ * Get all autonomous feature flags with proper defaults
+ * Trading defaults to true, all others default to false
+ */
+export function getAutonomousFeatures(config: UserAgentConfig | null) {
+  return {
+    trading: isAutonomousTradingEnabled(config),
+    posting: isAutonomousPostingEnabled(config),
+    commenting: isAutonomousCommentingEnabled(config),
+    dms: isAutonomousDMsEnabled(config),
+    groupChats: isAutonomousGroupChatsEnabled(config),
+  };
+}
+
+/**
+ * Check if any autonomous feature is enabled
+ */
+export function hasAnyAutonomousFeature(config: UserAgentConfig | null): boolean {
+  const features = getAutonomousFeatures(config);
+  return features.trading || features.posting || features.commenting || features.dms || features.groupChats;
+}
+
+/**
  * Helper to get model tier from config
  */
 export function getModelTier(config: UserAgentConfig | null): string {
