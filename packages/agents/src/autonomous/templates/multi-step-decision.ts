@@ -874,7 +874,7 @@ function formatPositionManagementGuidance(
     // Significant loss
     else if (p.pnlPercent < LOSS_THRESHOLD_PERCENT) {
       alerts.push(
-        `🔴 LOSING: ${p.ticker} ${p.side} is down ${p.pnlPercent.toFixed(1)}%. Consider cutting losses or averaging down if still bullish.`
+        `🔴 LOSING: ${p.ticker} ${p.side} is down ${p.pnlPercent.toFixed(1)}%. To cut losses, use side="close_position" with this ticker.`
       );
     }
     // Good profit - consider taking
@@ -894,27 +894,28 @@ function formatPositionManagementGuidance(
   // Check prediction positions
   for (const p of positions.predictions) {
     const absChange = Math.abs(p.pnlPercent);
+    const sellAction = p.side.toLowerCase() === 'yes' ? 'sell_yes' : 'sell_no';
 
     if (
       absChange < STAGNANT_THRESHOLD_PERCENT &&
       p.timeHeldMs > STAGNANT_TIME_MS
     ) {
       alerts.push(
-        `⚠️ STAGNANT: "${p.question.substring(0, 30)}..." ${p.side} hasn't moved (${p.pnlPercent >= 0 ? '+' : ''}${p.pnlPercent.toFixed(1)}%) in ${p.timeHeld}.`
+        `⚠️ STAGNANT: "${p.question.substring(0, 30)}..." ${p.side} hasn't moved (${p.pnlPercent >= 0 ? '+' : ''}${p.pnlPercent.toFixed(1)}%) in ${p.timeHeld}. To exit: use side="${sellAction}" on marketId ${p.marketId}.`
       );
     } else if (p.pnlPercent < LOSS_THRESHOLD_PERCENT) {
       alerts.push(
-        `🔴 LOSING: "${p.question.substring(0, 30)}..." ${p.side} down ${p.pnlPercent.toFixed(1)}%.`
+        `🔴 LOSING: "${p.question.substring(0, 30)}..." ${p.side} down ${p.pnlPercent.toFixed(1)}%. To cut losses: use side="${sellAction}" on marketId ${p.marketId}.`
       );
     } else if (p.pnlPercent > PROFIT_THRESHOLD_PERCENT) {
       alerts.push(
-        `🟢 PROFIT: "${p.question.substring(0, 30)}..." ${p.side} up +${p.pnlPercent.toFixed(1)}%.`
+        `🟢 PROFIT: "${p.question.substring(0, 30)}..." ${p.side} up +${p.pnlPercent.toFixed(1)}%. To take profits: use side="${sellAction}" on marketId ${p.marketId}.`
       );
     }
     // Very long hold - check if thesis still valid
     else if (p.timeHeldMs > LONG_HOLD_TIME_MS) {
       alerts.push(
-        `⏰ AGED: "${p.question.substring(0, 30)}..." ${p.side} held for ${p.timeHeld} (${p.pnlPercent >= 0 ? '+' : ''}${p.pnlPercent.toFixed(1)}%). Review if thesis still valid.`
+        `⏰ AGED: "${p.question.substring(0, 30)}..." ${p.side} held for ${p.timeHeld} (${p.pnlPercent >= 0 ? '+' : ''}${p.pnlPercent.toFixed(1)}%). To exit if thesis invalid: use side="${sellAction}" on marketId ${p.marketId}.`
       );
     }
   }
@@ -1054,13 +1055,26 @@ function formatActionSchemas(enabledFeatures: string[]): string {
 }`);
     } else if (action.name === Actions.TRADE) {
       // Special handling for TRADE with multiple variants
-      schemas.push(`TRADE (prediction - buy):
+      schemas.push(`TRADE (prediction - open position):
 {
   "marketType": "prediction",
   "marketId": "exact_market_id_from_list",
   "side": "buy_yes | buy_no",
   "amount": 100,
   "reasoning": "Why this trade"
+}
+
+TRADE (prediction - close/sell position):
+⚠️ To EXIT a position, you must SELL the same side you bought!
+- To close a YES position → use "sell_yes"
+- To close a NO position → use "sell_no"
+- Buying the opposite side does NOT close your position!
+{
+  "marketType": "prediction",
+  "marketId": "marketId_from_your_positions",
+  "side": "sell_yes | sell_no",
+  "amount": 50,
+  "reasoning": "Closing position because..."
 }
 
 TRADE (perp):
