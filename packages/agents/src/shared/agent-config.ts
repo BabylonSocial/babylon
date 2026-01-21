@@ -54,11 +54,13 @@ export async function getAgentConfig(
     .values({
       id: await generateSnowflakeId(),
       userId,
+      // Explicit true ensures agents trade by default regardless of DB migration state
       autonomousTrading: true,
       status: 'idle',
+      createdAt: now,
       updatedAt: now,
     })
-    .onConflictDoNothing()
+    .onConflictDoNothing({ target: userAgentConfigs.userId })
     .returning();
 
   if (created) return created;
@@ -121,15 +123,17 @@ export async function upsertAgentConfig(
     return result[0]!;
   }
 
-  // Generate a new ID
-  const id = `uac_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  // Generate a new ID using snowflake for consistency
+  const id = await generateSnowflakeId();
+  const now = new Date();
   const result = await db
     .insert(userAgentConfigs)
     .values({
       id,
       userId,
       ...config,
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     })
     .returning();
 
@@ -277,9 +281,17 @@ export function getAutonomousFeatures(config: UserAgentConfig | null) {
 /**
  * Check if any autonomous feature is enabled
  */
-export function hasAnyAutonomousFeature(config: UserAgentConfig | null): boolean {
+export function hasAnyAutonomousFeature(
+  config: UserAgentConfig | null
+): boolean {
   const features = getAutonomousFeatures(config);
-  return features.trading || features.posting || features.commenting || features.dms || features.groupChats;
+  return (
+    features.trading ||
+    features.posting ||
+    features.commenting ||
+    features.dms ||
+    features.groupChats
+  );
 }
 
 /**

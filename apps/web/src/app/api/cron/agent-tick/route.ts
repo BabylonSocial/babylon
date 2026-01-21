@@ -573,10 +573,8 @@ export async function POST(_req: NextRequest) {
 
     // Validation: Warn if no actions were executed
     if (totalActionsExecuted === 0 && results.length > 0) {
-      // Count agents with autonomous features enabled
-      const agentsWithFeatures = eligibleAgents.filter((a) =>
-        hasAnyAutonomousFeature(a.config)
-      ).length;
+      // All eligible agents have at least one autonomous feature (pre-filtered during eligibility check)
+      const agentsWithFeatures = eligibleAgents.length;
 
       logger.warn(
         'Agent tick completed but no actions were executed',
