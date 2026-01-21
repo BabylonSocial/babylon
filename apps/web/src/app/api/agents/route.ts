@@ -267,6 +267,7 @@ export async function GET(req: NextRequest) {
         agentService.getPerformance(agent.id),
         getAgentConfig(agent.id),
       ]);
+      const tradingEnabled = isAutonomousTradingEnabled(config);
       return {
         id: agent.id,
         username: agent.username,
@@ -274,8 +275,8 @@ export async function GET(req: NextRequest) {
         description: agent.bio,
         profileImageUrl: agent.profileImageUrl,
         virtualBalance: Number(agent.virtualBalance ?? 0),
-        autonomousEnabled: isAutonomousTradingEnabled(config),
-        autonomousTrading: isAutonomousTradingEnabled(config),
+        autonomousEnabled: tradingEnabled,
+        autonomousTrading: tradingEnabled,
         autonomousPosting: config?.autonomousPosting ?? false,
         autonomousCommenting: config?.autonomousCommenting ?? false,
         autonomousDMs: config?.autonomousDMs ?? false,

@@ -197,6 +197,8 @@ export async function GET(
     getAgentConfig(agentId),
   ]);
 
+  const tradingEnabled = isAutonomousTradingEnabled(config);
+
   return NextResponse.json({
     success: true,
     agent: {
@@ -257,8 +259,8 @@ export async function GET(
         })(),
       virtualBalance: Number(agent!.virtualBalance ?? 0),
       isActive: config?.status === 'active',
-      autonomousEnabled: isAutonomousTradingEnabled(config),
-      autonomousTrading: isAutonomousTradingEnabled(config),
+      autonomousEnabled: tradingEnabled,
+      autonomousTrading: tradingEnabled,
       autonomousPosting: config?.autonomousPosting ?? false,
       autonomousCommenting: config?.autonomousCommenting ?? false,
       autonomousDMs: config?.autonomousDMs ?? false,
