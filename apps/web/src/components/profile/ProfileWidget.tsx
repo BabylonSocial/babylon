@@ -164,13 +164,14 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
   // Calculate points in positions from actual position data
   // Sum of currentValue from predictions + (margin + unrealized) from perpetuals
   // For perps, include unrealized P&L for consistency with prediction currentValue
-  const pointsInPositions = useMemo(() => {
+  const positionsValue = useMemo(() => {
     const predictionValue = predictions.reduce(
       (sum, pos) => sum + (pos.currentValue ?? pos.shares * pos.currentPrice),
       0
     );
     // Use margin + unrealized P&L for perps to match prediction positions
-    // (prediction currentValue = cost + unrealized, so perp should be margin + unrealized)
+    // (prediction currentValue is the position's current worth including unrealized gains,
+    // so perp value should similarly be margin + unrealized)
     const perpValue = perps.reduce((sum, pos) => {
       const leverage = Number(pos.leverage);
       const effectiveLeverage =
@@ -185,25 +186,45 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
 
   // Total portfolio = available balance + points in positions
   const totalPortfolio = useMemo(
-    () => (balance?.balance || 0) + pointsInPositions,
-    [balance?.balance, pointsInPositions]
+    () => (balance?.balance || 0) + positionsValue,
+    [balance?.balance, positionsValue]
+  );
+
+  // Check if we have reliable deposit data for true P&L calculation
+  const hasDepositData = useMemo(
+    () =>
+      balance != null &&
+      typeof balance.totalDeposited === 'number' &&
+      typeof balance.totalWithdrawn === 'number',
+    [balance]
   );
 
   // Net contributions = what user actually put in
   const netContributions = useMemo(
-    () => (balance?.totalDeposited || 0) - (balance?.totalWithdrawn || 0),
-    [balance?.totalDeposited, balance?.totalWithdrawn]
+    () =>
+      hasDepositData
+        ? (balance!.totalDeposited ?? 0) - (balance!.totalWithdrawn ?? 0)
+        : undefined,
+    [hasDepositData, balance]
   );
 
   // True P&L = Current Portfolio Value - Net Contributions
-  // This gives the actual gain/loss regardless of trade accounting quirks
+  // Only calculated when we have reliable deposit/withdrawal tracking.
+  // Note: This assumes all portfolio funds came from tracked deposits;
+  // may not account for airdrops, rewards, or admin adjustments.
   const totalPnL = useMemo(
-    () => totalPortfolio - netContributions,
+    () =>
+      typeof netContributions === 'number'
+        ? totalPortfolio - netContributions
+        : 0,
     [totalPortfolio, netContributions]
   );
 
   const pnlPercent = useMemo(
-    () => (netContributions > 0 ? (totalPnL / netContributions) * 100 : 0),
+    () =>
+      typeof netContributions === 'number' && netContributions > 0
+        ? (totalPnL / netContributions) * 100
+        : 0,
     [totalPnL, netContributions]
   );
 
@@ -362,7 +383,7 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-sm">In Positions</span>
             <span className="font-semibold text-foreground text-sm">
-              {formatPoints(pointsInPositions)} pts
+              {formatPoints(positionsValue)} pts
             </span>
           </div>
           <div className="flex items-center justify-between">

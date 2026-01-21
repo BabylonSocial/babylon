@@ -19,12 +19,13 @@ interface UseAgentTotalPnLOptions {
 /**
  * Hook to calculate an agent's true P&L.
  *
- * If totalDeposited is provided, calculates true P&L as:
+ * If totalDeposited is provided and finite, calculates true P&L as:
  *   truePnL = totalPortfolio - netContributions
  *           = (availableBalance + pointsInPositions) - (totalDeposited - totalWithdrawn)
  *
  * This gives the actual gain/loss regardless of trade accounting quirks.
- * Falls back to realized + unrealized if deposit data isn't available.
+ * Falls back to realized + unrealized if totalDeposited is undefined or non-finite.
+ * totalWithdrawn defaults to 0 if undefined or non-finite.
  *
  * @example
  * ```tsx
@@ -120,9 +121,16 @@ export function useAgentTotalPnL(
   // Calculate total portfolio value
   const totalPortfolio = availableBalance + pointsInPositions;
 
+  // Sanitize deposit/withdrawal values to prevent NaN propagation
+  const depositedRaw = Number(totalDeposited);
+  const withdrawnRaw = Number(totalWithdrawn);
+  const depositedSafe = Number.isFinite(depositedRaw) ? depositedRaw : undefined;
+  const withdrawnSafe = Number.isFinite(withdrawnRaw) ? withdrawnRaw : 0;
+
   // Calculate net contributions (what was actually put in)
+  // Only computed when totalDeposited is a valid finite number
   const netContributions =
-    totalDeposited !== undefined ? totalDeposited - totalWithdrawn : undefined;
+    depositedSafe !== undefined ? depositedSafe - withdrawnSafe : undefined;
 
   // True P&L = Current Portfolio - Net Contributions
   // This gives the actual gain/loss regardless of trade accounting quirks.
