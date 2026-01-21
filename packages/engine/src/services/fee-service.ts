@@ -11,6 +11,7 @@ import {
   balanceTransactions,
   count,
   Decimal,
+  type DrizzleClient,
   db,
   desc,
   eq,
@@ -140,6 +141,7 @@ export class FeeService {
    * @param {number} tradeAmount - Trade amount
    * @param {string} [tradeId] - Optional trade ID for reference
    * @param {string} [marketId] - Optional market ID for reference
+   * @param {Transaction | DrizzleClient} [existingTx] - Optional existing transaction/client to reuse (avoids nested transactions)
    * @returns {Promise<FeeDistributionResult>} Fee distribution result
    *
    * @example
@@ -158,7 +160,8 @@ export class FeeService {
     tradeType: FeeType,
     tradeAmount: number,
     tradeId?: string,
-    marketId?: string
+    marketId?: string,
+    existingTx?: Transaction | DrizzleClient
   ): Promise<FeeDistributionResult> {
     const feeCalc = FeeService.calculateFee(tradeAmount);
 
@@ -182,11 +185,13 @@ export class FeeService {
       };
     }
 
-    // Get user's referrer
-    const referrerId = await FeeService.getUserReferrer(userId);
+    // Get user's referrer (use existing tx if provided to avoid deadlock)
+    const referrerId = existingTx
+      ? await FeeService.getUserReferrerInTx(userId, existingTx)
+      : await FeeService.getUserReferrer(userId);
 
-    // Execute in transaction
-    const result = await withTransaction(async (tx) => {
+    // Core fee processing logic
+    const processFee = async (tx: Transaction | DrizzleClient) => {
       // Create trading fee record
       await tx.insert(tradingFees).values({
         id: await generateSnowflakeId(),
@@ -239,7 +244,13 @@ export class FeeService {
           : feeCalc.feeAmount,
         referrerId,
       };
-    });
+    };
+
+    // If an existing transaction is provided, use it directly to avoid nested transactions
+    // (which can cause deadlocks when the inner tx waits on locks held by the outer tx)
+    const result = existingTx
+      ? await processFee(existingTx)
+      : await withTransaction(processFee);
 
     logger.info(
       'Trading fee processed',
@@ -270,13 +281,29 @@ export class FeeService {
   }
 
   /**
+   * Get user's referrer within an existing transaction
+   */
+  private static async getUserReferrerInTx(
+    userId: string,
+    tx: Transaction | DrizzleClient
+  ): Promise<string | null> {
+    const [user] = await tx
+      .select({ referredBy: users.referredBy })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return user?.referredBy || null;
+  }
+
+  /**
    * Distribute referral fee to referrer (within transaction)
    */
   private static async distributeReferralFeeInTx(
     referrerId: string,
     feeAmount: number,
     traderId: string,
-    tx: Transaction
+    tx: Transaction | DrizzleClient
   ): Promise<void> {
     // Credit referrer's virtual balance
     const [referrer] = await tx

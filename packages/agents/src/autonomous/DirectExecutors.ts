@@ -642,7 +642,8 @@ async function executePredictionTrade(params: {
                 type as (typeof FEE_CONFIG.FEE_TYPES)[keyof typeof FEE_CONFIG.FEE_TYPES],
                 amount,
                 positionId,
-                relatedId
+                relatedId,
+                txDb // Pass the existing transaction to avoid nested transaction deadlocks
               ),
           },
     });
@@ -768,7 +769,8 @@ async function executePredictionSell(params: {
                 type as (typeof FEE_CONFIG.FEE_TYPES)[keyof typeof FEE_CONFIG.FEE_TYPES],
                 amount,
                 positionId,
-                relatedId
+                relatedId,
+                txDb // Pass the existing transaction to avoid nested transaction deadlocks
               ),
           },
     });
