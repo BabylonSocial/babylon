@@ -304,14 +304,22 @@ export async function POST(_req: NextRequest) {
         TICK_POINTS_COST <= 0 ||
         Number(user.virtualBalance ?? 0) >= TICK_POINTS_COST;
 
+      const hasAutonomousTrading = config?.autonomousTrading ?? true;
+      const hasAutonomousPosting = config?.autonomousPosting ?? false;
+      const hasAutonomousCommenting = config?.autonomousCommenting ?? false;
+      const hasAutonomousDMs = config?.autonomousDMs ?? false;
+      const hasAutonomousGroupChats = config?.autonomousGroupChats ?? false;
+      const hasAutonomousFeatures =
+        hasAutonomousTrading ||
+        hasAutonomousPosting ||
+        hasAutonomousCommenting ||
+        hasAutonomousDMs ||
+        hasAutonomousGroupChats;
+
       if (
         user.isAgent &&
         hasEnoughBalance &&
-        (config?.autonomousTrading ||
-          config?.autonomousPosting ||
-          config?.autonomousCommenting ||
-          config?.autonomousDMs ||
-          config?.autonomousGroupChats)
+        hasAutonomousFeatures
       ) {
         eligibleAgents.push({
           agentId: agent.agentId,
@@ -422,17 +430,21 @@ export async function POST(_req: NextRequest) {
 
         // Determine enabled features from agent config
         const enabledFeatures: string[] = [];
-        if (eligibleAgent.config) {
-          if (eligibleAgent.config.autonomousTrading)
-            enabledFeatures.push('trading');
-          if (eligibleAgent.config.autonomousPosting)
-            enabledFeatures.push('posting');
-          if (eligibleAgent.config.autonomousCommenting)
-            enabledFeatures.push('commenting');
-          if (eligibleAgent.config.autonomousDMs) enabledFeatures.push('DMs');
-          if (eligibleAgent.config.autonomousGroupChats)
-            enabledFeatures.push('group chats');
-        }
+        const hasAutonomousTrading =
+          eligibleAgent.config?.autonomousTrading ?? true;
+        const hasAutonomousPosting =
+          eligibleAgent.config?.autonomousPosting ?? false;
+        const hasAutonomousCommenting =
+          eligibleAgent.config?.autonomousCommenting ?? false;
+        const hasAutonomousDMs = eligibleAgent.config?.autonomousDMs ?? false;
+        const hasAutonomousGroupChats =
+          eligibleAgent.config?.autonomousGroupChats ?? false;
+
+        if (hasAutonomousTrading) enabledFeatures.push('trading');
+        if (hasAutonomousPosting) enabledFeatures.push('posting');
+        if (hasAutonomousCommenting) enabledFeatures.push('commenting');
+        if (hasAutonomousDMs) enabledFeatures.push('DMs');
+        if (hasAutonomousGroupChats) enabledFeatures.push('group chats');
 
         // Always record trajectories for RL training data collection
         // For USER_CONTROLLED agents, pass user.id (userId for User table lookup)
@@ -586,12 +598,19 @@ export async function POST(_req: NextRequest) {
     if (totalActionsExecuted === 0 && results.length > 0) {
       // Count agents with autonomous features enabled
       const agentsWithFeatures = eligibleAgents.filter((a) => {
+        const hasAutonomousTrading = a.config?.autonomousTrading ?? true;
+        const hasAutonomousPosting = a.config?.autonomousPosting ?? false;
+        const hasAutonomousCommenting =
+          a.config?.autonomousCommenting ?? false;
+        const hasAutonomousDMs = a.config?.autonomousDMs ?? false;
+        const hasAutonomousGroupChats =
+          a.config?.autonomousGroupChats ?? false;
         return (
-          a.config?.autonomousTrading ||
-          a.config?.autonomousPosting ||
-          a.config?.autonomousCommenting ||
-          a.config?.autonomousDMs ||
-          a.config?.autonomousGroupChats
+          hasAutonomousTrading ||
+          hasAutonomousPosting ||
+          hasAutonomousCommenting ||
+          hasAutonomousDMs ||
+          hasAutonomousGroupChats
         );
       }).length;
 

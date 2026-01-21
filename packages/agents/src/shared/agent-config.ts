@@ -13,6 +13,7 @@ import {
   userAgentConfigs,
   users,
 } from '@babylon/db';
+import { generateSnowflakeId } from './snowflake';
 
 /** User with agent configuration attached */
 export type UserWithAgentConfig = User & {
@@ -22,7 +23,7 @@ export type UserWithAgentConfig = User & {
 /**
  * Get agent config for a user
  */
-export async function getAgentConfig(
+async function fetchAgentConfig(
   userId: string
 ): Promise<UserAgentConfig | null> {
   const result = await db
@@ -31,6 +32,38 @@ export async function getAgentConfig(
     .where(eq(userAgentConfigs.userId, userId))
     .limit(1);
   return result[0] ?? null;
+}
+
+export async function getAgentConfig(
+  userId: string
+): Promise<UserAgentConfig | null> {
+  const existing = await fetchAgentConfig(userId);
+  if (existing) return existing;
+
+  const [user] = await db
+    .select({ id: users.id, isAgent: users.isAgent })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user?.isAgent) return null;
+
+  const now = new Date();
+  const [created] = await db
+    .insert(userAgentConfigs)
+    .values({
+      id: await generateSnowflakeId(),
+      userId,
+      autonomousTrading: true,
+      status: 'idle',
+      updatedAt: now,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (created) return created;
+
+  return await fetchAgentConfig(userId);
 }
 
 /**
