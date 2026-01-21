@@ -41,36 +41,40 @@ export function AgentPerformance({ agent, agentId }: AgentPerformanceProps) {
     predictionPositions: predictions,
     perpPositions: perps,
     loading: positionsLoading,
+    error: positionsError,
   } = useUserPositions(agent.id);
 
-  // Calculate unrealized P&L from open positions
-  const unrealizedPnL = useMemo(() => {
-    const predictionPnL = predictions.reduce(
-      (sum, pos) => sum + (pos.unrealizedPnL ?? 0),
-      0
-    );
-    const perpPnL = perps.reduce((sum, pos) => sum + pos.unrealizedPnL, 0);
-    return predictionPnL + perpPnL;
-  }, [predictions, perps]);
+  // Calculate unrealized P&L and points in positions in a single pass
+  const { unrealizedPnL, pointsInPositions } = useMemo(() => {
+    let predictionPnL = 0;
+    let predictionValue = 0;
 
-  // Calculate points in positions
-  const pointsInPositions = useMemo(() => {
-    const predictionValue = predictions.reduce(
-      (sum, pos) => sum + (pos.currentValue ?? pos.shares * pos.currentPrice),
-      0
-    );
-    const perpValue = perps.reduce((sum, pos) => {
+    for (const pos of predictions) {
+      predictionPnL += pos.unrealizedPnL ?? 0;
+      predictionValue += pos.currentValue ?? pos.shares * pos.currentPrice;
+    }
+
+    let perpPnL = 0;
+    let perpValue = 0;
+
+    for (const pos of perps) {
+      perpPnL += pos.unrealizedPnL ?? 0;
       const leverage = Number(pos.leverage);
-      const effectiveLeverage =
-        Number.isFinite(leverage) && leverage > 0 ? leverage : 1;
-      return sum + Math.abs(pos.size / effectiveLeverage);
-    }, 0);
-    return predictionValue + perpValue;
+      if (Number.isFinite(leverage) && leverage > 0) {
+        perpValue += Math.abs(pos.size / leverage);
+      }
+    }
+
+    return {
+      unrealizedPnL: predictionPnL + perpPnL,
+      pointsInPositions: predictionValue + perpValue,
+    };
   }, [predictions, perps]);
 
-  const realizedPnL = parseFloat(agent.lifetimePnL);
+  const realizedPnL = parseFloat(agent.lifetimePnL) || 0;
   const totalPnL = realizedPnL + unrealizedPnL;
-  const isProfitable = totalPnL >= 0;
+  // Defer isProfitable determination until positions are loaded to avoid color flash
+  const isProfitable = positionsLoading ? realizedPnL >= 0 : totalPnL >= 0;
   const totalTrades = agent.totalTrades || 0;
   const profitableTrades = agent.profitableTrades || 0;
   const winRate = agent.winRate || 0;
@@ -161,7 +165,7 @@ export function AgentPerformance({ agent, agentId }: AgentPerformanceProps) {
             </span>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border-t border-border bg-muted/30 p-3 pt-4 transition-all hover:bg-muted/50">
+          <div className="flex items-center justify-between rounded-lg border-border border-t bg-muted/30 p-3 pt-4 transition-all hover:bg-muted/50">
             <span className="text-muted-foreground">Unrealized P&L</span>
             <span
               className={cn(
@@ -225,7 +229,19 @@ export function AgentPerformance({ agent, agentId }: AgentPerformanceProps) {
       <div className="rounded-lg border border-border bg-card/50 p-6 backdrop-blur">
         <h3 className="mb-4 font-semibold text-lg">Activity Summary</h3>
 
-        {totalTrades === 0 && predictions.length === 0 && perps.length === 0 ? (
+        {positionsLoading ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Activity className="mx-auto mb-4 h-12 w-12 animate-pulse opacity-50" />
+            <p>Loading activity...</p>
+          </div>
+        ) : positionsError ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <Activity className="mx-auto mb-4 h-12 w-12 opacity-50" />
+            <p>Failed to load positions</p>
+          </div>
+        ) : totalTrades === 0 &&
+          predictions.length === 0 &&
+          perps.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <Activity className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>No trading activity yet</p>
