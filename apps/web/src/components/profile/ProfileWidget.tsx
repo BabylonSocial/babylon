@@ -3,11 +3,10 @@
 import type {
   PerpPositionFromAPI,
   PredictionPosition,
-  UserBalanceData,
-  UserBalanceDataAPI,
   UserProfileStats,
 } from '@babylon/shared';
-import { cn, parseUserBalanceData } from '@babylon/shared';
+import { cn } from '@babylon/shared';
+import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import { HelpCircle, TrendingDown, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -31,27 +30,39 @@ const formatPrice = (price: number) => {
   return `$${price.toFixed(2)}`;
 };
 
+function toNumber(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  return fallback;
+}
+
 /**
  * Shared helper to fetch profile widget data.
  * Used by both the useEffect and handleRetry to avoid code duplication.
  */
 async function fetchProfileWidgetData(userId: string): Promise<{
-  balanceData: UserBalanceData | null;
+  portfolioData: PortfolioBreakdownSnapshot | null;
   predictionsData: PredictionPosition[];
   perpsData: PerpPositionFromAPI[];
   statsData: UserProfileStats | null;
   needsOnboarding?: boolean;
 }> {
-  const [balanceRes, positionsRes, profileRes] = await Promise.all([
-    fetch(`/api/users/${encodeURIComponent(userId)}/balance`),
+  const [breakdownRes, positionsRes, profileRes] = await Promise.all([
+    fetch(`/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`),
     fetch(`/api/markets/positions/${encodeURIComponent(userId)}`),
     fetch(`/api/users/${encodeURIComponent(userId)}/profile`),
   ]);
 
   // Check for complete fetch failure (all requests failed)
-  if (!balanceRes.ok && !positionsRes.ok && !profileRes.ok) {
+  if (!breakdownRes.ok && !positionsRes.ok && !profileRes.ok) {
     const errorDetails = {
-      balance: { status: balanceRes.status, statusText: balanceRes.statusText },
+      breakdown: {
+        status: breakdownRes.status,
+        statusText: breakdownRes.statusText,
+      },
       positions: {
         status: positionsRes.status,
         statusText: positionsRes.statusText,
@@ -63,15 +74,24 @@ async function fetchProfileWidgetData(userId: string): Promise<{
     );
   }
 
-  let balanceData: UserBalanceData | null = null;
+  let portfolioData: PortfolioBreakdownSnapshot | null = null;
   let predictionsData: PredictionPosition[] = [];
   let perpsData: PerpPositionFromAPI[] = [];
   let statsData: UserProfileStats | null = null;
 
-  // Process balance
-  if (balanceRes.ok) {
-    const balanceJson: UserBalanceDataAPI = await balanceRes.json();
-    balanceData = parseUserBalanceData(balanceJson);
+  // Process breakdown
+  if (breakdownRes.ok) {
+    const breakdownJson = (await breakdownRes.json()) as Record<string, unknown>;
+    portfolioData = {
+      wallet: toNumber(breakdownJson.wallet),
+      agents: toNumber(breakdownJson.agents),
+      positions: toNumber(breakdownJson.positions),
+      available: toNumber(breakdownJson.available),
+      originalAmount: toNumber(breakdownJson.originalAmount),
+      totalAssets: toNumber(breakdownJson.totalAssets),
+      totalPnL: toNumber(breakdownJson.totalPnL),
+      agentCount: toNumber(breakdownJson.agentCount),
+    };
   }
 
   // Process positions
@@ -88,7 +108,7 @@ async function fetchProfileWidgetData(userId: string): Promise<{
     // Check if user needs onboarding (graceful handling)
     if (profileJson.needsOnboarding) {
       return {
-        balanceData,
+        portfolioData,
         predictionsData,
         perpsData,
         statsData,
@@ -107,7 +127,7 @@ async function fetchProfileWidgetData(userId: string): Promise<{
     };
   }
 
-  return { balanceData, predictionsData, perpsData, statsData };
+  return { portfolioData, predictionsData, perpsData, statsData };
 }
 
 /**
@@ -141,7 +161,9 @@ interface ProfileWidgetProps {
 export function ProfileWidget({ userId }: ProfileWidgetProps) {
   const router = useRouter();
   const { needsOnboarding, user } = useAuth();
-  const [balance, setBalance] = useState<UserBalanceData | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioBreakdownSnapshot | null>(
+    null
+  );
   const [predictions, setPredictions] = useState<PredictionPosition[]>([]);
   const [perps, setPerps] = useState<PerpPositionFromAPI[]>([]);
   const [stats, setStats] = useState<UserProfileStats | null>(null);
@@ -161,72 +183,11 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
     PredictionPosition | PerpPositionFromAPI | null
   >(null);
 
-  // Calculate points in positions from actual position data
-  // Sum of currentValue from predictions + (margin + unrealized) from perpetuals
-  // For perps, include unrealized P&L for consistency with prediction currentValue
-  const positionsValue = useMemo(() => {
-    const predictionValue = predictions.reduce(
-      (sum, pos) => sum + (pos.currentValue ?? pos.shares * pos.currentPrice),
-      0
-    );
-    // Use margin + unrealized P&L for perps to match prediction positions
-    // (prediction currentValue is the position's current worth including unrealized gains,
-    // so perp value should similarly be margin + unrealized)
-    const perpValue = perps.reduce((sum, pos) => {
-      const leverage = Number(pos.leverage);
-      const effectiveLeverage =
-        Number.isFinite(leverage) && leverage > 0 ? leverage : 1;
-      const margin = Math.abs(pos.size / effectiveLeverage);
-      const unrealized = Number(pos.unrealizedPnL);
-      const unrealizedSafe = Number.isFinite(unrealized) ? unrealized : 0;
-      return sum + margin + unrealizedSafe;
-    }, 0);
-    return predictionValue + perpValue;
-  }, [predictions, perps]);
-
-  // Total portfolio = available balance + points in positions
-  const totalPortfolio = useMemo(
-    () => (balance?.balance || 0) + positionsValue,
-    [balance?.balance, positionsValue]
-  );
-
-  // Check if we have reliable deposit data for true P&L calculation
-  const hasDepositData = useMemo(
-    () =>
-      balance != null &&
-      typeof balance.totalDeposited === 'number' &&
-      typeof balance.totalWithdrawn === 'number',
-    [balance]
-  );
-
-  // Net contributions = what user actually put in
-  const netContributions = useMemo(
-    () =>
-      hasDepositData
-        ? (balance!.totalDeposited ?? 0) - (balance!.totalWithdrawn ?? 0)
-        : undefined,
-    [hasDepositData, balance]
-  );
-
-  // True P&L = Current Portfolio Value - Net Contributions
-  // Only calculated when we have reliable deposit/withdrawal tracking.
-  // Note: This assumes all portfolio funds came from tracked deposits;
-  // may not account for airdrops, rewards, or admin adjustments.
-  const totalPnL = useMemo(
-    () =>
-      typeof netContributions === 'number'
-        ? totalPortfolio - netContributions
-        : 0,
-    [totalPortfolio, netContributions]
-  );
-
-  const pnlPercent = useMemo(
-    () =>
-      typeof netContributions === 'number' && netContributions > 0
-        ? (totalPnL / netContributions) * 100
-        : 0,
-    [totalPnL, netContributions]
-  );
+  const pnlPercent = useMemo(() => {
+    const originalAmount = portfolio?.originalAmount ?? 0;
+    const totalPnL = portfolio?.totalPnL ?? 0;
+    return originalAmount > 0 ? (totalPnL / originalAmount) * 100 : 0;
+  }, [portfolio?.originalAmount, portfolio?.totalPnL]);
 
   /**
    * Apply fetch result to state and cache.
@@ -240,14 +201,14 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
       }
 
       // Apply fetched data to state
-      setBalance(result.balanceData);
+      setPortfolio(result.portfolioData);
       setPredictions(result.predictionsData);
       setPerps(result.perpsData);
       setStats(result.statsData);
 
       // Cache all the data
       widgetCache.setProfileWidget(userId, {
-        balance: result.balanceData,
+        portfolio: result.portfolioData,
         predictions: result.predictionsData,
         perps: result.perpsData,
         stats: result.statsData,
@@ -271,13 +232,13 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
       // Check cache first (unless explicitly skipping)
       if (!skipCache) {
         const cached = widgetCache.getProfileWidget(userId) as {
-          balance: UserBalanceData | null;
+          portfolio: PortfolioBreakdownSnapshot | null;
           predictions: PredictionPosition[];
           perps: PerpPositionFromAPI[];
           stats: UserProfileStats | null;
         } | null;
         if (cached) {
-          setBalance(cached.balance);
+          setPortfolio(cached.portfolio);
           setPredictions(cached.predictions);
           setPerps(cached.perps);
           setStats(cached.stats);
@@ -377,21 +338,31 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-sm">Available</span>
             <span className="font-semibold text-foreground text-sm">
-              {formatPoints(balance?.balance || 0)} pts
+              {formatPoints(portfolio?.available ?? 0)} pts
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-sm">In Positions</span>
             <span className="font-semibold text-foreground text-sm">
-              {formatPoints(positionsValue)} pts
+              {formatPoints(portfolio?.positions ?? 0)} pts
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm">
-              Total Portfolio
-            </span>
+            <span className="text-muted-foreground text-sm">Agents</span>
             <span className="font-semibold text-foreground text-sm">
-              {formatPoints(totalPortfolio)} pts
+              {formatPoints(portfolio?.agents ?? 0)} pts
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-sm">Wallet</span>
+            <span className="font-semibold text-foreground text-sm">
+              {formatPoints(portfolio?.wallet ?? 0)} pts
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-sm">Total Assets</span>
+            <span className="font-semibold text-foreground text-sm">
+              {formatPoints(portfolio?.totalAssets ?? 0)} pts
             </span>
           </div>
           <div className="flex items-center justify-between border-border border-t pt-2">
@@ -399,10 +370,13 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
             <span
               className={cn(
                 'font-semibold text-sm',
-                totalPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                (portfolio?.totalPnL ?? 0) >= 0
+                  ? 'text-green-600'
+                  : 'text-red-600'
               )}
             >
-              {formatPoints(totalPnL)} pts ({formatPercent(pnlPercent)})
+              {formatPoints(portfolio?.totalPnL ?? 0)} pts (
+              {formatPercent(pnlPercent)})
             </span>
           </div>
         </div>
@@ -542,6 +516,14 @@ export function ProfileWidget({ userId }: ProfileWidgetProps) {
                 {stats.totalActivity} Total Activity
               </span>
             </div>
+            {isOwnProfile && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-sm">My Agents</span>
+                <span className="font-semibold text-foreground text-sm">
+                  {portfolio?.agentCount ?? 0}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

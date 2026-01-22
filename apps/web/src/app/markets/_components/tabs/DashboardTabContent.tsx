@@ -1,6 +1,6 @@
 'use client';
 
-import type { PortfolioPnLSnapshot } from '@babylon/engine/client';
+import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import type { PerpPosition, UserPredictionPosition } from '@babylon/shared';
 import { memo } from 'react';
 import { PortfolioPnLCard } from '@/components/markets/PortfolioPnLCard';
@@ -19,7 +19,7 @@ interface DashboardTabContentProps {
   onLogin: () => void;
 
   // Portfolio
-  portfolioPnL: PortfolioPnLSnapshot | null;
+  portfolioPnL: PortfolioBreakdownSnapshot | null;
   portfolioLoading: boolean;
   portfolioError: string | null;
   onShowPnLShare: () => void;

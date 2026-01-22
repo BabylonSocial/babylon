@@ -139,6 +139,10 @@ export {
   calculatePortfolioPnL,
   type PortfolioPnLSnapshot,
 } from './portfolio-pnl';
+export {
+  calculatePortfolioBreakdown,
+  type PortfolioBreakdownSnapshot,
+} from './portfolio-breakdown';
 
 // =============================================================================
 // Reputation Service (includes sync interface)

@@ -1,6 +1,6 @@
 'use client';
 
-import type { PortfolioPnLSnapshot } from '@/hooks/usePortfolioPnL';
+import type { PortfolioBreakdownSnapshot } from '@/hooks/usePortfolioPnL';
 import type { User } from '@/stores/authStore';
 import { PnLShareModal } from './PnLShareModal';
 
@@ -32,7 +32,7 @@ import { PnLShareModal } from './PnLShareModal';
 interface PortfolioPnLShareModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: PortfolioPnLSnapshot | null | undefined;
+  data: PortfolioBreakdownSnapshot | null | undefined;
   user: User | null;
   lastUpdated?: Date | null | number;
 }

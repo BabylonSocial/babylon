@@ -1,5 +1,5 @@
 import { formatCurrency as formatCurrencyShared } from '@babylon/shared';
-import type { PortfolioPnLSnapshot } from '@/hooks/usePortfolioPnL';
+import type { PortfolioBreakdownSnapshot } from '@/hooks/usePortfolioPnL';
 import type { User } from '@/stores/authStore';
 
 /**
@@ -28,7 +28,7 @@ import type { User } from '@/stores/authStore';
  * ```
  */
 interface PortfolioPnLShareCardProps {
-  data: PortfolioPnLSnapshot;
+  data: PortfolioBreakdownSnapshot;
   user: User;
   className?: string;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import {
   Activity,
@@ -68,6 +69,7 @@ interface PortfolioPnL {
   perpPositions: number;
   predictionPositions: number;
   roi: number;
+  breakdown: PortfolioBreakdownSnapshot | null;
 }
 
 /**
@@ -179,7 +181,8 @@ export function TradingProfile({
     }
 
     // Fetch all data in parallel
-    const [profileRes, leaderboardRes, positionsRes] = await Promise.all([
+    const [profileRes, leaderboardRes, positionsRes, breakdownRes] =
+      await Promise.all([
       fetch(`/api/users/${encodeURIComponent(userId)}/profile`, {
         headers,
         signal: abortController.signal,
@@ -195,6 +198,15 @@ export function TradingProfile({
           signal: abortController.signal,
         }
       ),
+      isOwner
+        ? fetch(
+            `/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`,
+            {
+              headers,
+              signal: abortController.signal,
+            }
+          )
+        : Promise.resolve(null),
     ]);
 
     // Check if aborted
@@ -220,11 +232,22 @@ export function TradingProfile({
       setLoading(false);
       return;
     }
+    if (isOwner && breakdownRes && !breakdownRes.ok) {
+      setError(
+        `Failed to load portfolio breakdown: ${breakdownRes.status} ${breakdownRes.statusText}`
+      );
+      setLoading(false);
+      return;
+    }
 
-    const [profileData, leaderboardData, positionsData] = await Promise.all([
+    const [profileData, leaderboardData, positionsData, breakdownData] =
+      await Promise.all([
       profileRes.json(),
       leaderboardRes.json(),
       positionsRes.json() as Promise<ApiPositionsResponse>,
+      isOwner && breakdownRes
+        ? (breakdownRes.json() as Promise<PortfolioBreakdownSnapshot>)
+        : Promise.resolve(null),
     ]);
 
     // Check if aborted after async operations
@@ -263,8 +286,12 @@ export function TradingProfile({
     setPerpPositions(perpPos);
     setPredictionPositions(predPos);
 
-    // Calculate portfolio P&L for owner
+    // Calculate portfolio P&L for owner (canonical Total P/L)
     if (isOwner) {
+      const breakdown = breakdownData;
+      const totalPnL = breakdown ? toNumber(breakdown.totalPnL) : 0;
+      const originalAmount = breakdown ? toNumber(breakdown.originalAmount) : 0;
+
       const perpPnL = perpPos.reduce(
         (sum, p) => sum + toNumber(p.unrealizedPnL),
         0
@@ -273,16 +300,8 @@ export function TradingProfile({
         (sum, p) => sum + toNumber(p.unrealizedPnL),
         0
       );
-      const totalUnrealizedPnL = perpPnL + predictionPnL;
-
-      const lifetimePnL = toNumber(userProfile.lifetimePnL);
-      const totalPnL = lifetimePnL + totalUnrealizedPnL;
-
-      // ROI calculation - use actual balance as initial investment proxy
-      const balance = toNumber(userProfile.virtualBalance);
-      const initialInvestment = balance > 0 ? balance - totalPnL : 1000; // Fallback to 1000
       const roi =
-        initialInvestment > 0 ? (totalPnL / initialInvestment) * 100 : 0;
+        originalAmount > 0 ? (totalPnL / originalAmount) * 100 : 0;
 
       setPortfolioPnL({
         totalPnL,
@@ -292,6 +311,7 @@ export function TradingProfile({
         perpPositions: perpPos.length,
         predictionPositions: predPos.length,
         roi,
+        breakdown,
       });
     }
 
@@ -405,6 +425,20 @@ export function TradingProfile({
           </p>
         </div>
 
+        {isOwner && portfolioPnL?.breakdown && (
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="font-medium text-muted-foreground text-xs">
+                My Agents
+              </span>
+            </div>
+            <p className="font-bold text-2xl">
+              {portfolioPnL.breakdown.agentCount}
+            </p>
+          </div>
+        )}
+
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="mb-2 flex items-center gap-2">
             <Target className="h-4 w-4 text-blue-500" />
@@ -461,14 +495,43 @@ export function TradingProfile({
                 </p>
               </div>
 
-              <div>
-                <p className="mb-1 text-muted-foreground text-sm">
-                  Open Positions
-                </p>
-                <p className="font-bold text-xl">
-                  {portfolioPnL.totalPositions}
-                </p>
-              </div>
+              {portfolioPnL.breakdown && (
+                <div>
+                  <p className="mb-1 text-muted-foreground text-sm">Available</p>
+                  <p className="font-bold text-xl">
+                    {formatCurrency(portfolioPnL.breakdown.available)}
+                  </p>
+                </div>
+              )}
+
+              {portfolioPnL.breakdown && (
+                <div>
+                  <p className="mb-1 text-muted-foreground text-sm">
+                    In Positions
+                  </p>
+                  <p className="font-semibold text-lg">
+                    {formatCurrency(portfolioPnL.breakdown.positions)}
+                  </p>
+                </div>
+              )}
+
+              {portfolioPnL.breakdown && (
+                <div>
+                  <p className="mb-1 text-muted-foreground text-sm">Agents</p>
+                  <p className="font-semibold text-lg">
+                    {formatCurrency(portfolioPnL.breakdown.agents)}
+                  </p>
+                </div>
+              )}
+
+              {portfolioPnL.breakdown && (
+                <div>
+                  <p className="mb-1 text-muted-foreground text-sm">Wallet</p>
+                  <p className="font-semibold text-lg">
+                    {formatCurrency(portfolioPnL.breakdown.wallet)}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <p className="mb-1 text-muted-foreground text-sm">Perps P&L</p>

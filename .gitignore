@@ -19,6 +19,7 @@ dist/
 
 # misc
 .DS_Store
+.worktrees/
 *.pem
 .serena/
 .cursor/

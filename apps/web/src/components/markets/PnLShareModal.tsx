@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CategoryPnLShareCard } from '@/components/markets/CategoryPnLShareCard';
 import { PortfolioPnLShareCard } from '@/components/markets/PortfolioPnLShareCard';
-import type { PortfolioPnLSnapshot } from '@/hooks/usePortfolioPnL';
+import type { PortfolioBreakdownSnapshot } from '@/hooks/usePortfolioPnL';
 import { useTwitterAuth } from '@/hooks/useTwitterAuth';
 import type { User } from '@/stores/authStore';
 import type { MarketCategory } from '@/types/markets';
@@ -68,7 +68,7 @@ interface PnLShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: 'portfolio' | 'category';
-  portfolioData?: PortfolioPnLSnapshot | null;
+  portfolioData?: PortfolioBreakdownSnapshot | null;
   categoryData?: CategoryPnLData | null;
   category?: MarketCategory;
   user: User | null;

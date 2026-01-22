@@ -4,11 +4,11 @@
  */
 
 import type { A2AReputationResponse } from '@babylon/agents/client';
+import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import type {
   ArticleItem,
   PerpPositionFromAPI,
   PredictionPosition,
-  UserBalanceData,
   UserProfileStats,
 } from '@babylon/shared';
 import { create } from 'zustand';
@@ -95,7 +95,7 @@ export interface BabylonStats {
 }
 
 interface ProfileWidgetData {
-  balance: UserBalanceData | null;
+  portfolio: PortfolioBreakdownSnapshot | null;
   predictions: PredictionPosition[];
   perps: PerpPositionFromAPI[];
   stats: UserProfileStats | null;

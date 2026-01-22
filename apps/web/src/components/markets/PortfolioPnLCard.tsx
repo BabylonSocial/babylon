@@ -1,6 +1,6 @@
 import { formatCurrency as formatCurrencyShared } from '@babylon/shared';
 import { Share2, Sparkles } from 'lucide-react';
-import type { PortfolioPnLSnapshot } from '@/hooks/usePortfolioPnL';
+import type { PortfolioBreakdownSnapshot } from '@/hooks/usePortfolioPnL';
 
 /**
  * Portfolio PnL card component for displaying overall portfolio summary.
@@ -31,7 +31,7 @@ import type { PortfolioPnLSnapshot } from '@/hooks/usePortfolioPnL';
  * ```
  */
 interface PortfolioPnLCardProps {
-  data: PortfolioPnLSnapshot | null;
+  data: PortfolioBreakdownSnapshot | null;
   loading: boolean;
   error: string | null;
   onShare: () => void;
@@ -121,7 +121,7 @@ export function PortfolioPnLCard({
                   Total Points
                 </dt>
                 <dd className="mt-2 font-bold text-3xl text-foreground">
-                  {formatCurrency(data.accountEquity)}
+                  {formatCurrency(data.totalAssets)}
                 </dd>
               </div>
               <div className="p-4">
@@ -129,7 +129,7 @@ export function PortfolioPnLCard({
                   Available to Invest
                 </dt>
                 <dd className="mt-2 font-bold text-3xl text-foreground">
-                  {formatCurrency(data.availableBalance)}
+                  {formatCurrency(data.wallet)}
                 </dd>
               </div>
             </div>

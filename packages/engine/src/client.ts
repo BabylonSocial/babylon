@@ -137,3 +137,14 @@ export interface PortfolioPnLSnapshot {
   totalPnL: number;
   accountEquity: number;
 }
+
+export interface PortfolioBreakdownSnapshot {
+  wallet: number;
+  agents: number;
+  positions: number;
+  available: number;
+  originalAmount: number;
+  totalAssets: number;
+  totalPnL: number;
+  agentCount: number;
+}
