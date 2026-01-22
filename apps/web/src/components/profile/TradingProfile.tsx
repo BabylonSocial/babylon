@@ -183,31 +183,31 @@ export function TradingProfile({
     // Fetch all data in parallel
     const [profileRes, leaderboardRes, positionsRes, breakdownRes] =
       await Promise.all([
-      fetch(`/api/users/${encodeURIComponent(userId)}/profile`, {
-        headers,
-        signal: abortController.signal,
-      }),
-      fetch(`/api/leaderboard?page=1&pageSize=100`, {
-        headers,
-        signal: abortController.signal,
-      }),
-      fetch(
-        `/api/markets/positions/${encodeURIComponent(userId)}?status=open`,
-        {
+        fetch(`/api/users/${encodeURIComponent(userId)}/profile`, {
           headers,
           signal: abortController.signal,
-        }
-      ),
-      isOwner
-        ? fetch(
-            `/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`,
-            {
-              headers,
-              signal: abortController.signal,
-            }
-          )
-        : Promise.resolve(null),
-    ]);
+        }),
+        fetch(`/api/leaderboard?page=1&pageSize=100`, {
+          headers,
+          signal: abortController.signal,
+        }),
+        fetch(
+          `/api/markets/positions/${encodeURIComponent(userId)}?status=open`,
+          {
+            headers,
+            signal: abortController.signal,
+          }
+        ),
+        isOwner
+          ? fetch(
+              `/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`,
+              {
+                headers,
+                signal: abortController.signal,
+              }
+            )
+          : Promise.resolve(null),
+      ]);
 
     // Check if aborted
     if (abortController.signal.aborted) {
@@ -242,13 +242,13 @@ export function TradingProfile({
 
     const [profileData, leaderboardData, positionsData, breakdownData] =
       await Promise.all([
-      profileRes.json(),
-      leaderboardRes.json(),
-      positionsRes.json() as Promise<ApiPositionsResponse>,
-      isOwner && breakdownRes
-        ? (breakdownRes.json() as Promise<PortfolioBreakdownSnapshot>)
-        : Promise.resolve(null),
-    ]);
+        profileRes.json(),
+        leaderboardRes.json(),
+        positionsRes.json() as Promise<ApiPositionsResponse>,
+        isOwner && breakdownRes
+          ? (breakdownRes.json() as Promise<PortfolioBreakdownSnapshot>)
+          : Promise.resolve(null),
+      ]);
 
     // Check if aborted after async operations
     if (abortController.signal.aborted) {
@@ -300,8 +300,7 @@ export function TradingProfile({
         (sum, p) => sum + toNumber(p.unrealizedPnL),
         0
       );
-      const roi =
-        originalAmount > 0 ? (totalPnL / originalAmount) * 100 : 0;
+      const roi = originalAmount > 0 ? (totalPnL / originalAmount) * 100 : 0;
 
       setPortfolioPnL({
         totalPnL,
@@ -497,7 +496,9 @@ export function TradingProfile({
 
               {portfolioPnL.breakdown && (
                 <div>
-                  <p className="mb-1 text-muted-foreground text-sm">Available</p>
+                  <p className="mb-1 text-muted-foreground text-sm">
+                    Available
+                  </p>
                   <p className="font-bold text-xl">
                     {formatCurrency(portfolioPnL.breakdown.available)}
                   </p>

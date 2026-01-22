@@ -17,8 +17,8 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
-import { calculatePortfolioBreakdown } from '@babylon/engine';
 import { db, users } from '@babylon/db';
+import { calculatePortfolioBreakdown } from '@babylon/engine';
 import { logger, UserIdParamSchema } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 
@@ -67,4 +67,3 @@ export const GET = withErrorHandling(
     return successResponse(snapshot);
   }
 );
-

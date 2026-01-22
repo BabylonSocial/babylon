@@ -136,13 +136,13 @@ export { getOracleService, OracleService } from './oracle/oracle-service';
 export * from './oracle/types';
 export { CommitmentStore } from './oracle-commitment-store';
 export {
-  calculatePortfolioPnL,
-  type PortfolioPnLSnapshot,
-} from './portfolio-pnl';
-export {
   calculatePortfolioBreakdown,
   type PortfolioBreakdownSnapshot,
 } from './portfolio-breakdown';
+export {
+  calculatePortfolioPnL,
+  type PortfolioPnLSnapshot,
+} from './portfolio-pnl';
 
 // =============================================================================
 // Reputation Service (includes sync interface)

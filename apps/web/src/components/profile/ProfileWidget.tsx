@@ -1,12 +1,12 @@
 'use client';
 
+import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import type {
   PerpPositionFromAPI,
   PredictionPosition,
   UserProfileStats,
 } from '@babylon/shared';
 import { cn } from '@babylon/shared';
-import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import { HelpCircle, TrendingDown, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -81,7 +81,10 @@ async function fetchProfileWidgetData(userId: string): Promise<{
 
   // Process breakdown
   if (breakdownRes.ok) {
-    const breakdownJson = (await breakdownRes.json()) as Record<string, unknown>;
+    const breakdownJson = (await breakdownRes.json()) as Record<
+      string,
+      unknown
+    >;
     portfolioData = {
       wallet: toNumber(breakdownJson.wallet),
       agents: toNumber(breakdownJson.agents),

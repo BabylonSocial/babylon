@@ -4,8 +4,8 @@
 
 import { PredictionPricing } from '@babylon/core/markets/prediction';
 import { db, markets, perpPositions, positions, users } from '@babylon/db';
-import { FEE_CONFIG } from '../config/fees';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { FEE_CONFIG } from '../config/fees';
 
 export interface PortfolioBreakdownSnapshot {
   wallet: number;
@@ -145,7 +145,10 @@ export async function calculatePortfolioBreakdown(
       .from(positions)
       .innerJoin(markets, eq(positions.marketId, markets.id))
       .where(
-        and(inArray(positions.userId, positionUserIds), eq(markets.resolved, false))
+        and(
+          inArray(positions.userId, positionUserIds),
+          eq(markets.resolved, false)
+        )
       ),
   ]);
 
@@ -188,4 +191,3 @@ export async function calculatePortfolioBreakdown(
     agentCount,
   };
 }
-
