@@ -261,6 +261,91 @@ const userSelectFields = {
   gameGuideCompletedAt: users.gameGuideCompletedAt,
 } as const;
 
+type UserSelectResult = {
+  id: string;
+  privyId: string | null;
+  username: string | null;
+  displayName: string | null;
+  bio: string | null;
+  profileImageUrl: string | null;
+  coverImageUrl: string | null;
+  walletAddress: string | null;
+  email: string | null;
+  profileComplete: boolean | null;
+  hasUsername: boolean | null;
+  hasBio: boolean | null;
+  hasProfileImage: boolean | null;
+  onChainRegistered: boolean | null;
+  nftTokenId: number | null;
+  referralCode: string | null;
+  referredBy: string | null;
+  reputationPoints: number | null;
+  virtualBalance: string | null;
+  pointsAwardedForProfile: boolean | null;
+  pointsAwardedForFarcasterFollow: boolean | null;
+  pointsAwardedForTwitterFollow: boolean | null;
+  pointsAwardedForDiscordJoin: boolean | null;
+  hasFarcaster: boolean | null;
+  hasTwitter: boolean | null;
+  hasDiscord: boolean | null;
+  farcasterUsername: string | null;
+  twitterUsername: string | null;
+  discordUsername: string | null;
+  showTwitterPublic: boolean | null;
+  showFarcasterPublic: boolean | null;
+  showWalletPublic: boolean | null;
+  isAdmin: boolean | null;
+  isActor: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+  gameGuideCompletedAt: Date | null;
+};
+
+function buildUserResponse(
+  dbUser: UserSelectResult,
+  stats: Awaited<ReturnType<typeof cachedDb.getUserProfileStats>> | null
+) {
+  return {
+    id: dbUser.id,
+    privyId: dbUser.privyId,
+    username: dbUser.username,
+    displayName: dbUser.displayName,
+    bio: dbUser.bio,
+    profileImageUrl: dbUser.profileImageUrl,
+    coverImageUrl: dbUser.coverImageUrl,
+    walletAddress: dbUser.walletAddress,
+    profileComplete: dbUser.profileComplete,
+    hasUsername: dbUser.hasUsername,
+    hasBio: dbUser.hasBio,
+    hasProfileImage: dbUser.hasProfileImage,
+    onChainRegistered: dbUser.onChainRegistered,
+    nftTokenId: dbUser.nftTokenId,
+    referralCode: dbUser.referralCode,
+    referredBy: dbUser.referredBy,
+    reputationPoints: dbUser.reputationPoints,
+    virtualBalance: Number(dbUser.virtualBalance ?? 0),
+    pointsAwardedForProfile: dbUser.pointsAwardedForProfile,
+    pointsAwardedForFarcasterFollow: dbUser.pointsAwardedForFarcasterFollow,
+    pointsAwardedForTwitterFollow: dbUser.pointsAwardedForTwitterFollow,
+    pointsAwardedForDiscordJoin: dbUser.pointsAwardedForDiscordJoin,
+    hasFarcaster: dbUser.hasFarcaster,
+    hasTwitter: dbUser.hasTwitter,
+    hasDiscord: dbUser.hasDiscord,
+    farcasterUsername: dbUser.farcasterUsername,
+    twitterUsername: dbUser.twitterUsername,
+    discordUsername: dbUser.discordUsername,
+    showTwitterPublic: dbUser.showTwitterPublic,
+    showFarcasterPublic: dbUser.showFarcasterPublic,
+    showWalletPublic: dbUser.showWalletPublic,
+    isAdmin: dbUser.isAdmin,
+    isActor: dbUser.isActor,
+    createdAt: dbUser.createdAt.toISOString(),
+    updatedAt: dbUser.updatedAt.toISOString(),
+    gameGuideCompletedAt: dbUser.gameGuideCompletedAt?.toISOString() ?? null,
+    stats: stats || undefined,
+  };
+}
+
 export const GET = withErrorHandling(async (request: NextRequest) => {
   const authUser = await authenticate(request);
   const privyId = authUser.privyId ?? authUser.userId;
@@ -344,17 +429,41 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
         conditions.push(eq(users.twitterId, twitterId));
       }
 
-      const [existingUserWithSocial] = await db
+      const existingUsersWithSocial = await db
         .select(userSelectFields)
         .from(users)
         .where(or(...conditions))
-        .limit(1);
+        .limit(2);
 
-      if (existingUserWithSocial) {
+      // If multiple users found, it means Farcaster and Twitter belong to different accounts
+      // Skip auto-linking to prevent linking the wrong account
+      if (existingUsersWithSocial.length > 1) {
+        logger.error(
+          'Multiple users found with conflicting social accounts - skipping auto-link',
+          {
+            newPrivyId: privyId,
+            farcasterFid,
+            twitterId,
+            foundUserIds: existingUsersWithSocial.map((u) => u.id),
+          },
+          'GET /api/users/me'
+        );
+      } else if (existingUsersWithSocial.length === 1) {
+        const existingUserWithSocial = existingUsersWithSocial[0]!;
+        const matchedByFarcaster =
+          !!farcasterFid &&
+          existingUserWithSocial.farcasterFid === farcasterFid;
+        const matchedByTwitter =
+          !!twitterId && existingUserWithSocial.twitterId === twitterId;
+
         const linkedAccount =
-          farcasterFid && existingUserWithSocial.farcasterFid === farcasterFid
-            ? 'Farcaster'
-            : 'Twitter';
+          matchedByFarcaster && matchedByTwitter
+            ? 'Farcaster+Twitter'
+            : matchedByFarcaster
+              ? 'Farcaster'
+              : matchedByTwitter
+                ? 'Twitter'
+                : 'Unknown';
 
         logger.info(
           'Found existing user by social account - auto-linking new Privy session',
@@ -370,28 +479,48 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
           'GET /api/users/me'
         );
 
-        // Update the existing user's privyId to the new one
-        const [updatedUser] = await db
-          .update(users)
-          .set({
-            privyId,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, existingUserWithSocial.id))
-          .returning(userSelectFields);
+        // Check if the new privyId is already linked to a different user
+        const [existingUserWithPrivyId] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.privyId, privyId))
+          .limit(1);
 
-        if (updatedUser) {
-          dbUser = updatedUser;
-
-          logger.info(
-            'Successfully linked new Privy session to existing user',
+        if (existingUserWithPrivyId && existingUserWithPrivyId.id !== existingUserWithSocial.id) {
+          logger.warn(
+            'New privyId already linked to a different user - skipping auto-link to prevent account conflict',
             {
-              userId: updatedUser.id,
-              username: updatedUser.username,
               newPrivyId: privyId,
+              existingPrivyUserId: existingUserWithPrivyId.id,
+              socialMatchUserId: existingUserWithSocial.id,
             },
             'GET /api/users/me'
           );
+          // Skip auto-linking, let normal flow continue
+        } else {
+          // Update the existing user's privyId to the new one
+          const [updatedUser] = await db
+            .update(users)
+            .set({
+              privyId,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, existingUserWithSocial.id))
+            .returning(userSelectFields);
+
+          if (updatedUser) {
+            dbUser = updatedUser;
+
+            logger.info(
+              'Successfully linked new Privy session to existing user',
+              {
+                userId: updatedUser.id,
+                username: updatedUser.username,
+                newPrivyId: privyId,
+              },
+              'GET /api/users/me'
+            );
+          }
         }
       }
     }
@@ -401,45 +530,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
       // Get cached profile stats for the linked user
       const stats = await cachedDb.getUserProfileStats(dbUser.id);
 
-      const responseUser = {
-        id: dbUser.id,
-        privyId: dbUser.privyId,
-        username: dbUser.username,
-        displayName: dbUser.displayName,
-        bio: dbUser.bio,
-        profileImageUrl: dbUser.profileImageUrl,
-        coverImageUrl: dbUser.coverImageUrl,
-        walletAddress: dbUser.walletAddress,
-        profileComplete: dbUser.profileComplete,
-        hasUsername: dbUser.hasUsername,
-        hasBio: dbUser.hasBio,
-        hasProfileImage: dbUser.hasProfileImage,
-        onChainRegistered: dbUser.onChainRegistered,
-        nftTokenId: dbUser.nftTokenId,
-        referralCode: dbUser.referralCode,
-        referredBy: dbUser.referredBy,
-        reputationPoints: dbUser.reputationPoints,
-        virtualBalance: Number(dbUser.virtualBalance ?? 0),
-        pointsAwardedForProfile: dbUser.pointsAwardedForProfile,
-        pointsAwardedForFarcasterFollow: dbUser.pointsAwardedForFarcasterFollow,
-        pointsAwardedForTwitterFollow: dbUser.pointsAwardedForTwitterFollow,
-        pointsAwardedForDiscordJoin: dbUser.pointsAwardedForDiscordJoin,
-        hasFarcaster: dbUser.hasFarcaster,
-        hasTwitter: dbUser.hasTwitter,
-        hasDiscord: dbUser.hasDiscord,
-        farcasterUsername: dbUser.farcasterUsername,
-        twitterUsername: dbUser.twitterUsername,
-        discordUsername: dbUser.discordUsername,
-        showTwitterPublic: dbUser.showTwitterPublic,
-        showFarcasterPublic: dbUser.showFarcasterPublic,
-        showWalletPublic: dbUser.showWalletPublic,
-        isAdmin: dbUser.isAdmin,
-        isActor: dbUser.isActor,
-        createdAt: dbUser.createdAt.toISOString(),
-        updatedAt: dbUser.updatedAt.toISOString(),
-        gameGuideCompletedAt: dbUser.gameGuideCompletedAt?.toISOString() ?? null,
-        stats: stats || undefined,
-      };
+      const responseUser = buildUserResponse(dbUser, stats);
 
       const needsOnboarding = !dbUser.profileComplete;
       const needsOnchain = dbUser.profileComplete && !dbUser.onChainRegistered;
@@ -726,45 +817,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   // Get cached profile stats
   const stats = await cachedDb.getUserProfileStats(dbUser.id);
 
-  const responseUser = {
-    id: dbUser.id,
-    privyId: dbUser.privyId,
-    username: dbUser.username,
-    displayName: dbUser.displayName,
-    bio: dbUser.bio,
-    profileImageUrl: dbUser.profileImageUrl,
-    coverImageUrl: dbUser.coverImageUrl,
-    walletAddress: dbUser.walletAddress,
-    profileComplete: dbUser.profileComplete,
-    hasUsername: dbUser.hasUsername,
-    hasBio: dbUser.hasBio,
-    hasProfileImage: dbUser.hasProfileImage,
-    onChainRegistered: dbUser.onChainRegistered,
-    nftTokenId: dbUser.nftTokenId,
-    referralCode: dbUser.referralCode,
-    referredBy: dbUser.referredBy,
-    reputationPoints: dbUser.reputationPoints,
-    virtualBalance: Number(dbUser.virtualBalance ?? 0),
-    pointsAwardedForProfile: dbUser.pointsAwardedForProfile,
-    pointsAwardedForFarcasterFollow: dbUser.pointsAwardedForFarcasterFollow,
-    pointsAwardedForTwitterFollow: dbUser.pointsAwardedForTwitterFollow,
-    pointsAwardedForDiscordJoin: dbUser.pointsAwardedForDiscordJoin,
-    hasFarcaster: dbUser.hasFarcaster,
-    hasTwitter: dbUser.hasTwitter,
-    hasDiscord: dbUser.hasDiscord,
-    farcasterUsername: dbUser.farcasterUsername,
-    twitterUsername: dbUser.twitterUsername,
-    discordUsername: dbUser.discordUsername,
-    showTwitterPublic: dbUser.showTwitterPublic,
-    showFarcasterPublic: dbUser.showFarcasterPublic,
-    showWalletPublic: dbUser.showWalletPublic,
-    isAdmin: dbUser.isAdmin,
-    isActor: dbUser.isActor,
-    createdAt: dbUser.createdAt.toISOString(),
-    updatedAt: dbUser.updatedAt.toISOString(),
-    gameGuideCompletedAt: dbUser.gameGuideCompletedAt?.toISOString() ?? null,
-    stats: stats || undefined,
-  };
+  const responseUser = buildUserResponse(dbUser, stats);
 
   const needsOnboarding = !dbUser.profileComplete;
   const needsOnchain = dbUser.profileComplete && !dbUser.onChainRegistered;
