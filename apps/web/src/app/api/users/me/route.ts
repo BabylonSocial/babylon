@@ -144,6 +144,7 @@
 import {
   authenticate,
   cachedDb,
+  ConflictError,
   getPrivyClient,
   InternalServerError,
   successResponse,
@@ -289,7 +290,9 @@ type UserSelectResult = {
   hasTwitter: boolean | null;
   hasDiscord: boolean | null;
   farcasterUsername: string | null;
+  farcasterFid: string | null;
   twitterUsername: string | null;
+  twitterId: string | null;
   discordUsername: string | null;
   showTwitterPublic: boolean | null;
   showFarcasterPublic: boolean | null;
@@ -448,6 +451,12 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
           },
           'GET /api/users/me'
         );
+        
+        // Return error to prevent insert failure due to unique constraint violation
+        throw new ConflictError(
+          'Your social accounts are linked to different existing users. Please contact support.',
+          'User.socialAccounts'
+        );
       } else if (existingUsersWithSocial.length === 1) {
         const existingUserWithSocial = existingUsersWithSocial[0]!;
         const matchedByFarcaster =
@@ -486,7 +495,10 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
           .where(eq(users.privyId, privyId))
           .limit(1);
 
-        if (existingUserWithPrivyId && existingUserWithPrivyId.id !== existingUserWithSocial.id) {
+        if (
+          existingUserWithPrivyId &&
+          existingUserWithPrivyId.id !== existingUserWithSocial.id
+        ) {
           logger.warn(
             'New privyId already linked to a different user - skipping auto-link to prevent account conflict',
             {
@@ -527,6 +539,48 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
     // If we found and linked to an existing user, skip the new user creation
     if (dbUser) {
+      // Handle referral attribution for auto-linked users with incomplete profiles
+      if (referralCode && !dbUser.profileComplete) {
+        const normalizedCode = referralCode.trim();
+
+        // Try to find referrer by username first
+        let [referrer] = await db
+          .select({ id: users.id, username: users.username })
+          .from(users)
+          .where(sql`lower(${users.username}) = lower(${normalizedCode})`)
+          .limit(1);
+
+        // If not found by username, try by referralCode
+        if (!referrer) {
+          [referrer] = await db
+            .select({ id: users.id, username: users.username })
+            .from(users)
+            .where(eq(users.referralCode, normalizedCode))
+            .limit(1);
+        }
+
+        if (referrer && referrer.id !== dbUser.id && dbUser.referredBy !== referrer.id) {
+          const [updatedUser] = await db
+            .update(users)
+            .set({ referredBy: referrer.id, updatedAt: new Date() })
+            .where(eq(users.id, dbUser.id))
+            .returning(userSelectFields);
+
+          if (updatedUser) {
+            dbUser = updatedUser;
+            logger.info(
+              'Updated auto-linked user with referrer',
+              {
+                userId: dbUser.id,
+                referrerId: referrer.id,
+                referrerUsername: referrer.username,
+              },
+              'GET /api/users/me'
+            );
+          }
+        }
+      }
+
       // Get cached profile stats for the linked user
       const stats = await cachedDb.getUserProfileStats(dbUser.id);
 
