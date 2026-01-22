@@ -149,7 +149,7 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
-import { db, eq, sql, users } from '@babylon/db';
+import { db, eq, or, sql, users } from '@babylon/db';
 import {
   checkForAdminEmail,
   logger,
@@ -247,7 +247,9 @@ const userSelectFields = {
   hasTwitter: users.hasTwitter,
   hasDiscord: users.hasDiscord,
   farcasterUsername: users.farcasterUsername,
+  farcasterFid: users.farcasterFid,
   twitterUsername: users.twitterUsername,
+  twitterId: users.twitterId,
   discordUsername: users.discordUsername,
   showTwitterPublic: users.showTwitterPublic,
   showFarcasterPublic: users.showFarcasterPublic,
@@ -329,6 +331,139 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
       },
       'GET /api/users/me'
     );
+
+    // Check if Farcaster or Twitter account is already linked to an existing user
+    // If found, auto-link the new Privy session to the existing account
+    // This allows users to login with their social account and access their existing Babylon account
+    if (farcasterFid || twitterId) {
+      const conditions = [];
+      if (farcasterFid) {
+        conditions.push(eq(users.farcasterFid, farcasterFid));
+      }
+      if (twitterId) {
+        conditions.push(eq(users.twitterId, twitterId));
+      }
+
+      const [existingUserWithSocial] = await db
+        .select(userSelectFields)
+        .from(users)
+        .where(or(...conditions))
+        .limit(1);
+
+      if (existingUserWithSocial) {
+        const linkedAccount =
+          farcasterFid && existingUserWithSocial.farcasterFid === farcasterFid
+            ? 'Farcaster'
+            : 'Twitter';
+
+        logger.info(
+          'Found existing user by social account - auto-linking new Privy session',
+          {
+            newPrivyId: privyId,
+            oldPrivyId: existingUserWithSocial.privyId,
+            existingUserId: existingUserWithSocial.id,
+            existingUsername: existingUserWithSocial.username,
+            linkedAccount,
+            farcasterFid,
+            twitterId,
+          },
+          'GET /api/users/me'
+        );
+
+        // Update the existing user's privyId to the new one
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            privyId,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUserWithSocial.id))
+          .returning(userSelectFields);
+
+        if (updatedUser) {
+          dbUser = updatedUser;
+
+          logger.info(
+            'Successfully linked new Privy session to existing user',
+            {
+              userId: updatedUser.id,
+              username: updatedUser.username,
+              newPrivyId: privyId,
+            },
+            'GET /api/users/me'
+          );
+        }
+      }
+    }
+
+    // If we found and linked to an existing user, skip the new user creation
+    if (dbUser) {
+      // Get cached profile stats for the linked user
+      const stats = await cachedDb.getUserProfileStats(dbUser.id);
+
+      const responseUser = {
+        id: dbUser.id,
+        privyId: dbUser.privyId,
+        username: dbUser.username,
+        displayName: dbUser.displayName,
+        bio: dbUser.bio,
+        profileImageUrl: dbUser.profileImageUrl,
+        coverImageUrl: dbUser.coverImageUrl,
+        walletAddress: dbUser.walletAddress,
+        profileComplete: dbUser.profileComplete,
+        hasUsername: dbUser.hasUsername,
+        hasBio: dbUser.hasBio,
+        hasProfileImage: dbUser.hasProfileImage,
+        onChainRegistered: dbUser.onChainRegistered,
+        nftTokenId: dbUser.nftTokenId,
+        referralCode: dbUser.referralCode,
+        referredBy: dbUser.referredBy,
+        reputationPoints: dbUser.reputationPoints,
+        virtualBalance: Number(dbUser.virtualBalance ?? 0),
+        pointsAwardedForProfile: dbUser.pointsAwardedForProfile,
+        pointsAwardedForFarcasterFollow: dbUser.pointsAwardedForFarcasterFollow,
+        pointsAwardedForTwitterFollow: dbUser.pointsAwardedForTwitterFollow,
+        pointsAwardedForDiscordJoin: dbUser.pointsAwardedForDiscordJoin,
+        hasFarcaster: dbUser.hasFarcaster,
+        hasTwitter: dbUser.hasTwitter,
+        hasDiscord: dbUser.hasDiscord,
+        farcasterUsername: dbUser.farcasterUsername,
+        twitterUsername: dbUser.twitterUsername,
+        discordUsername: dbUser.discordUsername,
+        showTwitterPublic: dbUser.showTwitterPublic,
+        showFarcasterPublic: dbUser.showFarcasterPublic,
+        showWalletPublic: dbUser.showWalletPublic,
+        isAdmin: dbUser.isAdmin,
+        isActor: dbUser.isActor,
+        createdAt: dbUser.createdAt.toISOString(),
+        updatedAt: dbUser.updatedAt.toISOString(),
+        gameGuideCompletedAt: dbUser.gameGuideCompletedAt?.toISOString() ?? null,
+        stats: stats || undefined,
+      };
+
+      const needsOnboarding = !dbUser.profileComplete;
+      const needsOnchain = dbUser.profileComplete && !dbUser.onChainRegistered;
+
+      logger.info(
+        'Returning linked existing user profile',
+        {
+          userId: dbUser.id,
+          username: dbUser.username,
+          profileComplete: dbUser.profileComplete,
+          onChainRegistered: dbUser.onChainRegistered,
+          needsOnboarding,
+          needsOnchain,
+        },
+        'GET /api/users/me'
+      );
+
+      return successResponse({
+        authenticated: true,
+        needsOnboarding,
+        needsOnchain,
+        user: responseUser,
+      });
+    }
 
     // Resolve referrer if referralCode provided
     let resolvedReferrerId: string | null = null;
