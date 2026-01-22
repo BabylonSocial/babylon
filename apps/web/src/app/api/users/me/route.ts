@@ -272,33 +272,33 @@ type UserSelectResult = {
   coverImageUrl: string | null;
   walletAddress: string | null;
   email: string | null;
-  profileComplete: boolean | null;
-  hasUsername: boolean | null;
-  hasBio: boolean | null;
-  hasProfileImage: boolean | null;
-  onChainRegistered: boolean | null;
+  profileComplete: boolean;
+  hasUsername: boolean;
+  hasBio: boolean;
+  hasProfileImage: boolean;
+  onChainRegistered: boolean;
   nftTokenId: number | null;
   referralCode: string | null;
   referredBy: string | null;
-  reputationPoints: number | null;
-  virtualBalance: string | null;
-  pointsAwardedForProfile: boolean | null;
-  pointsAwardedForFarcasterFollow: boolean | null;
-  pointsAwardedForTwitterFollow: boolean | null;
-  pointsAwardedForDiscordJoin: boolean | null;
-  hasFarcaster: boolean | null;
-  hasTwitter: boolean | null;
-  hasDiscord: boolean | null;
+  reputationPoints: number;
+  virtualBalance: string;
+  pointsAwardedForProfile: boolean;
+  pointsAwardedForFarcasterFollow: boolean;
+  pointsAwardedForTwitterFollow: boolean;
+  pointsAwardedForDiscordJoin: boolean;
+  hasFarcaster: boolean;
+  hasTwitter: boolean;
+  hasDiscord: boolean;
   farcasterUsername: string | null;
   farcasterFid: string | null;
   twitterUsername: string | null;
   twitterId: string | null;
   discordUsername: string | null;
-  showTwitterPublic: boolean | null;
-  showFarcasterPublic: boolean | null;
-  showWalletPublic: boolean | null;
-  isAdmin: boolean | null;
-  isActor: boolean | null;
+  showTwitterPublic: boolean;
+  showFarcasterPublic: boolean;
+  showWalletPublic: boolean;
+  isAdmin: boolean;
+  isActor: boolean;
   createdAt: Date;
   updatedAt: Date;
   gameGuideCompletedAt: Date | null;
@@ -347,6 +347,80 @@ function buildUserResponse(
     gameGuideCompletedAt: dbUser.gameGuideCompletedAt?.toISOString() ?? null,
     stats: stats || undefined,
   };
+}
+
+async function updateReferrerForIncompleteUser(
+  dbUser: UserSelectResult,
+  referralCode: string
+): Promise<UserSelectResult> {
+  const normalizedCode = referralCode.trim();
+
+  // First, try to find referrer by username (legacy system, case-insensitive)
+  let [referrer] = await db
+    .select({ id: users.id, username: users.username })
+    .from(users)
+    .where(sql`lower(${users.username}) = lower(${normalizedCode})`)
+    .limit(1);
+
+  // If not found by username, try by referralCode
+  if (!referrer) {
+    [referrer] = await db
+      .select({ id: users.id, username: users.username })
+      .from(users)
+      .where(eq(users.referralCode, normalizedCode))
+      .limit(1);
+  }
+
+  if (referrer && referrer.id !== dbUser.id) {
+    const previousReferrer = dbUser.referredBy;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({ referredBy: referrer.id })
+      .where(eq(users.id, dbUser.id))
+      .returning(userSelectFields);
+
+    if (!updatedUser) {
+      throw new InternalServerError('Failed to update user record');
+    }
+
+    if (previousReferrer && previousReferrer !== referrer.id) {
+      logger.info(
+        'Updated user with NEW referrer (latest referral wins)',
+        {
+          userId: updatedUser.id,
+          previousReferrer,
+          newReferrer: referrer.id,
+          referrerUsername: referrer.username,
+          referralCode,
+        },
+        'GET /api/users/me'
+      );
+    } else if (!previousReferrer) {
+      logger.info(
+        'Updated existing user with referrer',
+        {
+          userId: updatedUser.id,
+          referrerId: referrer.id,
+          referrerUsername: referrer.username,
+          referralCode,
+        },
+        'GET /api/users/me'
+      );
+    }
+
+    return updatedUser;
+  }
+
+  if (referrer?.id === dbUser.id) {
+    logger.warn(
+      'Self-referral attempt blocked for existing user',
+      { userId: dbUser.id, referralCode },
+      'GET /api/users/me'
+    );
+  }
+
+  return dbUser;
 }
 
 export const GET = withErrorHandling(async (request: NextRequest) => {
@@ -441,7 +515,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
       // If multiple users found, it means Farcaster and Twitter belong to different accounts
       // Skip auto-linking to prevent linking the wrong account
       if (existingUsersWithSocial.length > 1) {
-        logger.error(
+        logger.warn(
           'Multiple users found with conflicting social accounts - skipping auto-link',
           {
             newPrivyId: privyId,
@@ -451,7 +525,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
           },
           'GET /api/users/me'
         );
-        
+
         // Return error to prevent insert failure due to unique constraint violation
         throw new ConflictError(
           'Your social accounts are linked to different existing users. Please contact support.',
@@ -539,63 +613,41 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 
     // If we found and linked to an existing user, skip the new user creation
     if (dbUser) {
-      // Handle referral attribution for auto-linked users with incomplete profiles
-      if (referralCode && !dbUser.profileComplete) {
-        const normalizedCode = referralCode.trim();
+      let linkedUser = dbUser;
 
-        // Try to find referrer by username first
-        let [referrer] = await db
-          .select({ id: users.id, username: users.username })
-          .from(users)
-          .where(sql`lower(${users.username}) = lower(${normalizedCode})`)
-          .limit(1);
-
-        // If not found by username, try by referralCode
-        if (!referrer) {
-          [referrer] = await db
-            .select({ id: users.id, username: users.username })
-            .from(users)
-            .where(eq(users.referralCode, normalizedCode))
-            .limit(1);
-        }
-
-        if (referrer && referrer.id !== dbUser.id && dbUser.referredBy !== referrer.id) {
-          const [updatedUser] = await db
-            .update(users)
-            .set({ referredBy: referrer.id, updatedAt: new Date() })
-            .where(eq(users.id, dbUser.id))
-            .returning(userSelectFields);
-
-          if (updatedUser) {
-            dbUser = updatedUser;
-            logger.info(
-              'Updated auto-linked user with referrer',
-              {
-                userId: dbUser.id,
-                referrerId: referrer.id,
-                referrerUsername: referrer.username,
-              },
-              'GET /api/users/me'
-            );
-          }
-        }
+      if (referralCode && !linkedUser.profileComplete) {
+        linkedUser = await updateReferrerForIncompleteUser(
+          linkedUser,
+          referralCode
+        );
+      } else if (referralCode && linkedUser.profileComplete) {
+        logger.warn(
+          'Referral change blocked - profile already complete',
+          {
+            userId: linkedUser.id,
+            referralCode,
+            existingReferrer: linkedUser.referredBy,
+          },
+          'GET /api/users/me'
+        );
       }
 
       // Get cached profile stats for the linked user
-      const stats = await cachedDb.getUserProfileStats(dbUser.id);
+      const stats = await cachedDb.getUserProfileStats(linkedUser.id);
 
-      const responseUser = buildUserResponse(dbUser, stats);
+      const responseUser = buildUserResponse(linkedUser, stats);
 
-      const needsOnboarding = !dbUser.profileComplete;
-      const needsOnchain = dbUser.profileComplete && !dbUser.onChainRegistered;
+      const needsOnboarding = !linkedUser.profileComplete;
+      const needsOnchain =
+        linkedUser.profileComplete && !linkedUser.onChainRegistered;
 
       logger.info(
         'Returning linked existing user profile',
         {
-          userId: dbUser.id,
-          username: dbUser.username,
-          profileComplete: dbUser.profileComplete,
-          onChainRegistered: dbUser.onChainRegistered,
+          userId: linkedUser.id,
+          username: linkedUser.username,
+          profileComplete: linkedUser.profileComplete,
+          onChainRegistered: linkedUser.onChainRegistered,
           needsOnboarding,
           needsOnchain,
         },
@@ -759,69 +811,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   } else if (referralCode && dbUser && !dbUser.profileComplete) {
     // User exists BUT profile not complete - update referredBy with latest referral code (latest wins!)
     // ⚠️ IMPORTANT: Only allow referral changes BEFORE profile completion to prevent gaming
-    const normalizedCode = referralCode.trim();
-
-    // First, try to find referrer by username (legacy system, case-insensitive)
-    let [referrer] = await db
-      .select({ id: users.id, username: users.username })
-      .from(users)
-      .where(sql`lower(${users.username}) = lower(${normalizedCode})`)
-      .limit(1);
-
-    // If not found by username, try by referralCode
-    if (!referrer) {
-      [referrer] = await db
-        .select({ id: users.id, username: users.username })
-        .from(users)
-        .where(eq(users.referralCode, normalizedCode))
-        .limit(1);
-    }
-
-    if (referrer && referrer.id !== dbUser.id) {
-      const previousReferrer = dbUser.referredBy;
-
-      const [updatedUser] = await db
-        .update(users)
-        .set({ referredBy: referrer.id })
-        .where(eq(users.id, dbUser.id))
-        .returning(userSelectFields);
-
-      if (!updatedUser) {
-        throw new InternalServerError('Failed to update user record');
-      }
-      dbUser = updatedUser;
-
-      if (previousReferrer && previousReferrer !== referrer.id) {
-        logger.info(
-          'Updated user with NEW referrer (latest referral wins)',
-          {
-            userId: dbUser.id,
-            previousReferrer,
-            newReferrer: referrer.id,
-            referrerUsername: referrer.username,
-            referralCode,
-          },
-          'GET /api/users/me'
-        );
-      } else if (!previousReferrer) {
-        logger.info(
-          'Updated existing user with referrer',
-          {
-            userId: dbUser.id,
-            referrerId: referrer.id,
-            referrerUsername: referrer.username,
-            referralCode,
-          },
-          'GET /api/users/me'
-        );
-      }
-    } else if (referrer?.id === dbUser.id) {
-      logger.warn(
-        'Self-referral attempt blocked for existing user',
-        { userId: dbUser.id, referralCode },
-        'GET /api/users/me'
-      );
-    }
+    dbUser = await updateReferrerForIncompleteUser(dbUser, referralCode);
   } else if (referralCode && dbUser && dbUser.profileComplete) {
     // User has completed profile - don't allow referral changes anymore
     logger.warn(
