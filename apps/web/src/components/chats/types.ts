@@ -1,3 +1,8 @@
+import type { MessageType } from '@babylon/shared';
+
+export { MessageTypeEnum } from '@babylon/shared';
+export type { MessageType };
+
 export type ChatFilter = 'all' | 'dms' | 'groups';
 
 export interface Chat {
@@ -30,10 +35,6 @@ export interface Chat {
     chainName: string;
   };
 }
-
-import type { MessageType } from '@babylon/shared';
-export { MessageTypeEnum } from '@babylon/shared';
-export type { MessageType };
 
 export interface Message {
   id: string;
