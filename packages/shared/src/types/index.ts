@@ -25,6 +25,8 @@ export {
 } from './errors';
 // Group types (tiers, alpha levels)
 export * from './groups';
+// Message types (chat/system)
+export * from './messages';
 // Social interaction types
 export * from './interactions';
 // Agent monitoring types

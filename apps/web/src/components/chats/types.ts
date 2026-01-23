@@ -31,13 +31,8 @@ export interface Chat {
   };
 }
 
-import type { MessageType } from '@babylon/db';
-
-// Enum for runtime checks, type-guarded by MessageType from db
-export const MessageTypeEnum = {
-  USER: 'user' as MessageType,
-  SYSTEM: 'system' as MessageType,
-} as const;
+export { MessageTypeEnum } from '@babylon/shared';
+export type { MessageType } from '@babylon/shared';
 
 export interface Message {
   id: string;
