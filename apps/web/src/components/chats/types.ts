@@ -31,8 +31,9 @@ export interface Chat {
   };
 }
 
+import type { MessageType } from '@babylon/shared';
 export { MessageTypeEnum } from '@babylon/shared';
-export type { MessageType } from '@babylon/shared';
+export type { MessageType };
 
 export interface Message {
   id: string;
