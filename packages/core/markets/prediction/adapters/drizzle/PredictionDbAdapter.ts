@@ -291,6 +291,7 @@ export class PredictionDbAdapter implements PredictionDbPort {
         set: {
           shares: row.shares,
           avgPrice: row.avgPrice,
+          amount: row.amount,
           pnl: row.pnl,
           outcome: row.outcome,
           resolvedAt: row.resolvedAt,
