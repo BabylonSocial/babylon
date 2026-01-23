@@ -439,7 +439,8 @@ export type NewUserAgentTeamChat = typeof userAgentTeamChats.$inferInsert;
 export type GroupType = 'user' | 'npc' | 'agent';
 export type GroupMemberRole = 'owner' | 'admin' | 'member';
 export type GroupInviteStatus = 'pending' | 'accepted' | 'declined';
-export type MessageType = 'user' | 'system';
+// MessageType is exported from @babylon/shared - use that canonical definition
+export type { MessageType } from '@babylon/shared';
 // TierLevel is exported from @babylon/shared - use that canonical definition
 
 // Alpha group enhancement types (for grandfathering and invite decay)
