@@ -21,6 +21,16 @@
       "import": "./markets/prediction/index.ts",
       "require": "./markets/prediction/index.ts"
     },
+    "./markets/prediction/client": {
+      "types": "./markets/prediction/client.ts",
+      "import": "./markets/prediction/client.ts",
+      "require": "./markets/prediction/client.ts"
+    },
+    "./markets/prediction/pricing": {
+      "types": "./markets/prediction/pricing.ts",
+      "import": "./markets/prediction/pricing.ts",
+      "require": "./markets/prediction/pricing.ts"
+    },
     "./markets/shared": {
       "types": "./markets/shared/index.ts",
       "import": "./markets/shared/index.ts",

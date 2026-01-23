@@ -42,7 +42,7 @@
  * ```
  */
 
-import { PredictionPricing } from '@babylon/core/markets/prediction';
+import { PredictionPricing } from '@babylon/core/markets/prediction/pricing';
 import { logger } from '@babylon/shared';
 
 /**

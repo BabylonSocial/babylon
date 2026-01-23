@@ -2,7 +2,7 @@
  * Utility functions for formatting values in the Markets page.
  */
 
-import { PredictionPricing } from '@babylon/core/markets/prediction';
+import { PredictionPricing } from '@babylon/core/markets/prediction/client';
 import { BABYLON_POINTS_SYMBOL } from '@babylon/shared';
 
 /**
