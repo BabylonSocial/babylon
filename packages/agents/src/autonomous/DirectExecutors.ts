@@ -457,13 +457,21 @@ export interface DirectRepostResult {
 
 /**
  * Execute a trade directly without LLM decision-making.
- * Validates balance - cannot trade more than you have.
+ * Validates balance for entry trades; exit trades (sell_yes/sell_no/close_position)
+ * can close positions even when balance is $0.
  */
 export async function executeDirectTrade(
   params: DirectTradeParams
 ): Promise<DirectTradeResult> {
   const { agentUserId, marketType, marketId, side, reasoning } = params;
   let { amount } = params;
+
+  if (!Number.isFinite(amount)) {
+    return {
+      success: false,
+      error: 'Invalid trade amount. Must be a finite number.',
+    };
+  }
 
   // Check if this is an NPC (system-defined actor from static data files).
   // User-created agents are NOT in StaticDataRegistry, so they won't match.
