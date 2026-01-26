@@ -118,8 +118,11 @@ export class MultiStepExecutor {
 
     // Get agent config (may be null for NPCs)
     const config = await getAgentConfig(agentUserId);
-    const systemPrompt =
+    const baseSystemPrompt =
       config?.systemPrompt ?? 'You are an autonomous trading agent on Babylon.';
+    const balanceGuidance =
+      'Trading guidance: If your balance is low or $0 but you have open positions, you can still sell/close positions to free balance. Do not assume trading is impossible; check your open positions and consider trimming or closing to unlock funds before switching to social-only actions.';
+    const systemPrompt = `${baseSystemPrompt}\n\n${balanceGuidance}`;
 
     // Determine enabled features - NPCs have all features enabled by default
     // For USER_CONTROLLED agents: trading defaults to true, others default to false

@@ -471,6 +471,11 @@ export async function executeDirectTrade(
   const npcActor = StaticDataRegistry.getActor(agentUserId);
   const isNpc = !!npcActor;
 
+  const isExitTrade =
+    (marketType === 'prediction' &&
+      (side === 'sell_yes' || side === 'sell_no')) ||
+    (marketType === 'perp' && side === 'close_position');
+
   // Get current balance
   let balance = 0;
   if (isNpc) {
@@ -485,39 +490,46 @@ export async function executeDirectTrade(
     balance = walletBalance.balance;
   }
 
-  const looksLikeShareCount =
-    Number.isInteger(amount) &&
-    amount >= 1 &&
-    amount <= SHARE_LIKE_MAX_INTEGER &&
-    balance > 0 &&
-    amount / balance < SHARE_LIKE_RATIO_THRESHOLD;
-  if (looksLikeShareCount) {
-    logger.warn(
-      `[DirectExecutor] Trade amount $${amount.toFixed(
-        2
-      )} looks like a share count relative to $${balance.toFixed(
-        2
-      )} balance. Expected Babylon Points.`,
-      { agentUserId, marketType, side, balance },
-      'DirectExecutors'
-    );
-  }
+  if (!isExitTrade) {
+    const looksLikeShareCount =
+      Number.isInteger(amount) &&
+      amount >= 1 &&
+      amount <= SHARE_LIKE_MAX_INTEGER &&
+      balance > 0 &&
+      amount / balance < SHARE_LIKE_RATIO_THRESHOLD;
+    if (looksLikeShareCount) {
+      logger.warn(
+        `[DirectExecutor] Trade amount $${amount.toFixed(
+          2
+        )} looks like a share count relative to $${balance.toFixed(
+          2
+        )} balance. Expected Babylon Points.`,
+        { agentUserId, marketType, side, balance },
+        'DirectExecutors'
+      );
+    }
 
-  // Cannot trade more than balance
-  if (amount > balance) {
-    logger.warn(
-      `[DirectExecutor] Trade capped to balance: $${amount} -> $${balance}`,
-      { agentUserId, isNpc },
-      'DirectExecutors'
-    );
-    amount = balance;
-  }
+    // Cannot trade more than balance
+    if (amount > balance) {
+      logger.warn(
+        `[DirectExecutor] Trade capped to balance: $${amount} -> $${balance}`,
+        { agentUserId, isNpc },
+        'DirectExecutors'
+      );
+      amount = balance;
+    }
 
-  // Reject if insufficient funds
-  if (amount < 1) {
+    // Reject if insufficient funds
+    if (amount < 1) {
+      return {
+        success: false,
+        error: `Insufficient balance: $${balance.toFixed(2)}`,
+      };
+    }
+  } else if (amount < 0) {
     return {
       success: false,
-      error: `Insufficient balance: $${balance.toFixed(2)}`,
+      error: 'Amount must be 0 or greater for exit trades',
     };
   }
 
