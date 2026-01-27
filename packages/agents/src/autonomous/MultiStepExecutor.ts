@@ -156,24 +156,31 @@ export class MultiStepExecutor {
       Features.GROUP_CHATS,
     ];
     const featuresToMaybeDisable = enabledFeatures.filter(
-      (f) => socialFeatures.includes(f) && Math.random() < ENTROPY_DISABLE_CHANCE
+      (f) =>
+        socialFeatures.includes(f) && Math.random() < ENTROPY_DISABLE_CHANCE
     );
     // Ensure at least one social feature remains if agent had any
     const enabledSocialFeatures = enabledFeatures.filter((f) =>
       socialFeatures.includes(f)
     );
-    if (
-      featuresToMaybeDisable.length > 0 &&
-      featuresToMaybeDisable.length < enabledSocialFeatures.length
-    ) {
-      enabledFeatures = enabledFeatures.filter(
-        (f) => !featuresToMaybeDisable.includes(f)
-      );
-      logger.debug(
-        `[Entropy] Temporarily disabled features for tick: ${featuresToMaybeDisable.join(', ')}`,
-        { agentUserId },
-        'MultiStepExecutor'
-      );
+    if (featuresToMaybeDisable.length > 0 && enabledSocialFeatures.length > 0) {
+      // If all social features were selected for disabling, keep one random one
+      if (featuresToMaybeDisable.length >= enabledSocialFeatures.length) {
+        const keepIndex = Math.floor(
+          Math.random() * featuresToMaybeDisable.length
+        );
+        featuresToMaybeDisable.splice(keepIndex, 1);
+      }
+      if (featuresToMaybeDisable.length > 0) {
+        enabledFeatures = enabledFeatures.filter(
+          (f) => !featuresToMaybeDisable.includes(f)
+        );
+        logger.debug(
+          `[Entropy] Temporarily disabled features for tick: ${featuresToMaybeDisable.join(', ')}`,
+          { agentUserId },
+          'MultiStepExecutor'
+        );
+      }
     }
 
     const balanceGuidance =
