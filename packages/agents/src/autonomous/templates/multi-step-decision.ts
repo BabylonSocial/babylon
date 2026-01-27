@@ -704,7 +704,7 @@ ${creatorSection}${npcContextSection}${tradePostEncouragement}# Current Executio
 **Actions Completed This Tick**: ${traceActionResults.length}
 
 # Your Current State
-- Balance: $${context.balance.toFixed(2)}
+- Balance: $${context.balance.toFixed(2)}${context.balance < 10 && context.openPositions > 0 ? ' ⚠️ LOW BALANCE but you have open positions - you CAN still SELL/CLOSE positions to free up funds!' : ''}
 - Lifetime P&L: ${context.pnl >= 0 ? '+' : ''}$${context.pnl.toFixed(2)}
 - Open Positions: ${context.openPositions}
 - Pending Comments: ${context.pendingCommentReplies.length}
@@ -926,6 +926,7 @@ function formatPositionManagementGuidance(
 
   return `
 # Position Management Alerts
+💡 REMINDER: Selling/closing positions does NOT require balance - you receive funds FROM the sale!
 ${alerts.join('\n')}
 `;
 }

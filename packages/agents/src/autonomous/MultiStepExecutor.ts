@@ -123,7 +123,7 @@ export class MultiStepExecutor {
 
     // Determine enabled features - NPCs have all features enabled by default
     // For USER_CONTROLLED agents: trading defaults to true, others default to false
-    const enabledFeatures: string[] = [];
+    let enabledFeatures: string[] = [];
     if (isNpc) {
       enabledFeatures.push(
         Features.TRADING,
@@ -142,6 +142,38 @@ export class MultiStepExecutor {
       if (features.commenting) enabledFeatures.push(Features.ENGAGING);
       if (features.dms) enabledFeatures.push(Features.DMS);
       if (features.groupChats) enabledFeatures.push(Features.GROUP_CHATS);
+    }
+
+    // Add entropy by randomly disabling some non-essential features (15% chance each)
+    // TRADING is never disabled (agents need to exit positions)
+    // At least one social feature is kept enabled
+    const ENTROPY_DISABLE_CHANCE = 0.15;
+    const socialFeatures: string[] = [
+      Features.POSTING,
+      Features.COMMENTING,
+      Features.ENGAGING,
+      Features.DMS,
+      Features.GROUP_CHATS,
+    ];
+    const featuresToMaybeDisable = enabledFeatures.filter(
+      (f) => socialFeatures.includes(f) && Math.random() < ENTROPY_DISABLE_CHANCE
+    );
+    // Ensure at least one social feature remains if agent had any
+    const enabledSocialFeatures = enabledFeatures.filter((f) =>
+      socialFeatures.includes(f)
+    );
+    if (
+      featuresToMaybeDisable.length > 0 &&
+      featuresToMaybeDisable.length < enabledSocialFeatures.length
+    ) {
+      enabledFeatures = enabledFeatures.filter(
+        (f) => !featuresToMaybeDisable.includes(f)
+      );
+      logger.debug(
+        `[Entropy] Temporarily disabled features for tick: ${featuresToMaybeDisable.join(', ')}`,
+        { agentUserId },
+        'MultiStepExecutor'
+      );
     }
 
     const balanceGuidance =
