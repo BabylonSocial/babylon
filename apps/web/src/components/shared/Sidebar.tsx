@@ -6,7 +6,6 @@ import {
   Check,
   Copy,
   Gift,
-  Home,
   LogOut,
   MessageCircle,
   Shield,
@@ -15,6 +14,7 @@ import {
   User,
   Users,
 } from 'lucide-react';
+import { HouseIcon } from '@/components/shared/icons/HouseIcon';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -127,7 +127,7 @@ function SidebarContent() {
     {
       name: 'Home',
       href: '/feed',
-      icon: Home,
+      icon: HouseIcon,
       color: '#0066FF',
       active: pathname === '/feed' || pathname === '/',
     },
@@ -170,7 +170,7 @@ function SidebarContent() {
       name: 'Rewards',
       href: '/rewards',
       icon: Gift,
-      color: '#a855f7',
+      color: '#0066FF',
       active: pathname === '/rewards',
     },
     {
@@ -209,7 +209,7 @@ function SidebarContent() {
         <div className="flex items-center justify-center p-6 lg:justify-start">
           <Link
             href="/feed"
-            className="transition-transform duration-300 hover:scale-105"
+            className=""
           >
             {/* Icon-only logo for md (tablet) */}
             <Image
@@ -247,45 +247,18 @@ function SidebarContent() {
                   'group pointer-events-auto relative z-10 flex items-center px-4 py-3',
                   'transition-colors duration-200',
                   'md:justify-center lg:justify-start',
-                  !item.active && 'bg-transparent hover:bg-sidebar-accent'
+                  'bg-transparent hover:bg-sidebar-accent'
                 )}
                 title={item.name}
-                style={{
-                  backgroundColor: item.active ? item.color : undefined,
-                }}
-                onMouseEnter={(e) => {
-                  if (!item.active) {
-                    e.currentTarget.style.backgroundColor = item.color;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!item.active) {
-                    e.currentTarget.style.backgroundColor = '';
-                  }
-                }}
               >
                 {/* Icon with notification indicator */}
                 <div className="relative lg:mr-3">
                   <Icon
                     className={cn(
                       'h-6 w-6 flex-shrink-0',
-                      'transition-all duration-300',
-                      'group-hover:scale-110',
-                      !item.active && 'text-sidebar-foreground'
+                      item.active ? 'text-sidebar-primary' : 'text-sidebar-foreground'
                     )}
-                    style={{
-                      color: item.active ? '#e4e4e4' : undefined,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!item.active) {
-                        e.currentTarget.style.color = '#e4e4e4';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!item.active) {
-                        e.currentTarget.style.color = '';
-                      }
-                    }}
+                    fill={item.active ? 'currentColor' : 'none'}
                   />
                   {hasNotificationBadge && (
                     <span className="-top-1 -right-1 absolute h-2 w-2 rounded-full bg-blue-500 ring-2 ring-sidebar" />
@@ -297,21 +270,10 @@ function SidebarContent() {
                   className={cn(
                     'hidden lg:block',
                     'text-lg transition-colors duration-300',
-                    item.active ? 'font-semibold' : 'text-sidebar-foreground'
+                    item.active
+                      ? 'font-semibold text-black dark:text-white'
+                      : 'text-sidebar-foreground group-hover:text-black dark:group-hover:text-white'
                   )}
-                  style={{
-                    color: item.active ? '#e4e4e4' : undefined,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!item.active) {
-                      e.currentTarget.style.color = '#e4e4e4';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!item.active) {
-                      e.currentTarget.style.color = '';
-                    }
-                  }}
                 >
                   {item.name}
                 </span>
