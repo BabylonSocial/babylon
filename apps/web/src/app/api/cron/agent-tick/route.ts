@@ -91,6 +91,20 @@ const TICK_TIME_BUDGET_MS = 180_000; // 3 minutes
 const PER_AGENT_TIMEOUT_MS = 90_000; // 90 seconds
 
 /**
+ * Custom error for agent timeouts. Using a typed error class instead of
+ * string matching for more robust timeout detection in catch blocks.
+ */
+class AgentTimeoutError extends Error {
+  constructor(
+    public readonly agentId: string,
+    timeoutMs: number
+  ) {
+    super(`Agent timeout after ${timeoutMs / 1000}s`);
+    this.name = 'AgentTimeoutError';
+  }
+}
+
+/**
  * Points cost per autonomous tick.
  * Set to 0 for free ticks, or a positive number to charge agents.
  * Used for both eligibility checks and deductions.
@@ -479,7 +493,10 @@ export async function POST(_req: NextRequest) {
                 'AgentTick'
               );
               reject(
-                new Error(`Agent timeout after ${PER_AGENT_TIMEOUT_MS / 1000}s`)
+                new AgentTimeoutError(
+                  eligibleAgent.agentId,
+                  PER_AGENT_TIMEOUT_MS
+                )
               );
             }, PER_AGENT_TIMEOUT_MS);
           }),
@@ -581,8 +598,7 @@ export async function POST(_req: NextRequest) {
           'AgentTick'
         );
       } catch (error) {
-        const isTimeout =
-          error instanceof Error && error.message.includes('Agent timeout');
+        const isTimeout = error instanceof AgentTimeoutError;
         errors++;
         logger.error(
           `Error processing agent ${eligibleAgent.name}`,
