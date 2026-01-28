@@ -216,15 +216,27 @@ function createPerpWalletAdapter(isNpc: boolean) {
   };
 }
 
+/** PnL record to be processed after transaction completes */
+interface DeferredPnLRecord {
+  userId: string;
+  pnl: number;
+  reason: string;
+  relatedId?: string;
+}
+
 /**
  * Creates a wallet adapter for prediction market trading operations.
  *
  * - NPCs use actorState.tradingBalance (within the provided transaction context).
  * - Regular users use WalletService.
+ *
+ * IMPORTANT: recordPnL is deferred to avoid nested transaction deadlocks.
+ * The caller must process deferredPnL after the transaction completes.
  */
 function createPredictionWalletAdapter(
   isNpc: boolean,
-  txDb?: Parameters<Parameters<typeof asUser>[1]>[0]
+  txDb?: Parameters<Parameters<typeof asUser>[1]>[0],
+  deferredPnL?: DeferredPnLRecord[]
 ) {
   if (isNpc) {
     if (!txDb) {
@@ -350,7 +362,14 @@ function createPredictionWalletAdapter(
       reason: string;
       relatedId?: string;
     }) => {
-      await WalletService.recordPnL(uid, pnl, reason, relatedId);
+      // Defer PnL recording to avoid nested transaction deadlocks
+      // The PnL will be recorded after the transaction completes
+      if (deferredPnL) {
+        deferredPnL.push({ userId: uid, pnl, reason, relatedId });
+      } else {
+        // Fallback for callers that don't use deferredPnL (shouldn't happen in new code)
+        await WalletService.recordPnL(uid, pnl, reason, relatedId);
+      }
     },
     getBalance: (uid: string) => WalletService.getBalance(uid),
   };
@@ -733,13 +752,16 @@ async function executePredictionSell(params: {
   const isSellYes = side === 'sell_yes';
   const sideLabel = isSellYes ? 'yes' : 'no';
 
+  // Collect PnL records to process after transaction completes (avoids nested transaction deadlocks)
+  const deferredPnL: DeferredPnLRecord[] = [];
+
   const sellOperation = async (
     txDb: Parameters<Parameters<typeof asUser>[1]>[0]
   ) => {
     const adapter = new PredictionDbAdapter(txDb);
     const service = new PredictionMarketService({
       db: adapter,
-      wallet: createPredictionWalletAdapter(isNpc, txDb),
+      wallet: createPredictionWalletAdapter(isNpc, txDb, deferredPnL),
       broadcast: {
         emit: (channel, payload) =>
           broadcastToChannel(channel, payload as Record<string, JsonValue>),
@@ -822,6 +844,17 @@ async function executePredictionSell(params: {
   const { sellResult, sharesToSell } = isNpc
     ? await asSystem(sellOperation, 'npc_prediction_sell')
     : await asUser({ userId: agentUserId }, sellOperation);
+
+  // Process deferred PnL records AFTER transaction completes (avoids nested transaction deadlocks)
+  for (const pnlRecord of deferredPnL) {
+    if (pnlRecord.pnl === 0) continue;
+    await WalletService.recordPnL(
+      pnlRecord.userId,
+      pnlRecord.pnl,
+      pnlRecord.reason,
+      pnlRecord.relatedId
+    );
+  }
 
   // Record in AgentTrade
   await agentPnLService.recordTrade({
