@@ -4,7 +4,7 @@
       "maxDuration": 60
     },
     "src/app/api/cron/agent-tick/route.ts": {
-      "maxDuration": 800
+      "maxDuration": 300
     },
     "src/app/api/cron/game-tick/route.ts": {
       "maxDuration": 800

@@ -75,9 +75,20 @@ import { NextResponse } from 'next/server';
 import { ensureEngineServices } from '@/lib/engine/ensure-engine-services';
 
 // Vercel function configuration
-// Note: vercel.json overrides this with 800 seconds (13.3 minutes)
-export const maxDuration = 800; // 13.3 minutes max for agent tick (matches vercel.json)
+export const maxDuration = 300; // 5 minutes max - reduced from 800s to prevent long lock holds
 export const dynamic = 'force-dynamic';
+
+/**
+ * Time budget for entire tick (ms). Stop processing new agents after this.
+ * Set to 180s to leave headroom before function timeout (300s).
+ */
+const TICK_TIME_BUDGET_MS = 180_000; // 3 minutes
+
+/**
+ * Per-agent processing timeout (ms). Abort agent if exceeds this.
+ * Prevents single slow agent from blocking entire tick.
+ */
+const PER_AGENT_TIMEOUT_MS = 90_000; // 90 seconds
 
 /**
  * Points cost per autonomous tick.
@@ -152,10 +163,10 @@ export async function POST(_req: NextRequest) {
   }
 
   // 1.5 Acquire global lock to prevent overlapping cron invocations
-  // Duration matches function timeout (800s) to prevent overlap when ticks take longer than cron interval
+  // Duration matches function timeout (300s) to prevent overlap when ticks take longer than cron interval
   const globalLockAcquired = await DistributedLockService.acquireLock({
     lockId: 'agent-tick-global',
-    durationMs: 800 * 1000, // 800 seconds (13.3 minutes) - matches function timeout
+    durationMs: 300 * 1000, // 300 seconds (5 minutes) - matches function timeout
     operation: 'agent-tick-global',
     processId,
   });
@@ -360,8 +371,22 @@ export async function POST(_req: NextRequest) {
     let totalActionsExecuted = 0;
     let errors = 0;
     let skippedDueToLock = 0;
+    let skippedDueToTimeBudget = 0;
 
     for (const eligibleAgent of eligibleAgents) {
+      // Check tick-level time budget before processing each agent
+      const tickElapsed = Date.now() - startTime;
+      if (tickElapsed >= TICK_TIME_BUDGET_MS) {
+        const remainingAgents = eligibleAgents.length - results.length;
+        logger.warn(
+          `Tick time budget exceeded (${Math.round(tickElapsed / 1000)}s) - skipping ${remainingAgents} remaining agents`,
+          { processId, processed: results.length, remaining: remainingAgents },
+          'AgentTick'
+        );
+        skippedDueToTimeBudget = remainingAgents;
+        break;
+      }
+
       const agentStartTime = Date.now();
 
       // Try to acquire lock for this agent - skip if already running
@@ -423,14 +448,34 @@ export async function POST(_req: NextRequest) {
         if (features.dms) enabledFeatures.push('DMs');
         if (features.groupChats) enabledFeatures.push('group chats');
 
+        logger.info(
+          `Processing agent ${eligibleAgent.name}`,
+          { agentId: eligibleAgent.agentId, features: enabledFeatures },
+          'AgentTick'
+        );
+
         // Always record trajectories for RL training data collection
         // For USER_CONTROLLED agents, pass user.id (userId for User table lookup)
-        const tickResult = await autonomousCoordinator.executeAutonomousTick(
-          eligibleAgent.user.id,
-          runtime,
-          true, // Always record trajectories
-          false // isNpc = false for user agents
-        );
+        // Wrap with per-agent timeout to prevent single agent from blocking tick
+        const tickResult = await Promise.race([
+          autonomousCoordinator.executeAutonomousTick(
+            eligibleAgent.user.id,
+            runtime,
+            true, // Always record trajectories
+            false // isNpc = false for user agents
+          ),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () =>
+                reject(
+                  new Error(
+                    `Agent timeout after ${PER_AGENT_TIMEOUT_MS / 1000}s`
+                  )
+                ),
+              PER_AGENT_TIMEOUT_MS
+            )
+          ),
+        ]);
 
         // Validation: Verify tick executed successfully
         if (!tickResult.success) {
@@ -559,6 +604,7 @@ export async function POST(_req: NextRequest) {
         agentsEligible: eligibleAgents.length,
         agentsProcessed: results.length - skippedDueToLock,
         agentsSkippedLocked: skippedDueToLock,
+        agentsSkippedTimeBudget: skippedDueToTimeBudget,
         totalActions: totalActionsExecuted,
         errors,
         averageActionsPerAgent:
@@ -599,6 +645,7 @@ export async function POST(_req: NextRequest) {
       eligible: eligibleAgents.length,
       processed: results.length - skippedDueToLock,
       skippedLocked: skippedDueToLock,
+      skippedTimeBudget: skippedDueToTimeBudget,
       duration,
       totalActions: totalActionsExecuted,
       errors,
