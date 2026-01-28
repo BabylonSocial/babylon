@@ -457,6 +457,13 @@ export async function POST(_req: NextRequest) {
         // Always record trajectories for RL training data collection
         // For USER_CONTROLLED agents, pass user.id (userId for User table lookup)
         // Wrap with per-agent timeout to prevent single agent from blocking tick
+        //
+        // Note on timeout behavior: When timeout fires, the underlying executeAutonomousTick
+        // continues running in the background. This is intentional - we don't want to add
+        // AbortSignal complexity throughout the coordinator. The per-agent lock (acquireAgentLock)
+        // prevents duplicate execution: if this agent is still running when the next tick starts,
+        // it will be skipped via the lock check. The timeout just prevents blocking OTHER agents.
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const tickResult = await Promise.race([
           autonomousCoordinator.executeAutonomousTick(
             eligibleAgent.user.id,
@@ -464,18 +471,22 @@ export async function POST(_req: NextRequest) {
             true, // Always record trajectories
             false // isNpc = false for user agents
           ),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () =>
-                reject(
-                  new Error(
-                    `Agent timeout after ${PER_AGENT_TIMEOUT_MS / 1000}s`
-                  )
-                ),
-              PER_AGENT_TIMEOUT_MS
-            )
-          ),
-        ]);
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(() => {
+              logger.warn(
+                `Agent ${eligibleAgent.name} timed out after ${PER_AGENT_TIMEOUT_MS / 1000}s - execution continues in background`,
+                { agentId: eligibleAgent.agentId },
+                'AgentTick'
+              );
+              reject(
+                new Error(`Agent timeout after ${PER_AGENT_TIMEOUT_MS / 1000}s`)
+              );
+            }, PER_AGENT_TIMEOUT_MS);
+          }),
+        ]).finally(() => {
+          // Clear timeout to prevent timer leak when main promise resolves first
+          if (timeoutId) clearTimeout(timeoutId);
+        });
 
         // Validation: Verify tick executed successfully
         if (!tickResult.success) {
