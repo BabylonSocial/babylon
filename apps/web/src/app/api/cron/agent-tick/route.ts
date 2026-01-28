@@ -581,6 +581,8 @@ export async function POST(_req: NextRequest) {
           'AgentTick'
         );
       } catch (error) {
+        const isTimeout =
+          error instanceof Error && error.message.includes('Agent timeout');
         errors++;
         logger.error(
           `Error processing agent ${eligibleAgent.name}`,
@@ -588,6 +590,7 @@ export async function POST(_req: NextRequest) {
             agentId: eligibleAgent.agentId,
             agentType: eligibleAgent.type,
             error: error instanceof Error ? error.message : String(error),
+            isTimeout,
           },
           'AgentTick'
         );
@@ -596,7 +599,7 @@ export async function POST(_req: NextRequest) {
           agentId: eligibleAgent.agentId,
           agentType: eligibleAgent.type,
           name: eligibleAgent.name,
-          status: 'error',
+          status: isTimeout ? 'timeout' : 'error',
           error: error instanceof Error ? error.message : String(error),
           duration: Date.now() - agentStartTime,
         });
