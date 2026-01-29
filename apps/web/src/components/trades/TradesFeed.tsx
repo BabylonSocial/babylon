@@ -239,8 +239,8 @@ export function TradesFeed({ userId, containerRef }: TradesFeedProps) {
 
   if (trades.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Activity className="mb-4 h-16 w-16 text-muted-foreground opacity-50" />
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Activity className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
         <h3 className="mb-2 font-semibold text-foreground text-lg">
           No trades yet
         </h3>

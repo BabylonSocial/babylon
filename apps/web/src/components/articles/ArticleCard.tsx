@@ -8,9 +8,6 @@ import { memo } from 'react';
 import { z } from 'zod';
 import { Avatar } from '@/components/shared/Avatar';
 
-/**
- * Article card post schema for validation.
- */
 const _ArticleCardPostSchema = z.object({
   id: z.string(),
   type: z.string().optional(),
@@ -28,33 +25,6 @@ const _ArticleCardPostSchema = z.object({
   timestamp: z.string(),
 });
 
-/**
- * Article card component for displaying article posts.
- *
- * Displays a formatted card for article posts with title, byline, content
- * preview, author information, and timestamp. Includes bias score display
- * and click handling for navigation.
- *
- * Features:
- * - Article title and byline
- * - Content preview
- * - Author display
- * - Timestamp formatting
- * - Bias score indicator
- * - Click handling
- * - Memoized for performance
- *
- * @param props - ArticleCard component props
- * @returns Article card element
- *
- * @example
- * ```tsx
- * <ArticleCard
- *   post={articleData}
- *   onClick={() => router.push(`/articles/${post.id}`)}
- * />
- * ```
- */
 export type ArticleCardProps = {
   post: z.infer<typeof _ArticleCardPostSchema>;
   className?: string;
@@ -81,7 +51,6 @@ export const ArticleCard = memo(function ArticleCard({
   } else if (diffHours < 24) {
     timeAgo = `${diffHours}h ago`;
   } else {
-    // Show date for articles older than 24 hours
     timeAgo = publishedDate.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -96,7 +65,6 @@ export const ArticleCard = memo(function ArticleCard({
     if (onClick) {
       onClick();
     } else {
-      // Navigate directly to article page (ArticleCard is only used for article-type posts)
       router.push(`/article/${post.id}`);
     }
   };
@@ -104,17 +72,17 @@ export const ArticleCard = memo(function ArticleCard({
   return (
     <article
       className={cn(
-        'px-4 py-3',
+        'px-4 py-4',
         'cursor-pointer transition-all duration-200 hover:bg-muted/30',
         'w-full overflow-hidden',
-        'border-border/5 border-b',
+        'border-border border-b',
         className
       )}
       onClick={handleClick}
     >
-      {/* Header: Avatar + Author + Timestamp */}
-      <div className="mb-3 flex w-full items-start gap-3">
-        {/* Avatar */}
+      {/* Two-column layout: Avatar | Content */}
+      <div className="flex gap-3">
+        {/* Left column: Avatar */}
         <Link
           href={`/profile/${post.authorId}`}
           className="shrink-0 transition-opacity hover:opacity-80"
@@ -129,73 +97,77 @@ export const ArticleCard = memo(function ArticleCard({
           />
         </Link>
 
-        {/* Author name and timestamp */}
-        <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col">
-            <Link
-              href={`/profile/${post.authorId}`}
-              className="truncate font-semibold text-foreground text-lg hover:underline sm:text-xl"
-              onClick={(e) => e.stopPropagation()}
+        {/* Right column: All content */}
+        <div className="min-w-0 flex-1">
+          {/* Author row: Name · @handle · Category | timeAgo right-aligned */}
+          <div className="mb-2 flex items-center justify-between gap-1.5 text-[15px] leading-tight">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Link
+                href={`/profile/${post.authorId}`}
+                className="truncate font-semibold text-foreground hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {post.authorName}
+              </Link>
+              {post.authorUsername && (
+                <Link
+                  href={`/profile/${post.authorId}`}
+                  className="truncate text-muted-foreground hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  @{post.authorUsername}
+                </Link>
+              )}
+              {post.category && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="shrink-0 font-semibold text-[#0066FF] text-xs uppercase tracking-wide">
+                    {post.category}
+                  </span>
+                </>
+              )}
+            </div>
+            <time
+              className="shrink-0 text-[15px] text-muted-foreground"
+              title={publishedDate.toLocaleString()}
             >
-              {post.authorName}
-            </Link>
-          </div>
-          <time
-            className="ml-2 shrink-0 text-base text-muted-foreground"
-            title={publishedDate.toLocaleString()}
-          >
-            {timeAgo}
-          </time>
-        </div>
-      </div>
-
-      {/* Mobile: Article Image (shown full width on small screens) */}
-      {post.imageUrl && (
-        <div className="relative mb-3 aspect-video w-full overflow-hidden rounded-lg sm:hidden">
-          <Image
-            src={post.imageUrl}
-            alt={post.articleTitle || 'Article image'}
-            fill
-            className="object-cover"
-            sizes="100vw"
-          />
-        </div>
-      )}
-
-      {/* Article Content: Image + Text (desktop) */}
-      <div className="mb-3 flex gap-4">
-        {/* Article Image thumbnail (desktop only) */}
-        {post.imageUrl && (
-          <div className="relative hidden aspect-video w-32 shrink-0 overflow-hidden rounded-lg sm:block md:w-40">
-            <Image
-              src={post.imageUrl}
-              alt={post.articleTitle || 'Article image'}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 128px, 160px"
-            />
-          </div>
-        )}
-
-        {/* Title and Summary */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          {/* Article Title with Read More Button */}
-          <div className="mb-2 flex items-start justify-between gap-4">
-            <h2 className="flex-1 font-bold text-foreground text-lg leading-tight sm:text-xl">
-              {post.articleTitle || 'Untitled Article'}
-            </h2>
-            <button
-              type="button"
-              className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-[#0066FF] px-3 py-2 font-semibold text-primary-foreground text-sm transition-colors hover:bg-[#2952d9]"
-              onClick={handleClick}
-            >
-              Read Full Article →
-            </button>
+              {timeAgo}
+            </time>
           </div>
 
-          {/* Article Summary */}
-          <div className="line-clamp-3 whitespace-pre-wrap break-words text-foreground leading-relaxed">
+          {/* Cover image */}
+          {post.imageUrl && (
+            <div className="relative mb-3 aspect-video w-full overflow-hidden rounded-lg">
+              <Image
+                src={post.imageUrl}
+                alt={post.articleTitle || 'Article image'}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 600px"
+              />
+            </div>
+          )}
+
+          {/* Article Title */}
+          <h2 className="mb-1.5 line-clamp-2 font-bold text-foreground text-lg leading-tight">
+            {post.articleTitle || 'Untitled Article'}
+          </h2>
+
+          {/* Summary */}
+          <p className="mb-3 line-clamp-2 text-muted-foreground text-sm leading-relaxed">
             {post.content}
+          </p>
+
+          {/* Footer */}
+          <div className="flex flex-col gap-1">
+            {post.byline && (
+              <span className="truncate text-muted-foreground text-xs">
+                {post.byline}
+              </span>
+            )}
+            <span className="text-[#0066FF] text-sm">
+              Read Full Article →
+            </span>
           </div>
         </div>
       </div>

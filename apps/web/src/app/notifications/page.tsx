@@ -43,12 +43,19 @@ interface GroupInvite {
 }
 
 export default function NotificationsPage() {
-  const { authenticated, user, getAccessToken } = useAuth();
+  const { authenticated, user, getAccessToken, login } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [groupInvites, setGroupInvites] = useState<GroupInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (authenticated) return;
+    router.push('/feed');
+    const timer = setTimeout(() => login(), 500);
+    return () => clearTimeout(timer);
+  }, [authenticated, router, login]);
 
   const fetchNotifications = useCallback(
     async (showLoading = true, silent = false) => {
@@ -341,36 +348,12 @@ export default function NotificationsPage() {
   };
 
   if (!authenticated) {
-    return (
-      <PageContainer
-        noPadding
-        className="!overflow-visible flex w-full flex-col"
-      >
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-[rgba(120,120,120,0.5)] lg:border-r lg:border-l">
-          <div className="sticky top-0 z-10 border-border border-b bg-background">
-            <div className="px-4 py-3 lg:px-6">
-              <h1 className="font-bold text-xl">Notifications</h1>
-            </div>
-          </div>
-          <div className="flex flex-1 flex-col items-center justify-center gap-4">
-            <p className="text-muted-foreground">
-              Please sign in to view notifications
-            </p>
-            <Link
-              href="/feed"
-              className="rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition-all hover:bg-primary/90"
-            >
-              Go to Feed
-            </Link>
-          </div>
-        </div>
-      </PageContainer>
-    );
+    return null;
   }
 
   return (
     <PageContainer noPadding className="!overflow-visible flex w-full flex-col">
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-[rgba(120,120,120,0.5)] lg:border-r lg:border-l">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-[rgba(120,120,120,0.15)] lg:border-r lg:border-l">
         {/* Header */}
         <div className="sticky top-0 z-10 border-border border-b bg-background/95 backdrop-blur-sm">
           <div className="px-4 py-3 lg:px-6">
@@ -398,7 +381,7 @@ export default function NotificationsPage() {
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Bell className="mb-4 h-16 w-16 text-muted-foreground opacity-50" />
+              <Bell className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
               <h2 className="mb-2 font-semibold text-xl">
                 No notifications yet
               </h2>

@@ -18,7 +18,6 @@ import {
   AgentDetail,
   type AgentDetailData,
   AgentDetailNotFound,
-  AgentDetailSkeleton,
 } from '@/components/agents/AgentDetail';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,7 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 export default function AgentDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { authenticated, ready, getAccessToken } = useAuth();
+  const { authenticated, ready, getAccessToken, login } = useAuth();
   const agentId = params.agentId as string;
 
   const [agent, setAgent] = useState<AgentDetailData | null>(null);
@@ -77,12 +76,16 @@ export default function AgentDetailPage() {
     }
   }, [ready, authenticated, agentId, fetchAgent]);
 
+  // Auth required — redirect to feed and show login
+  useEffect(() => {
+    if (!ready || authenticated) return;
+    router.push('/feed');
+    const timer = setTimeout(() => login(), 500);
+    return () => clearTimeout(timer);
+  }, [ready, authenticated, router, login]);
+
   if (!ready || !authenticated || loading) {
-    return (
-      <PageContainer>
-        <AgentDetailSkeleton />
-      </PageContainer>
-    );
+    return null;
   }
 
   if (!agent) {

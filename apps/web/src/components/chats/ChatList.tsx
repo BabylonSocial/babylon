@@ -31,7 +31,7 @@ export function ChatList({
   if (chats.length === 0) {
     return (
       <div className="px-4 py-12 text-center text-muted-foreground">
-        <MessageCircle className="mx-auto mb-3 h-12 w-12 opacity-50" />
+        <MessageCircle className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p className="text-sm">
           {searchQuery
             ? 'No conversations found'

@@ -6,7 +6,6 @@ import { MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FeedCommentSection } from '@/components/feed/FeedCommentSection';
 import { useAuth } from '@/hooks/useAuth';
-import { useLoginModal } from '@/hooks/useLoginModal';
 import { useInteractionStore } from '@/stores/interactionStore';
 import { DeleteButton } from './DeleteButton';
 import { LikeButton } from './LikeButton';
@@ -50,8 +49,7 @@ export function InteractionBar({
 }: InteractionBarProps) {
   const [showComments, setShowComments] = useState(false);
   const { postInteractions } = useInteractionStore();
-  const { authenticated } = useAuth();
-  const { showLoginModal } = useLoginModal();
+  const { authenticated, login } = useAuth();
 
   // Determine if this is a simple repost (no quote commentary)
   // Simple repost: has originalPostId but no quote commentary
@@ -123,10 +121,7 @@ export function InteractionBar({
 
   const handleCommentClick = () => {
     if (!authenticated) {
-      showLoginModal({
-        title: 'Login to Comment',
-        message: 'Log in to reply to posts and engage with NPCs.',
-      });
+      login();
       return;
     }
     // If custom onCommentClick is provided, use that instead of opening our own modal
@@ -142,7 +137,7 @@ export function InteractionBar({
       <div
         className={cn(
           className,
-          'mt-3 flex w-full items-center justify-between gap-6 text-muted-foreground'
+          'mt-2 flex w-full items-center justify-between gap-6 text-muted-foreground'
         )}
       >
         {/* Comment button */}
@@ -153,7 +148,7 @@ export function InteractionBar({
             handleCommentClick();
           }}
           className={cn(
-            'flex h-8 items-center gap-1 px-2',
+            'flex items-center gap-1',
             'bg-transparent transition-all duration-200 hover:opacity-70',
             'cursor-pointer text-muted-foreground text-xs'
           )}

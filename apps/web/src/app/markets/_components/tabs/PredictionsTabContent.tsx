@@ -1,9 +1,11 @@
 'use client';
 
 import type { UserPredictionPosition } from '@babylon/shared';
+import { TrendingUp } from 'lucide-react';
 import { memo, useState } from 'react';
 import { CategoryPnLCard } from '@/components/markets/CategoryPnLCard';
 import { PredictionPositionsList } from '@/components/markets/PredictionPositionsList';
+import { EmptyState } from '@/components/shared/EmptyState';
 import type {
   PredictionMarketWithPosition,
   PredictionSort,
@@ -160,9 +162,11 @@ export const PredictionsTabContent = memo(function PredictionsTabContent({
             )
           )
         ) : (
-          <p className="py-8 text-center text-muted-foreground text-sm">
-            No markets found
-          </p>
+          <EmptyState
+            icon={TrendingUp}
+            title="No markets found"
+            description="Try adjusting your filters or check back later for new markets"
+          />
         )}
       </div>
     </div>

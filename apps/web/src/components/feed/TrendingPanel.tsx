@@ -100,48 +100,36 @@ export function TrendingPanel() {
   };
 
   return (
-    <div className="flex flex-1 flex-col rounded-2xl bg-sidebar p-4">
-      <h2 className="mb-3 text-left font-bold text-foreground text-lg">
+    <div className="flex flex-1 flex-col">
+      <h2 className="mb-3 font-bold text-foreground text-lg">
         Trending
       </h2>
       {loading ? (
-        <div className="flex-1 space-y-3 pl-3">
+        <div className="flex-1 space-y-3">
           <Skeleton className="h-14 w-full" />
           <Skeleton className="h-14 w-full" />
           <Skeleton className="h-14 w-full" />
         </div>
       ) : trending.length === 0 ? (
-        <div className="flex-1 pl-3 text-muted-foreground text-sm">
+        <div className="flex-1 text-muted-foreground text-sm">
           No trending topics at the moment.
         </div>
       ) : (
-        <div className="flex-1 space-y-2 pl-3">
+        <div className="flex-1 space-y-2">
           {trending.map((item) => (
             <div
               key={item.id}
               onClick={() => handleTrendingClick(item)}
-              className="-ml-1.5 flex cursor-pointer items-start gap-3 rounded-lg p-1.5 transition-colors duration-200 hover:bg-muted/50"
+              className="-mx-2 cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-muted/50"
             >
               <div className="min-w-0 flex-1">
-                {/* Category and status */}
-                <p className="text-muted-foreground text-xs">
-                  {item.category || 'Trending'} · Trending
+                {/* Category and tag name(s) */}
+                <p className="font-semibold text-foreground text-sm leading-snug">
+                  {item.category && (
+                    <span className="text-muted-foreground">{item.category} · </span>
+                  )}
+                  {item.tags.join(' · ')}
                 </p>
-                {/* Tag name(s) - show all tags if grouped */}
-                <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                  {item.tags.map((tag, idx) => (
-                    <span key={idx}>
-                      <span className="font-semibold text-foreground text-sm leading-snug">
-                        {tag}
-                      </span>
-                      {idx < item.tags.length - 1 && (
-                        <span className="mx-1 text-muted-foreground text-xs">
-                          •
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </div>
                 {/* Summary */}
                 {item.summary && (
                   <p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">

@@ -120,7 +120,7 @@ export function MessageList({
       {messages.length === 0 && (
         <div className="flex h-full items-center justify-center">
           <div className="max-w-md p-8 text-center text-muted-foreground">
-            <MessageCircle className="mx-auto mb-3 h-12 w-12 opacity-50" />
+            <MessageCircle className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p className="mb-2 text-foreground">No messages yet</p>
             {authenticated && (
               <p className="text-muted-foreground text-xs">

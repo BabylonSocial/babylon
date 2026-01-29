@@ -187,12 +187,14 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
   /* Prevent native pull-to-refresh and overscroll effects */
   overscroll-behavior-y: contain;
-  overflow-y: auto;
 }
 
 /* Prevent pull-to-refresh on the entire app */
 html {
   overscroll-behavior-y: contain;
+  /* Always show scrollbar and reserve space to prevent layout shift */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 /* All buttons and links should have pointer cursor */

@@ -4,6 +4,7 @@ import type { CommentInputProps } from '@babylon/shared';
 import { cn } from '@babylon/shared';
 import { Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { useInteractionStore } from '@/stores/interactionStore';
 
 /**
@@ -50,6 +51,7 @@ export function CommentInput({
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const { authenticated, login } = useAuth();
   const { addComment } = useInteractionStore();
 
   useEffect(() => {
@@ -68,6 +70,11 @@ export function CommentInput({
   }, []);
 
   const handleSubmit = async () => {
+    if (!authenticated) {
+      login();
+      return;
+    }
+
     const trimmedContent = content.trim();
 
     if (!trimmedContent || isSubmitting) {

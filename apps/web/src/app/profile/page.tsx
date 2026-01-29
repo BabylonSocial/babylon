@@ -17,7 +17,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArticleCard } from '@/components/articles/ArticleCard';
-import { LoginButton } from '@/components/auth/LoginButton';
 import { PostCard } from '@/components/posts/PostCard';
 import { FollowListModal } from '@/components/profile/FollowListModal';
 import { LinkSocialAccountsModal } from '@/components/profile/LinkSocialAccountsModal';
@@ -61,7 +60,7 @@ interface EditModalState {
 }
 
 export default function ProfilePage() {
-  const { ready, authenticated, getAccessToken } = useAuth();
+  const { ready, authenticated, getAccessToken, login } = useAuth();
   const { user, setUser } = useAuthStore();
   const router = useRouter();
 
@@ -285,6 +284,14 @@ export default function ProfilePage() {
       reply.content?.toLowerCase().includes(query)
     );
   }, [replies, searchQuery]);
+
+  // Auth required — redirect to feed and show login
+  useEffect(() => {
+    if (!ready || (authenticated && user)) return;
+    router.push('/feed');
+    const timer = setTimeout(() => login(), 500);
+    return () => clearTimeout(timer);
+  }, [ready, authenticated, user, router, login]);
 
   const openEditModal = () => {
     setEditModal({
@@ -942,22 +949,8 @@ export default function ProfilePage() {
     );
   }
 
-  // Not authenticated
   if (!authenticated || !user) {
-    return (
-      <PageContainer noPadding className="flex flex-col">
-        <div className="flex flex-1 items-center justify-center p-8">
-          <div className="max-w-md text-center">
-            <User className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="mb-2 font-bold text-foreground text-xl">log in</h2>
-            <p className="mb-6 text-muted-foreground">
-              Sign in to view and edit your profile
-            </p>
-            <LoginButton />
-          </div>
-        </div>
-      </PageContainer>
-    );
+    return null;
   }
 
   return (

@@ -165,11 +165,9 @@ function ActivitySkeleton() {
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <Activity className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <p className="text-muted-foreground text-sm">{message}</p>
-      <p className="mt-1 text-muted-foreground/70 text-xs">
+      <Activity className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
+      <p className="font-semibold text-lg">{message}</p>
+      <p className="mt-1 max-w-sm text-muted-foreground text-sm">
         Activity will appear here when your agent takes actions
       </p>
     </div>

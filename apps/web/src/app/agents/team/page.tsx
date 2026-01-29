@@ -21,7 +21,6 @@ import {
   AgentDetailSkeleton,
   type AgentDetailTab,
 } from '@/components/agents/AgentDetail';
-import { LoginButton } from '@/components/auth/LoginButton';
 import { TeamChatView } from '@/components/chats';
 import { Avatar } from '@/components/shared/Avatar';
 import { PageContainer } from '@/components/shared/PageContainer';
@@ -92,7 +91,7 @@ interface AgentData {
 export default function TeamChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { ready, authenticated, user, getAccessToken } = useAuth();
+  const { ready, authenticated, user, getAccessToken, login } = useAuth();
 
   const {
     teamChat,
@@ -352,24 +351,16 @@ export default function TeamChatPage() {
     };
   }, [activeTab, teamChat?.chatId, loading, messagesEndRef, scrollToBottom]);
 
-  // Auth required state
+  // Auth required — redirect to feed and show login
+  useEffect(() => {
+    if (!ready || authenticated) return;
+    router.push('/feed');
+    const timer = setTimeout(() => login(), 500);
+    return () => clearTimeout(timer);
+  }, [ready, authenticated, router, login]);
+
   if (ready && !authenticated) {
-    return (
-      <PageContainer noPadding className="flex flex-col">
-        <div className="flex flex-1 items-center justify-center p-8">
-          <div className="max-w-md text-center">
-            <Users className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="mb-2 font-bold text-foreground text-xl">
-              Log in to access Agents
-            </h2>
-            <p className="mb-6 text-muted-foreground">
-              Sign in to coordinate your agents
-            </p>
-            <LoginButton />
-          </div>
-        </div>
-      </PageContainer>
-    );
+    return null;
   }
 
   // Loading state

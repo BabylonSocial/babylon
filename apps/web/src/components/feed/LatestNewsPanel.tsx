@@ -1,7 +1,6 @@
 'use client';
 
 import { type ArticleItem, logger } from '@babylon/shared';
-import { AlertCircle, Newspaper, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
@@ -284,17 +283,6 @@ export function LatestNewsPanel() {
     void fetchArticles(true);
   });
 
-  const getSentimentIcon = (sentiment?: string) => {
-    switch (sentiment) {
-      case 'positive':
-        return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case 'negative':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Newspaper className="h-4 w-4 text-[#0066FF]" />;
-    }
-  };
-
   const getTimeAgo = (timestamp: string) => {
     const now = Date.now();
     const diff = now - new Date(timestamp).getTime();
@@ -320,45 +308,38 @@ export function LatestNewsPanel() {
   };
 
   return (
-    <>
-      <div className="flex flex-1 flex-col rounded-2xl bg-sidebar p-4">
-        <h2 className="mb-3 text-left font-bold text-foreground text-lg">
-          Latest News
-        </h2>
+    <div className="flex flex-1 flex-col">
+      <h2 className="mb-3 font-bold text-foreground text-lg">
+        Latest News
+      </h2>
         {loading ? (
-          <div className="flex-1 space-y-3 pl-3">
+          <div className="flex-1 space-y-3">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />
           </div>
         ) : articles.length === 0 ? (
-          <div className="flex-1 pl-3 text-muted-foreground text-sm">
+          <div className="flex-1 text-muted-foreground text-sm">
             No articles available yet.
           </div>
         ) : (
-          <div className="flex-1 space-y-2 pl-3">
+          <div className="flex-1 space-y-2">
             {articles.map((article) => (
               <div
                 key={article.id}
                 onClick={() => handleArticleClick(article.id)}
-                className="-ml-1.5 flex cursor-pointer items-start gap-3 rounded-lg p-1.5 transition-colors duration-200 hover:bg-muted/50"
+                className="-mx-2 cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-muted/50"
               >
-                <div className="mt-0.5 shrink-0">
-                  {getSentimentIcon(article.sentiment)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground text-sm leading-snug">
-                    {article.title}
-                  </p>
-                  <p className="mt-0.5 text-muted-foreground text-xs">
-                    {article.authorOrgName} · {getTimeAgo(article.publishedAt)}
-                  </p>
-                </div>
+                <p className="font-semibold text-foreground text-sm leading-snug">
+                  {article.title}
+                </p>
+                <p className="mt-0.5 text-muted-foreground text-xs">
+                  {article.authorOrgName} · {getTimeAgo(article.publishedAt)}
+                </p>
               </div>
             ))}
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }

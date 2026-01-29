@@ -133,25 +133,25 @@ export function MarketsPanel() {
   }, [perpMarkets]);
 
   return (
-    <div className="flex flex-1 flex-col rounded-2xl bg-sidebar px-4 py-3">
-      <h2 className="mb-3 text-left font-bold text-foreground text-lg">
+    <div className="flex flex-1 flex-col">
+      <h2 className="mb-3 font-bold text-foreground text-lg">
         Markets
       </h2>
       {loading ? (
-        <div className="flex-1 space-y-3 pl-3">
+        <div className="flex-1 space-y-3">
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
         </div>
       ) : markets.length === 0 && perpMarkets.length === 0 ? (
-        <div className="flex-1 pl-3 text-muted-foreground text-sm">
+        <div className="flex-1 text-muted-foreground text-sm">
           No active markets at the moment.
         </div>
       ) : (
         <>
           {/* Top Movers Section - show when we have price changes */}
           {topMovers.length > 0 && (
-            <div className="mb-4 pl-3">
+            <div className="mb-4">
               <div className="mb-2 flex items-center gap-1.5">
                 <TrendingUp className="h-4 w-4 text-[#0066FF]" />
                 <h3 className="font-semibold text-foreground text-sm">
@@ -163,7 +163,7 @@ export function MarketsPanel() {
                   <div
                     key={`mover-${market.id}`}
                     onClick={() => handleMarketClick(market.id)}
-                    className="-ml-1.5 flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-muted/50"
+                    className="-mx-2 cursor-pointer rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-muted/50"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="line-clamp-1 font-medium text-foreground text-sm leading-snug">
@@ -194,13 +194,13 @@ export function MarketsPanel() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3 border-border border-t pt-3" />
+              <div className="-mx-2 mt-3 border-border border-t pt-3" />
             </div>
           )}
 
           {/* Trending Tokens Section - show perp futures gainers and losers */}
           {perpMarkets.length > 0 && (
-            <div className="mb-4 pl-3">
+            <div className="mb-4">
               <div className="grid grid-cols-2 gap-3">
                 {/* Top Gainers Column */}
                 <div>
@@ -222,7 +222,7 @@ export function MarketsPanel() {
                         </p>
                         <div className="mt-0.5 flex items-center justify-between gap-1">
                           <span className="truncate text-muted-foreground text-xs">
-                            ${token.currentPrice.toFixed(2)}
+                            ${token.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span
                             className={cn(
@@ -261,7 +261,7 @@ export function MarketsPanel() {
                         </p>
                         <div className="mt-0.5 flex items-center justify-between gap-1">
                           <span className="truncate text-muted-foreground text-xs">
-                            ${token.currentPrice.toFixed(2)}
+                            ${token.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span
                             className={cn(
@@ -284,13 +284,13 @@ export function MarketsPanel() {
 
           {/* Prediction Markets List - only show when there are prediction markets */}
           {markets.length > 0 && (
-            <div className="flex-1 pl-3">
+            <div className="flex-1">
               <div className="space-y-2.5">
                 {markets.slice(0, 5).map((market) => (
                   <div
                     key={market.id}
                     onClick={() => handleMarketClick(market.id)}
-                    className="-ml-1.5 flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-muted/50"
+                    className="-mx-2 cursor-pointer rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-muted/50"
                   >
                     <div className="min-w-0 flex-1">
                       {/* Market question */}
@@ -298,32 +298,20 @@ export function MarketsPanel() {
                         {market.question}
                       </p>
                       {/* Market stats */}
-                      <div className="mt-1 flex items-center gap-3">
-                        <span className="text-green-500 text-xs">
-                          Yes {(market.yesPrice * 100).toFixed(0)}%
-                        </span>
-                        <span className="text-red-500 text-xs">
-                          No {(market.noPrice * 100).toFixed(0)}%
-                        </span>
+                      <div className="mt-1 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-green-500 text-xs">
+                            Yes {(market.yesPrice * 100).toFixed(0)}%
+                          </span>
+                          <span className="text-red-500 text-xs">
+                            No {(market.noPrice * 100).toFixed(0)}%
+                          </span>
+                        </div>
                         {market.volume > 0 && (
                           <span className="text-muted-foreground text-xs">
-                            ${market.volume.toFixed(0)}
+                            Vol ${Math.round(market.volume).toLocaleString()}
                           </span>
                         )}
-                        {market.changePercent24h !== undefined &&
-                          market.changePercent24h !== 0 && (
-                            <span
-                              className={cn(
-                                'font-medium text-xs',
-                                market.changePercent24h >= 0
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              )}
-                            >
-                              {market.changePercent24h >= 0 ? '+' : ''}
-                              {market.changePercent24h.toFixed(1)}%
-                            </span>
-                          )}
                       </div>
                     </div>
                   </div>

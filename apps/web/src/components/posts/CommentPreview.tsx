@@ -4,6 +4,7 @@ import type { CommentPreviewData } from '@babylon/shared';
 import { cn, getProfileUrl } from '@babylon/shared';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { memo } from 'react';
 import { CommentInteractionBar } from '@/components/interactions';
 import { Avatar } from '@/components/shared/Avatar';
@@ -84,14 +85,14 @@ export const CommentPreview = memo(function CommentPreview({
             e.stopPropagation();
             onViewAllClick?.();
           }}
-          className="mt-3 text-primary text-sm transition-colors hover:text-primary/80"
+          className="text-primary text-sm transition-colors hover:underline"
         >
           View all {totalCommentCount} comments
         </button>
       )}
 
       {/* Line separator - shown under comments/view all when there are comments */}
-      {hasComments && <div className="mt-3 border-muted border-b" />}
+      {hasComments && <div className="mt-3 border-border border-b" />}
 
       {/* Comment input bar - shown when showInputBar is true */}
       {showInputBar && (
@@ -116,7 +117,7 @@ export const CommentPreview = memo(function CommentPreview({
 });
 
 /**
- * Individual comment preview item - full layout matching reference design
+ * Individual comment preview item - two-column layout matching post style
  */
 const CommentPreviewItem = memo(function CommentPreviewItem({
   comment,
@@ -125,41 +126,50 @@ const CommentPreviewItem = memo(function CommentPreviewItem({
   comment: CommentPreviewData;
   onClick?: () => void;
 }) {
+  const router = useRouter();
   const isNPC = isNpcIdentifier(comment.userId);
   const timeAgo = formatTimeAgo(comment.createdAt);
 
   return (
-    <div className="flex w-full items-start gap-3 text-left">
-      {/* Avatar */}
-      <Link
-        href={getProfileUrl(comment.userId, comment.userUsername)}
-        className="shrink-0 transition-opacity hover:opacity-80"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Avatar
-          id={comment.userId}
-          name={comment.userName}
-          type="actor"
-          size="sm"
-          src={comment.userAvatar || undefined}
-        />
-      </Link>
+    <div
+      className="cursor-pointer flex gap-3"
+      onClick={(e) => {
+        e.stopPropagation();
+        router.push(`/comment/${comment.id}`);
+      }}
+    >
+      {/* Left column: Avatar */}
+      <div className="flex flex-col items-center">
+        <Link
+          href={getProfileUrl(comment.userId, comment.userUsername)}
+          className="shrink-0 transition-opacity hover:opacity-80"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Avatar
+            id={comment.userId}
+            name={comment.userName}
+            type="actor"
+            size="md"
+            src={comment.userAvatar || undefined}
+          />
+        </Link>
+      </div>
 
-      {/* Content area */}
+      {/* Right column: Content */}
       <div className="min-w-0 flex-1">
-        {/* Header: Name + Handle + Timestamp */}
-        <div className="flex items-center justify-between gap-2">
+        {/* Header: Name + Username + Time */}
+        <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             <Link
               href={getProfileUrl(comment.userId, comment.userUsername)}
-              className="flex items-center gap-1 font-semibold text-foreground text-sm hover:underline"
+              className="truncate font-semibold text-foreground text-[15px] hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="truncate">{comment.userName}</span>
-              {isNPC && <VerifiedBadge size="sm" />}
+              {comment.userName}
             </Link>
+            {isNPC && <VerifiedBadge size="sm" />}
             {comment.userUsername && (
-              <span className="truncate text-muted-foreground text-sm">
+              <span className="truncate text-[15px] text-muted-foreground">
                 @{comment.userUsername}
               </span>
             )}

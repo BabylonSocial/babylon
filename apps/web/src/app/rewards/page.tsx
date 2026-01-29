@@ -20,10 +20,9 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { LoginButton } from '@/components/auth/LoginButton';
 import { LinkSocialAccountsModal } from '@/components/profile/LinkSocialAccountsModal';
 import { RewardsSkeleton } from '@/components/rewards/RewardsSkeleton';
 import { Avatar } from '@/components/shared/Avatar';
@@ -79,8 +78,17 @@ interface ReferralData {
 }
 
 export default function RewardsPage() {
+  const router = useRouter();
   const { ready, authenticated, getAccessToken, login, refresh } = useAuth();
   const { user } = useAuthStore();
+
+  // Auth required — redirect to feed and show login
+  useEffect(() => {
+    if (!ready || authenticated) return;
+    router.push('/feed');
+    const timer = setTimeout(() => login(), 500);
+    return () => clearTimeout(timer);
+  }, [ready, authenticated, router, login]);
   const searchParams = useSearchParams();
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -277,19 +285,7 @@ export default function RewardsPage() {
 
   return (
     <PageContainer noPadding className="flex flex-col">
-      {/* Auth Required Banner */}
-      {ready && !authenticated && (
-        <div className="flex flex-1 items-center justify-center p-8">
-          <div className="max-w-md text-center">
-            <Award className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="mb-2 font-bold text-foreground text-xl">log in</h2>
-            <p className="mb-6 text-muted-foreground">
-              Sign in to earn rewards and track your progress
-            </p>
-            <LoginButton />
-          </div>
-        </div>
-      )}
+      {/* Auth required — handled by redirect effect above */}
 
       {/* Loading State */}
       {authenticated && loading && <RewardsSkeleton />}
@@ -856,7 +852,7 @@ export default function RewardsPage() {
 
               {referralData.referredUsers.length === 0 ? (
                 <div className="rounded-lg border border-border bg-muted/30 py-12 text-center">
-                  <Users className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                  <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground opacity-50" />
                   <h3 className="mb-2 font-semibold text-foreground text-lg">
                     No referrals yet
                   </h3>

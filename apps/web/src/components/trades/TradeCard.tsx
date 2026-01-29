@@ -210,7 +210,7 @@ export function TradeCard({ trade }: TradeCardProps) {
   };
 
   return (
-    <div className="border-border border-b bg-card p-4 transition-colors hover:bg-muted/30">
+    <div className="border-border border-b p-4 transition-colors hover:bg-muted/30">
       <div className="flex items-start gap-3">
         {/* Avatar */}
         <div
@@ -227,19 +227,21 @@ export function TradeCard({ trade }: TradeCardProps) {
         {/* Trade Content */}
         <div className="min-w-0 flex-1">
           {/* User Info */}
-          <div className="mb-1 flex items-center gap-2">
-            <span
-              className="cursor-pointer truncate font-medium hover:underline"
-              onClick={handleProfileClick}
-            >
-              {displayName}
-            </span>
-            {trade.user.isActor && (
-              <span className="rounded bg-purple-500/20 px-2 py-0.5 text-purple-500 text-xs">
-                NPC
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className="cursor-pointer truncate font-medium hover:underline"
+                onClick={handleProfileClick}
+              >
+                {displayName}
               </span>
-            )}
-            <span className="text-muted-foreground text-xs">
+              {trade.user.isActor && (
+                <span className="rounded bg-purple-500/20 px-2 py-0.5 text-purple-500 text-xs">
+                  NPC
+                </span>
+              )}
+            </div>
+            <span className="shrink-0 text-muted-foreground text-xs">
               {formatTime(trade.timestamp)}
             </span>
           </div>

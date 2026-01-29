@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { Avatar } from '@/components/shared/Avatar';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { useLoginModal } from '@/hooks/useLoginModal';
 import { useFeedStore } from '@/stores/feedStore';
 import { useInteractionStore } from '@/stores/interactionStore';
 
@@ -39,7 +38,7 @@ import { useInteractionStore } from '@/stores/interactionStore';
  * ```
  */
 const sizeClasses = {
-  sm: 'h-8 px-2 text-xs gap-1',
+  sm: 'text-xs gap-1',
   md: 'h-10 px-3 text-sm gap-1.5',
   lg: 'h-12 px-4 text-base gap-2',
 };
@@ -81,15 +80,11 @@ export function RepostButton({
   const count = storeData?.shareCount ?? shareCount;
   const isLoading = loadingStates.get(`share-${postId}`) ?? false;
 
-  const { authenticated } = useAuth();
-  const { showLoginModal } = useLoginModal();
+  const { authenticated, login } = useAuth();
 
   const handleClick = () => {
     if (!authenticated) {
-      showLoginModal({
-        title: 'Login to Share',
-        message: 'Log in to share posts with your followers.',
-      });
+      login();
       return;
     }
     if (isShared) {

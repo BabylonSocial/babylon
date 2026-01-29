@@ -33,7 +33,7 @@ interface DeleteButtonProps {
 }
 
 const sizeClasses = {
-  sm: 'h-8 px-2 text-xs gap-1',
+  sm: 'text-xs gap-1',
   md: 'h-10 px-3 text-sm gap-1.5',
   lg: 'h-12 px-4 text-base gap-2',
 };

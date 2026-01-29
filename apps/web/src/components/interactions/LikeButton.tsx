@@ -6,7 +6,6 @@ import { Frown, Heart, Laugh } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { useLoginModal } from '@/hooks/useLoginModal';
 import { useSocialTracking } from '@/hooks/usePostHog';
 import { useInteractionStore } from '@/stores/interactionStore';
 
@@ -93,7 +92,7 @@ type ReactionType = keyof typeof REACTION_TYPES;
  * ```
  */
 const sizeClasses = {
-  sm: 'h-8 px-2 text-xs gap-1',
+  sm: 'text-xs gap-1',
   md: 'h-10 px-3 text-sm gap-1.5',
   lg: 'h-12 px-4 text-base gap-2',
 };
@@ -120,6 +119,7 @@ export function LikeButton({
   showCount = true,
   className,
 }: LikeButtonProps & { initialReactionType?: ReactionType }) {
+  const { authenticated, login } = useAuth();
   // Ensure size is properly typed for index access
   const sizeKey: 'sm' | 'md' | 'lg' = size;
   const [currentReaction, setCurrentReaction] =
@@ -130,8 +130,6 @@ export function LikeButton({
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const longPressStartTime = useRef<number>(0);
 
-  const { authenticated } = useAuth();
-  const { showLoginModal } = useLoginModal();
   const {
     toggleLike,
     toggleCommentLike,
@@ -161,15 +159,10 @@ export function LikeButton({
   }, []);
 
   const handleClick = async () => {
-    // Check authentication before allowing like
     if (!authenticated) {
-      showLoginModal({
-        title: 'Login to Like',
-        message: `Log in to like ${targetType === 'post' ? 'posts' : 'comments'} and engage with the community.`,
-      });
+      login();
       return;
     }
-
     // Trigger animation
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 300);
@@ -187,17 +180,11 @@ export function LikeButton({
   };
 
   const handleReactionSelect = async (reactionType: ReactionType) => {
-    setShowReactionPicker(false);
-
-    // Check authentication before allowing reaction
     if (!authenticated) {
-      showLoginModal({
-        title: 'Login to React',
-        message: `Log in to react to ${targetType === 'post' ? 'posts' : 'comments'} and engage with the community.`,
-      });
+      login();
       return;
     }
-
+    setShowReactionPicker(false);
     setCurrentReaction(reactionType);
 
     // Trigger animation

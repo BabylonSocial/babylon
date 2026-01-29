@@ -1,7 +1,5 @@
 'use client';
 
-import { Newspaper } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
@@ -87,20 +85,13 @@ export function MoreArticlesWidget({
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="mb-4 flex items-center gap-2">
-          <Newspaper className="h-5 w-5 text-[#0066FF]" />
-          <h3 className="font-semibold text-foreground">More Articles</h3>
-        </div>
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex gap-3">
-              <Skeleton className="h-16 w-20 shrink-0 rounded-md" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-              </div>
-            </div>
-          ))}
+        <h2 className="mb-3 font-bold text-foreground text-lg">
+          More Articles
+        </h2>
+        <div className="space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
         </div>
       </div>
     );
@@ -112,48 +103,23 @@ export function MoreArticlesWidget({
 
   return (
     <div className={className}>
-      <div className="mb-4 flex items-center gap-2">
-        <Newspaper className="h-5 w-5 text-[#0066FF]" />
-        <h3 className="font-semibold text-foreground">More Articles</h3>
-      </div>
+      <h2 className="mb-3 font-bold text-foreground text-lg">
+        More Articles
+      </h2>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         {articles.map((article) => (
           <Link
             key={article.id}
             href={`/article/${article.id}`}
-            className="group flex gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50"
+            className="-mx-2 block rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-muted/50"
           >
-            {/* Thumbnail */}
-            {article.imageUrl ? (
-              <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-md">
-                <Image
-                  src={article.imageUrl}
-                  alt={article.articleTitle || 'Article thumbnail'}
-                  fill
-                  className="object-cover transition-transform group-hover:scale-105"
-                  sizes="80px"
-                />
-              </div>
-            ) : (
-              <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-md bg-muted">
-                <Newspaper className="h-6 w-6 text-muted-foreground" />
-              </div>
-            )}
-
-            {/* Article info */}
-            <div className="flex min-w-0 flex-1 flex-col justify-center">
-              <h4 className="line-clamp-2 font-medium text-foreground text-sm leading-tight transition-colors group-hover:text-[#0066FF]">
-                {article.articleTitle || 'Untitled Article'}
-              </h4>
-              <div className="mt-1 flex items-center gap-2 text-muted-foreground text-xs">
-                <span className="truncate">{article.authorName}</span>
-                <span>·</span>
-                <span className="shrink-0">
-                  {formatTimeAgo(article.timestamp)}
-                </span>
-              </div>
-            </div>
+            <p className="font-semibold text-foreground text-sm leading-snug">
+              {article.articleTitle || 'Untitled Article'}
+            </p>
+            <p className="mt-0.5 text-muted-foreground text-xs">
+              {article.authorName} · {formatTimeAgo(article.timestamp)}
+            </p>
           </Link>
         ))}
       </div>

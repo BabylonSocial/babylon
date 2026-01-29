@@ -579,9 +579,9 @@ export function FeedCommentSection({
           )}
 
           {/* Comments list */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="flex-1 overflow-y-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
+              <div className="flex items-center justify-center px-4 py-8">
                 <div className="w-full space-y-3">
                   <Skeleton className="h-20 w-full" />
                   <Skeleton className="h-20 w-full" />
@@ -594,7 +594,7 @@ export function FeedCommentSection({
                 description="Be the first to comment!"
               />
             ) : (
-              <div className="space-y-4">
+              <div>
                 {sortedComments.map((comment) => (
                   <CommentCard
                     key={comment.id}

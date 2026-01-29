@@ -11,7 +11,7 @@ import {
   type Organization,
   POST_TYPES,
 } from '@babylon/shared';
-import { ArrowLeft, Coins, MessageCircle, Search } from 'lucide-react';
+import { ArrowLeft, Coins, FileText, MessageCircle, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -34,6 +34,7 @@ import {
 } from '@/components/profile/ProfileReplyCard';
 import { ProfileWidget } from '@/components/profile/ProfileWidget';
 import { Avatar } from '@/components/shared/Avatar';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { PageContainer } from '@/components/shared/PageContainer';
 import {
   FeedSkeleton,
@@ -695,11 +696,19 @@ export default function ActorProfilePage() {
 
     return (
       <PageContainer noPadding className="min-h-screen">
-        <div className="mx-auto w-full max-w-[700px]">
-          <ProfileHeaderSkeleton />
-          <div className="mt-4 border-border/5 border-t">
-            <FeedSkeleton count={5} />
+        <div className="flex flex-1 overflow-hidden">
+          {/* Main Content */}
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              <ProfileHeaderSkeleton />
+              <div className="mt-4 border-border/5 border-t">
+                <FeedSkeleton count={5} />
+              </div>
+            </div>
           </div>
+
+          {/* Right: Widget placeholder */}
+          <div className="hidden w-96 flex-shrink-0 flex-col bg-sidebar p-4 xl:flex" />
         </div>
       </PageContainer>
     );
@@ -1035,13 +1044,15 @@ export default function ActorProfilePage() {
                     <FeedSkeleton count={5} />
                   </div>
                 ) : replies.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <p className="text-muted-foreground">
-                      {searchQuery
-                        ? 'No replies found matching your search'
-                        : 'No replies yet'}
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={MessageCircle}
+                    title={searchQuery ? 'No replies found' : 'No replies yet'}
+                    description={
+                      searchQuery
+                        ? 'Try adjusting your search terms'
+                        : "Replies to other posts will appear here"
+                    }
+                  />
                 ) : (
                   <div>
                     {replies
@@ -1073,13 +1084,15 @@ export default function ActorProfilePage() {
                   <FeedSkeleton count={5} />
                 </div>
               ) : filteredPosts.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-muted-foreground">
-                    {searchQuery
-                      ? 'No posts found matching your search'
-                      : 'No posts yet'}
-                  </p>
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  title={searchQuery ? 'No posts found' : 'No posts yet'}
+                  description={
+                    searchQuery
+                      ? 'Try adjusting your search terms'
+                      : "Posts will appear here once published"
+                  }
+                />
               ) : (
                 <div className="space-y-0">
                   {filteredPosts.map((item, i) => {

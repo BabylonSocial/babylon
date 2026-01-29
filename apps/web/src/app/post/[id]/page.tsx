@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowLeft, MessageCircle } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import { FeedCommentSection } from '@/components/feed/FeedCommentSection';
@@ -9,6 +10,17 @@ import { PostCard } from '@/components/posts/PostCard';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useInteractionStore } from '@/stores/interactionStore';
+
+const WidgetSidebar = dynamic(
+  () =>
+    import('@/components/shared/WidgetSidebar').then((m) => ({
+      default: m.WidgetSidebar,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="hidden w-96 flex-none xl:block" />,
+  }
+);
 
 interface PostPageProps {
   params: Promise<{ id: string }>;
@@ -175,48 +187,88 @@ export default function PostPage({ params }: PostPageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="w-full max-w-feed space-y-4 px-4 py-3">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-32 w-full" />
+      <PageContainer noPadding className="!overflow-visible flex w-full flex-col">
+        <div className="relative flex min-h-screen flex-1">
+          {/* Desktop loading */}
+          <div className="hidden min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.15)] lg:flex lg:border-r lg:border-l">
+            <div className="flex-1 bg-background">
+              <div className="w-full lg:mx-auto lg:max-w-[700px]">
+                <div className="space-y-4 px-4 py-6">
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-64 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <WidgetSidebar showLatestNews={false} showMarkets={false} />
+          {/* Mobile loading */}
+          <div className="flex flex-1 flex-col lg:hidden">
+            <div className="space-y-4 px-4 py-6">
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   if (error || !post) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-3">
-        <div className="text-center">
-          <h1 className="mb-2 font-bold text-2xl">Post Not Found</h1>
-          <p className="mb-4 text-muted-foreground">
-            {error || 'The post you are looking for does not exist.'}
-          </p>
-          <button
-            onClick={() => router.push('/feed')}
-            className="rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Back to Feed
-          </button>
+      <PageContainer noPadding className="!overflow-visible flex w-full flex-col">
+        <div className="relative flex min-h-screen flex-1">
+          {/* Desktop error */}
+          <div className="hidden min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.15)] lg:flex lg:border-r lg:border-l">
+            <div className="flex flex-1 flex-col items-center justify-center bg-background">
+              <div className="text-center">
+                <h1 className="mb-2 font-bold text-2xl">Post Not Found</h1>
+                <p className="mb-4 text-muted-foreground">
+                  {error || 'The post you are looking for does not exist.'}
+                </p>
+                <button
+                  onClick={() => router.push('/feed')}
+                  className="rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Back to Feed
+                </button>
+              </div>
+            </div>
+          </div>
+          <WidgetSidebar showLatestNews={false} showMarkets={false} />
+          {/* Mobile error */}
+          <div className="flex flex-1 flex-col items-center justify-center lg:hidden">
+            <div className="text-center px-4">
+              <h1 className="mb-2 font-bold text-2xl">Post Not Found</h1>
+              <p className="mb-4 text-muted-foreground">
+                {error || 'The post you are looking for does not exist.'}
+              </p>
+              <button
+                onClick={() => router.push('/feed')}
+                className="rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Back to Feed
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
     <PageContainer noPadding className="!overflow-visible flex w-full flex-col">
-      {/* Desktop: Multi-column layout matching feed */}
-      <div className="relative hidden flex-1 lg:flex">
-        {/* Content area with same borders as feed */}
-        <div className="flex min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.5)] lg:border-r lg:border-l">
+      <div className="relative flex min-h-screen flex-1">
+        {/* Desktop: Post content area */}
+        <div className="hidden min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.15)] lg:flex lg:border-r lg:border-l">
           {/* Desktop: Top bar with back button */}
           <div className="sticky top-0 z-10 shrink-0 bg-background shadow-sm">
-            <div className="px-3 sm:px-4 lg:px-6">
-              <div className="flex items-center gap-4 py-3">
+            <div className="px-6 py-4">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => router.push('/feed')}
-                  className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <ArrowLeft size={20} />
                 </button>
@@ -229,7 +281,7 @@ export default function PostPage({ params }: PostPageProps) {
           </div>
 
           {/* Post content */}
-          <div className="flex-1 overflow-y-auto bg-background">
+          <div className="flex-1 bg-background">
             <div className="w-full lg:mx-auto lg:max-w-[700px]">
               {/* Post */}
               <div className="border-border border-b">
@@ -314,22 +366,22 @@ export default function PostPage({ params }: PostPageProps) {
               </div>
 
               {/* Comments Section - Always visible below the post */}
-              <div className="border-border border-b">
-                <FeedCommentSection postId={postId} postData={post} />
-              </div>
+              <FeedCommentSection postId={postId} postData={post} />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile/Tablet: Single column layout */}
-      <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
+        {/* Widget sidebar - desktop only */}
+        <WidgetSidebar showLatestNews={false} showMarkets={false} />
+
+        {/* Mobile/Tablet: Single column layout */}
+        <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
         {/* Mobile header */}
         <div className="sticky top-0 z-10 shrink-0 border-border border-b bg-background">
           <div className="flex items-center gap-4 px-4 py-3">
             <button
               onClick={() => router.push('/feed')}
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <ArrowLeft size={20} />
             </button>
@@ -424,11 +476,10 @@ export default function PostPage({ params }: PostPageProps) {
           </div>
 
           {/* Comments Section - Always visible below the post */}
-          <div className="border-border border-b">
-            <FeedCommentSection postId={postId} postData={post} />
-          </div>
+          <FeedCommentSection postId={postId} postData={post} />
         </div>
       </div>
+    </div>
 
       {/* Comment Modal */}
       {isCommentModalOpen && (

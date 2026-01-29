@@ -248,7 +248,7 @@ export function EntitySearchAutocomplete({
         onKeyDown={handleKeyDown}
         className={cn(
           'w-full',
-          'border border-border bg-muted/50',
+          'border border-border bg-transparent',
           'focus:border-border focus:outline-none',
           'transition-all duration-200',
           'text-foreground',

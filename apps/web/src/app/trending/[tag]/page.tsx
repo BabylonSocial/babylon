@@ -1,11 +1,24 @@
 'use client';
 
 import { logger } from '@babylon/shared';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, TrendingUp } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { PostCard } from '@/components/posts/PostCard';
 import { PageContainer } from '@/components/shared/PageContainer';
+import { Skeleton } from '@/components/shared/Skeleton';
+
+const WidgetSidebar = dynamic(
+  () =>
+    import('@/components/shared/WidgetSidebar').then((m) => ({
+      default: m.WidgetSidebar,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="hidden w-96 flex-none xl:block" />,
+  }
+);
 
 interface PostData {
   id: string;
@@ -109,181 +122,132 @@ export default function TrendingTagPage() {
     }
   };
 
-  return (
-    <PageContainer
-      noPadding
-      className="flex min-h-screen w-full flex-col overflow-visible"
-    >
-      {/* Mobile/Tablet: Header */}
-      <div className="sticky top-0 z-10 shrink-0 border-border border-b bg-background px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="rounded-full p-2 transition-colors hover:bg-muted"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="flex-1">
-            {tagInfo ? (
-              <>
-                <h1 className="font-bold text-2xl">{tagInfo.displayName}</h1>
-                {tagInfo.category && (
-                  <p className="text-muted-foreground text-sm">
-                    {tagInfo.category} · Trending
-                  </p>
-                )}
-              </>
-            ) : (
-              <h1 className="font-bold text-2xl">{decodeURIComponent(tag)}</h1>
-            )}
+  const headerTitle = tagInfo?.displayName || decodeURIComponent(tag);
+  const headerCategory = tagInfo?.category || null;
+
+  const feedContent = (
+    <>
+      {loading ? (
+        <div className="space-y-4 px-4 py-6">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <h2 className="mb-2 font-semibold text-xl">No posts found</h2>
+            <p className="text-muted-foreground">
+              No posts have been tagged with &quot;
+              {tagInfo?.displayName || tag}&quot; yet.
+            </p>
           </div>
         </div>
-      </div>
+      ) : (
+        <div>
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} showCommentInputBar={false} />
+          ))}
 
-      {/* Desktop: Multi-column layout with sidebar */}
-      <div className="hidden min-h-0 flex-1 lg:flex">
-        {/* Left: Feed area */}
-        <div className="flex min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.5)] border-r border-l">
-          {/* Desktop Header */}
+          {hasMore && (
+            <div className="py-4 text-center">
+              {loadingMore ? (
+                <div className="text-muted-foreground text-sm">
+                  Loading more posts...
+                </div>
+              ) : (
+                <button
+                  onClick={handleLoadMore}
+                  className="rounded-lg bg-primary px-6 py-2 text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Load More
+                </button>
+              )}
+            </div>
+          )}
+
+          {!hasMore && posts.length > 0 && (
+            <div className="py-4 text-center text-muted-foreground text-xs">
+              You&apos;re all caught up.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Spacer for login bar */}
+      <div className="pb-24" />
+    </>
+  );
+
+  return (
+    <PageContainer noPadding className="flex w-full flex-col">
+      <div className="relative flex min-h-screen flex-1">
+        {/* Desktop: Content area */}
+        <div className="hidden min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.15)] lg:flex lg:border-r lg:border-l">
+          {/* Desktop header */}
           <div className="sticky top-0 z-10 shrink-0 bg-background shadow-sm">
             <div className="px-6 py-4">
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => router.back()}
-                  className="rounded-full p-2 transition-colors hover:bg-muted"
+                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   aria-label="Go back"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft size={20} />
                 </button>
-                <div className="flex-1">
-                  {tagInfo ? (
-                    <>
-                      <h1 className="font-bold text-2xl">
-                        {tagInfo.displayName}
-                      </h1>
-                      {tagInfo.category && (
-                        <p className="text-muted-foreground text-sm">
-                          {tagInfo.category} · Trending
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <h1 className="font-bold text-2xl">
-                      {decodeURIComponent(tag)}
-                    </h1>
-                  )}
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-[#0066FF]" />
+                  <h1 className="font-bold text-xl">{headerTitle}</h1>
                 </div>
+                {headerCategory && (
+                  <p className="ml-auto text-muted-foreground text-sm">
+                    {headerCategory} · Trending
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Feed content - Scrollable */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-muted-foreground">Loading posts...</div>
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <h2 className="mb-2 font-semibold text-xl">No posts found</h2>
-                  <p className="text-muted-foreground">
-                    No posts have been tagged with &quot;
-                    {tagInfo?.displayName || tag}&quot; yet.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="mx-auto max-w-feed space-y-0 px-6 py-4">
-                {posts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    showCommentInputBar={false}
-                    onCommentClick={() => router.push(`/post/${post.id}`)}
-                  />
-                ))}
-
-                {hasMore && (
-                  <div className="py-4 text-center">
-                    {loadingMore ? (
-                      <div className="text-muted-foreground text-sm">
-                        Loading more posts...
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleLoadMore}
-                        className="rounded-lg bg-primary px-6 py-2 text-primary-foreground transition-opacity hover:opacity-90"
-                      >
-                        Load More
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {!hasMore && posts.length > 0 && (
-                  <div className="py-4 text-center text-muted-foreground text-xs">
-                    You&apos;re all caught up.
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Feed content */}
+          <div className="flex-1 bg-background">
+            <div className="w-full lg:mx-auto lg:max-w-[700px]">
+              {feedContent}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile/Tablet: Content */}
-      <div className="flex w-full flex-1 overflow-y-auto overflow-x-hidden bg-background lg:hidden">
-        {loading ? (
-          <div className="flex w-full items-center justify-center py-12">
-            <div className="text-muted-foreground">Loading posts...</div>
-          </div>
-        ) : posts.length === 0 ? (
-          <div className="flex w-full items-center justify-center py-12">
-            <div className="px-4 text-center">
-              <h2 className="mb-2 font-semibold text-xl">No posts found</h2>
-              <p className="text-muted-foreground">
-                No posts have been tagged with &quot;
-                {tagInfo?.displayName || tag}&quot; yet.
-              </p>
+        {/* Widget sidebar - desktop only */}
+        <WidgetSidebar />
+
+        {/* Mobile/Tablet: Single column layout */}
+        <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
+          {/* Mobile header */}
+          <div className="sticky top-0 z-10 shrink-0 border-border border-b bg-background">
+            <div className="flex items-center gap-4 px-4 py-3">
+              <button
+                onClick={() => router.back()}
+                className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Go back"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-[#0066FF]" />
+                <h1 className="font-bold text-xl">{headerTitle}</h1>
+              </div>
+              {headerCategory && (
+                <p className="ml-auto text-muted-foreground text-sm">
+                  {headerCategory} · Trending
+                </p>
+              )}
             </div>
           </div>
-        ) : (
-          <div className="w-full px-4 py-4">
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                showCommentInputBar={false}
-                onCommentClick={() => router.push(`/post/${post.id}`)}
-              />
-            ))}
 
-            {hasMore && (
-              <div className="py-4 text-center">
-                {loadingMore ? (
-                  <div className="text-muted-foreground text-sm">
-                    Loading more posts...
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleLoadMore}
-                    className="rounded-lg bg-primary px-6 py-2 text-primary-foreground transition-opacity hover:opacity-90"
-                  >
-                    Load More
-                  </button>
-                )}
-              </div>
-            )}
-
-            {!hasMore && posts.length > 0 && (
-              <div className="py-4 text-center text-muted-foreground text-xs">
-                You&apos;re all caught up.
-              </div>
-            )}
+          {/* Mobile content */}
+          <div className="flex-1 overflow-y-auto">
+            {feedContent}
           </div>
-        )}
+        </div>
       </div>
     </PageContainer>
   );

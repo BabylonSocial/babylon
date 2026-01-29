@@ -1,13 +1,7 @@
 'use client';
 
 import { formatCurrency } from '@babylon/shared';
-import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Trophy,
-  Users,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -29,7 +23,10 @@ const LeaderboardWidgetSidebar = dynamic(
     import('@/components/leaderboard/LeaderboardWidgetSidebar').then((m) => ({
       default: m.LeaderboardWidgetSidebar,
     })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => <div className="hidden w-96 flex-none xl:block" />,
+  }
 );
 
 interface LeaderboardUser {
@@ -240,15 +237,6 @@ export default function LeaderboardPage() {
 
     return (
       <div className="flex-1 overflow-y-auto">
-        <div className="mb-4 flex items-center gap-3 px-4 pt-4">
-          <Users className="h-5 w-5 text-[#0066FF]" />
-          <h2 className="font-semibold text-foreground text-lg">
-            {leaderboardData.leaderboard.length}{' '}
-            {leaderboardData.leaderboard.length === 1 ? 'Player' : 'Players'}
-          </h2>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </div>
-
         <div className="space-y-0">
           {leaderboardData.leaderboard.map((player) => {
             const isCurrentUser =
@@ -317,7 +305,7 @@ export default function LeaderboardPage() {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
                         <h3 className="truncate font-semibold text-foreground">
                           {player.displayName || player.username || 'Anonymous'}
                         </h3>
@@ -351,13 +339,6 @@ export default function LeaderboardPage() {
                           <div className="text-muted-foreground text-xs">
                             {activePointsLabel}
                           </div>
-                        </div>
-                        <div className="shrink-0">
-                          <RankBadge
-                            rank={player.rank}
-                            size="md"
-                            showLabel={false}
-                          />
                         </div>
                         {authenticated && !isCurrentUser && (
                           <div
@@ -463,7 +444,7 @@ export default function LeaderboardPage() {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
                         <h3 className="truncate font-semibold text-foreground text-sm sm:text-base">
                           {player.displayName || player.username || 'Anonymous'}
                         </h3>
@@ -588,18 +569,16 @@ export default function LeaderboardPage() {
       {/* Desktop: Content + Widgets layout */}
       <div className="hidden flex-1 overflow-hidden xl:flex">
         {/* Main content */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-[rgba(120,120,120,0.5)] lg:border-r lg:border-l">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-[rgba(120,120,120,0.15)] lg:border-r lg:border-l">
           {/* Header with tabs */}
           <div className="sticky top-0 z-10 flex-shrink-0 bg-background shadow-sm">
-            <div className="px-3 sm:px-4 lg:px-6">
-              <LeaderboardToggle
-                activeTab={selectedTab}
-                onTabChange={handleTabChange}
-              />
-              <p className="py-3 text-muted-foreground text-sm">
-                {tabDescriptions[selectedTab]}
-              </p>
-            </div>
+            <LeaderboardToggle
+              activeTab={selectedTab}
+              onTabChange={handleTabChange}
+            />
+            <p className="px-3 py-3 text-muted-foreground text-sm sm:px-4 lg:px-6">
+              {tabDescriptions[selectedTab]}
+            </p>
           </div>
 
           {/* Content */}
@@ -617,15 +596,13 @@ export default function LeaderboardPage() {
       <div className="flex flex-1 flex-col overflow-hidden xl:hidden">
         {/* Header with tabs */}
         <div className="sticky top-0 z-10 flex-shrink-0 bg-background shadow-sm">
-          <div className="px-3 sm:px-4">
-            <LeaderboardToggle
-              activeTab={selectedTab}
-              onTabChange={handleTabChange}
-            />
-            <p className="py-2 text-muted-foreground text-xs sm:text-sm">
-              {tabDescriptions[selectedTab]}
-            </p>
-          </div>
+          <LeaderboardToggle
+            activeTab={selectedTab}
+            onTabChange={handleTabChange}
+          />
+          <p className="px-3 py-2 text-muted-foreground text-xs sm:px-4 sm:text-sm">
+            {tabDescriptions[selectedTab]}
+          </p>
         </div>
 
         {/* Content */}

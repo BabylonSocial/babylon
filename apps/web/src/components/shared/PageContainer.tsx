@@ -31,7 +31,7 @@ export const PageContainer = forwardRef<HTMLDivElement, PageContainerProps>(
         ref={ref}
         className={cn(
           // Sharp corners, simple boxy layout
-          'overflow-hidden bg-background',
+          'overflow-x-hidden bg-background',
           'h-full min-h-full w-full',
           // Desktop: Simple container - use full height
           'md:h-full',

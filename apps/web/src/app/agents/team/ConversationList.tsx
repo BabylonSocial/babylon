@@ -1,7 +1,14 @@
 'use client';
 
 import { cn } from '@babylon/shared';
-import { Check, Loader2, MessageSquarePlus, Pencil, X } from 'lucide-react';
+import {
+  Check,
+  Loader2,
+  MessageCircle,
+  MessageSquarePlus,
+  Pencil,
+  X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -120,9 +127,15 @@ export function ConversationList({
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : conversations.length === 0 ? (
-          <p className="py-4 text-center text-muted-foreground text-xs">
-            No conversations yet
-          </p>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <MessageCircle className="mb-4 h-12 w-12 text-muted-foreground opacity-50" />
+            <p className="font-medium text-muted-foreground text-sm">
+              No conversations yet
+            </p>
+            <p className="text-muted-foreground/70 text-xs">
+              Start a new chat with your team
+            </p>
+          </div>
         ) : (
           conversations.map((conversation) => (
             <div

@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { LoginButton } from '@/components/auth/LoginButton';
 import { Avatar } from '@/components/shared/Avatar';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { Skeleton } from '@/components/shared/Skeleton';
@@ -65,7 +65,8 @@ interface Agent {
 }
 
 export default function AgentsPage() {
-  const { authenticated, ready, getAccessToken } = useAuth();
+  const router = useRouter();
+  const { authenticated, ready, getAccessToken, login } = useAuth();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'idle'>('all');
@@ -111,22 +112,16 @@ export default function AgentsPage() {
     }
   }, [ready, authenticated, fetchAgents]);
 
+  // Auth required — redirect to feed and show login
+  useEffect(() => {
+    if (!ready || authenticated) return;
+    router.push('/feed');
+    const timer = setTimeout(() => login(), 500);
+    return () => clearTimeout(timer);
+  }, [ready, authenticated, router, login]);
+
   if (ready && !authenticated) {
-    return (
-      <PageContainer noPadding className="flex flex-col">
-        <div className="flex flex-1 items-center justify-center p-8">
-          <div className="max-w-md text-center">
-            <Bot className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="mb-2 font-bold text-foreground text-xl">log in</h2>
-            <p className="mb-6 text-muted-foreground">
-              Sign in to create and manage AI agents that can chat and trade
-              autonomously
-            </p>
-            <LoginButton />
-          </div>
-        </div>
-      </PageContainer>
-    );
+    return null;
   }
 
   return (

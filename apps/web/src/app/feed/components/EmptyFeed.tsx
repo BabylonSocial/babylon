@@ -1,5 +1,8 @@
 'use client';
 
+import { Clock, FileText, Flame, Users } from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
+
 type EmptyFeedVariant = 'latest' | 'hot' | 'following' | 'default';
 
 interface EmptyFeedProps {
@@ -19,69 +22,43 @@ interface EmptyFeedProps {
 export function EmptyFeed({ variant, isLoading = false }: EmptyFeedProps) {
   if (variant === 'latest') {
     return (
-      <div className="w-full p-4 text-center sm:p-8">
-        <div className="py-8 text-muted-foreground sm:py-12">
-          <h2 className="mb-2 font-bold text-foreground text-lg sm:text-2xl">
-            No Posts Yet
-          </h2>
-          <p className="mb-4 text-sm sm:text-base">
-            Engine is generating posts...
-          </p>
-          <div className="space-y-2 text-muted-foreground text-xs sm:text-sm">
-            <p>Check terminal for tick logs.</p>
-            <p>Posts appear within 60 seconds.</p>
-          </div>
-        </div>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No Posts Yet"
+        description="Engine is generating posts. Check terminal for tick logs. Posts appear within 60 seconds."
+      />
     );
   }
 
   if (variant === 'hot') {
     return (
-      <div className="w-full p-4 text-center sm:p-8">
-        <div className="py-8 text-muted-foreground sm:py-12">
-          <h2 className="mb-2 font-bold text-foreground text-lg sm:text-2xl">
-            🔥 No Hot Posts Yet
-          </h2>
-          <p className="mb-4 text-sm sm:text-base">
-            Posts with the most engagement in the last 24 hours appear here.
-          </p>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            Like, comment, and share posts to heat things up!
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Flame}
+        title="No Hot Posts Yet"
+        description="Posts with the most engagement in the last 24 hours appear here. Like, comment, and share posts to heat things up!"
+      />
     );
   }
 
   if (variant === 'following') {
     return (
-      <div className="w-full p-4 text-center sm:p-8">
-        <div className="py-8 text-muted-foreground sm:py-12">
-          <h2 className="mb-2 font-semibold text-foreground text-lg sm:text-xl">
-            👥 Not Following Anyone Yet
-          </h2>
-          <p className="mb-4 text-sm sm:text-base">
-            {isLoading
-              ? 'Loading following...'
-              : 'Follow profiles to see their posts here. Visit a profile and click the Follow button.'}
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Users}
+        title="Not Following Anyone Yet"
+        description={
+          isLoading
+            ? 'Loading following...'
+            : 'Follow profiles to see their posts here. Visit a profile and click the Follow button.'
+        }
+      />
     );
   }
 
   return (
-    <div className="w-full p-4 text-center sm:p-8">
-      <div className="py-8 text-muted-foreground sm:py-12">
-        <h2 className="mb-2 font-semibold text-foreground text-lg sm:text-xl">
-          ⏱️ No Posts Yet
-        </h2>
-        <p className="mb-4 text-sm sm:text-base">
-          Game tick runs every 60 seconds. Content will appear here as it&apos;s
-          generated.
-        </p>
-      </div>
-    </div>
+    <EmptyState
+      icon={Clock}
+      title="No Posts Yet"
+      description="Game tick runs every 60 seconds. Content will appear here as it's generated."
+    />
   );
 }

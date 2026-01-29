@@ -24,7 +24,10 @@ const WidgetSidebar = dynamic(
     import('@/components/shared/WidgetSidebar').then((m) => ({
       default: m.WidgetSidebar,
     })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => <div className="hidden w-96 flex-none xl:block" />,
+  }
 );
 
 const TradesFeed = dynamic(
@@ -288,17 +291,13 @@ export function FeedClient() {
   };
 
   return (
-    <PageContainer noPadding className="!overflow-visible flex w-full flex-col">
+    <PageContainer noPadding className="flex w-full flex-col">
       <div ref={scrollContainerRef} className="relative flex flex-1">
         {/* Feed area */}
-        <div className="flex min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.5)] lg:border-r lg:border-l">
+        <div className="flex min-w-0 flex-1 flex-col border-[rgba(120,120,120,0.15)] lg:border-r lg:border-l">
           {/* Header with tabs */}
           <div className="sticky top-0 z-10 flex-shrink-0 bg-background shadow-sm">
-            <div className="px-3 sm:px-4 lg:px-6">
-              <div className="flex items-center justify-between lg:mb-3">
-                <FeedToggle activeTab={tab} onTabChange={setTab} />
-              </div>
-            </div>
+            <FeedToggle activeTab={tab} onTabChange={setTab} />
           </div>
 
           {/* Feed content */}
