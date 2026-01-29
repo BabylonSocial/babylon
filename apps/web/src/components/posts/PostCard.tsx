@@ -289,9 +289,11 @@ export const PostCard = memo(function PostCard({
               />
             </Link>
             {/* Connecting line to comments */}
-            {showCommentPreviews && !isDetail && (post.commentPreviews?.length ?? 0) > 0 && (
-              <div className="mt-2 w-0.5 flex-1 bg-border" />
-            )}
+            {showCommentPreviews &&
+              !isDetail &&
+              (post.commentPreviews?.length ?? 0) > 0 && (
+                <div className="mt-2 w-0.5 flex-1 bg-border" />
+              )}
           </div>
         )}
 
@@ -304,14 +306,12 @@ export const PostCard = memo(function PostCard({
               <div className="flex min-w-0 flex-1 items-center gap-1.5">
                 <Link
                   href={getProfileUrl(displayAuthorId, displayAuthorUsername)}
-                  className="truncate font-semibold text-foreground text-[15px] hover:underline"
+                  className="truncate font-semibold text-[15px] text-foreground hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {displayAuthorName}
                 </Link>
-                {showVerifiedBadge && (
-                  <VerifiedBadge size="sm" />
-                )}
+                {showVerifiedBadge && <VerifiedBadge size="sm" />}
                 <Link
                   href={getProfileUrl(displayAuthorId, displayAuthorUsername)}
                   className="truncate text-[15px] text-muted-foreground hover:underline"
@@ -348,41 +348,157 @@ export const PostCard = memo(function PostCard({
 
           {/* Post Content */}
           {post.type === 'article' ? (
-        // Article card - Show title, summary, and "Read more" button
-        <div className="mb-3 w-full">
-          {/* Article title with Read More Button */}
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <h2 className="flex-1 font-bold text-foreground text-lg leading-tight sm:text-xl">
-              {post.articleTitle || 'Untitled Article'}
-            </h2>
-            {!isDetail && (
-              <button
-                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-[#0066FF] px-3 py-2 font-semibold text-primary-foreground text-sm transition-colors hover:bg-[#2952d9]"
-                onClick={handleCardClick}
+            // Article card - Show title, summary, and "Read more" button
+            <div className="mb-3 w-full">
+              {/* Article title with Read More Button */}
+              <div className="mb-3 flex items-start justify-between gap-4">
+                <h2 className="flex-1 font-bold text-foreground text-lg leading-tight sm:text-xl">
+                  {post.articleTitle || 'Untitled Article'}
+                </h2>
+                {!isDetail && (
+                  <button
+                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-[#0066FF] px-3 py-2 font-semibold text-primary-foreground text-sm transition-colors hover:bg-[#2952d9]"
+                    onClick={handleCardClick}
+                  >
+                    Read Full Article →
+                  </button>
+                )}
+              </div>
+
+              {/* Article metadata */}
+              <div className="mb-4 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
+                {post.byline && <span>{post.byline}</span>}
+              </div>
+
+              {/* Article summary */}
+              <div className="mb-3 whitespace-pre-wrap break-words text-[15px] text-foreground leading-normal">
+                {post.content}
+              </div>
+            </div>
+          ) : post.isRepost ? (
+            // Repost (with or without quote comment) - show embedded card
+            <div className="mb-4 w-full">
+              {/* Quote comment (if present) */}
+              {post.quoteComment && (
+                <div className="post-content mb-3 whitespace-pre-wrap break-words text-[15px] text-foreground leading-normal">
+                  <TaggedText
+                    text={post.quoteComment}
+                    onTagClick={(tag) => {
+                      if (tag.startsWith('@')) {
+                        // Handle @mentions - route to profile
+                        const username = tag.slice(1);
+                        router.push(getProfileUrl('', username));
+                      } else if (tag.startsWith('$')) {
+                        // Handle $cashtags - route to markets
+                        const symbol = tag.slice(1);
+                        router.push(
+                          `/markets?search=${encodeURIComponent(symbol)}`
+                        );
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Embedded original post */}
+              <div
+                className={cn(
+                  'rounded-xl border border-border p-4',
+                  'overflow-hidden transition-colors',
+                  quotedPostId
+                    ? 'cursor-pointer hover:bg-muted/50'
+                    : 'cursor-default'
+                )}
+                role={quotedPostId ? 'link' : undefined}
+                tabIndex={quotedPostId ? 0 : undefined}
+                aria-label={quotedPostId ? 'View quoted post' : undefined}
+                onClick={handleQuotedPostClick}
+                onKeyDown={handleQuotedPostKeyDown}
               >
-                Read Full Article →
-              </button>
-            )}
-          </div>
+                {post.originalPost ? (
+                  <>
+                    {/* Original post author */}
+                    <div className="mb-2 flex items-center gap-2">
+                      <Link
+                        href={getProfileUrl(
+                          post.originalPost.authorId,
+                          post.originalPost.authorUsername
+                        )}
+                        className="shrink-0 transition-opacity hover:opacity-80"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Avatar
+                          id={post.originalPost.authorId}
+                          name={post.originalPost.authorName}
+                          type="actor"
+                          size="sm"
+                          className="!h-5 !w-5"
+                          src={
+                            post.originalPost.authorProfileImageUrl || undefined
+                          }
+                        />
+                      </Link>
+                      <div className="flex min-w-0 flex-1 items-center gap-1">
+                        <Link
+                          href={getProfileUrl(
+                            post.originalPost.authorId,
+                            post.originalPost.authorUsername
+                          )}
+                          className="truncate font-semibold text-foreground text-sm hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {post.originalPost.authorName}
+                        </Link>
+                        {isNpcIdentifier(post.originalPost.authorId) && (
+                          <VerifiedBadge size="sm" />
+                        )}
+                        <Link
+                          href={getProfileUrl(
+                            post.originalPost.authorId,
+                            post.originalPost.authorUsername
+                          )}
+                          className="truncate text-foreground/50 text-sm hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          @
+                          {post.originalPost.authorUsername ||
+                            post.originalPost.authorId}
+                        </Link>
+                      </div>
+                    </div>
 
-          {/* Article metadata */}
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
-            {post.byline && <span>{post.byline}</span>}
-          </div>
-
-          {/* Article summary */}
-          <div className="mb-3 whitespace-pre-wrap break-words text-[15px] text-foreground leading-normal">
-            {post.content}
-          </div>
-        </div>
-      ) : post.isRepost ? (
-        // Repost (with or without quote comment) - show embedded card
-        <div className="mb-4 w-full">
-          {/* Quote comment (if present) */}
-          {post.quoteComment && (
-            <div className="post-content mb-3 whitespace-pre-wrap break-words text-[15px] text-foreground leading-normal">
+                    {/* Original post content */}
+                    <div className="whitespace-pre-wrap break-words text-[15px] text-foreground/90 leading-normal">
+                      <TaggedText
+                        text={post.originalPost.content}
+                        onTagClick={(tag) => {
+                          if (tag.startsWith('@')) {
+                            // Handle @mentions - route to profile
+                            const username = tag.slice(1);
+                            router.push(getProfileUrl('', username));
+                          } else if (tag.startsWith('$')) {
+                            // Handle $cashtags - route to markets
+                            const symbol = tag.slice(1);
+                            router.push(
+                              `/markets?search=${encodeURIComponent(symbol)}`
+                            );
+                          }
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-4 text-center text-foreground/50 italic">
+                    This post has been deleted
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            // Regular post - Show content as normal
+            <div className="post-content mb-3 w-full whitespace-pre-wrap break-words text-[15px] text-foreground leading-normal">
               <TaggedText
-                text={post.quoteComment}
+                text={post.content || ''}
                 onTagClick={(tag) => {
                   if (tag.startsWith('@')) {
                     // Handle @mentions - route to profile
@@ -400,116 +516,6 @@ export const PostCard = memo(function PostCard({
             </div>
           )}
 
-          {/* Embedded original post */}
-          <div
-            className={cn(
-              'rounded-xl border border-border p-4',
-              'overflow-hidden transition-colors',
-              quotedPostId
-                ? 'cursor-pointer hover:bg-muted/50'
-                : 'cursor-default'
-            )}
-            role={quotedPostId ? 'link' : undefined}
-            tabIndex={quotedPostId ? 0 : undefined}
-            aria-label={quotedPostId ? 'View quoted post' : undefined}
-            onClick={handleQuotedPostClick}
-            onKeyDown={handleQuotedPostKeyDown}
-          >
-            {post.originalPost ? (
-              <>
-                {/* Original post author */}
-                <div className="mb-2 flex items-center gap-2">
-                  <Link
-                    href={getProfileUrl(
-                      post.originalPost.authorId,
-                      post.originalPost.authorUsername
-                    )}
-                    className="shrink-0 transition-opacity hover:opacity-80"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Avatar
-                      id={post.originalPost.authorId}
-                      name={post.originalPost.authorName}
-                      type="actor"
-                      size="sm"
-                      className="!h-5 !w-5"
-                      src={post.originalPost.authorProfileImageUrl || undefined}
-                    />
-                  </Link>
-                  <div className="flex min-w-0 flex-1 items-center gap-1">
-                    <Link
-                      href={getProfileUrl(
-                        post.originalPost.authorId,
-                        post.originalPost.authorUsername
-                      )}
-                      className="truncate font-semibold text-sm text-foreground hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {post.originalPost.authorName}
-                    </Link>
-                    {isNpcIdentifier(post.originalPost.authorId) && (
-                      <VerifiedBadge size="sm" />
-                    )}
-                    <Link
-                      href={getProfileUrl(
-                        post.originalPost.authorId,
-                        post.originalPost.authorUsername
-                      )}
-                      className="truncate text-foreground/50 text-sm hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      @{post.originalPost.authorUsername || post.originalPost.authorId}
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Original post content */}
-                <div className="whitespace-pre-wrap break-words text-[15px] text-foreground/90 leading-normal">
-                  <TaggedText
-                    text={post.originalPost.content}
-                    onTagClick={(tag) => {
-                      if (tag.startsWith('@')) {
-                        // Handle @mentions - route to profile
-                        const username = tag.slice(1);
-                        router.push(getProfileUrl('', username));
-                      } else if (tag.startsWith('$')) {
-                        // Handle $cashtags - route to markets
-                        const symbol = tag.slice(1);
-                        router.push(
-                          `/markets?search=${encodeURIComponent(symbol)}`
-                        );
-                      }
-                    }}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="py-4 text-center text-foreground/50 italic">
-                This post has been deleted
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        // Regular post - Show content as normal
-        <div className="post-content mb-3 w-full whitespace-pre-wrap break-words text-[15px] text-foreground leading-normal">
-          <TaggedText
-            text={post.content || ''}
-            onTagClick={(tag) => {
-              if (tag.startsWith('@')) {
-                // Handle @mentions - route to profile
-                const username = tag.slice(1);
-                router.push(getProfileUrl('', username));
-              } else if (tag.startsWith('$')) {
-                // Handle $cashtags - route to markets
-                const symbol = tag.slice(1);
-                router.push(`/markets?search=${encodeURIComponent(symbol)}`);
-              }
-            }}
-          />
-        </div>
-      )}
-
           {/* Interaction Bar */}
           {showInteractions && (
             <div onClick={(e) => e.stopPropagation()}>
@@ -521,7 +527,6 @@ export const PostCard = memo(function PostCard({
               />
             </div>
           )}
-
         </div>
       </div>
 

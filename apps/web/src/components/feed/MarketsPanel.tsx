@@ -134,9 +134,7 @@ export function MarketsPanel() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h2 className="mb-3 font-bold text-foreground text-lg">
-        Markets
-      </h2>
+      <h2 className="mb-3 font-bold text-foreground text-lg">Markets</h2>
       {loading ? (
         <div className="flex-1 space-y-3">
           <Skeleton className="h-16 w-full" />
@@ -222,7 +220,11 @@ export function MarketsPanel() {
                         </p>
                         <div className="mt-0.5 flex items-center justify-between gap-1">
                           <span className="truncate text-muted-foreground text-xs">
-                            ${token.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            $
+                            {token.currentPrice.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </span>
                           <span
                             className={cn(
@@ -261,7 +263,11 @@ export function MarketsPanel() {
                         </p>
                         <div className="mt-0.5 flex items-center justify-between gap-1">
                           <span className="truncate text-muted-foreground text-xs">
-                            ${token.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            $
+                            {token.currentPrice.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </span>
                           <span
                             className={cn(

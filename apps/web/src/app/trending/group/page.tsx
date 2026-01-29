@@ -89,13 +89,13 @@ export default function GroupedTrendingPage() {
     fetchPosts();
   }, [fetchPosts]);
 
-  const headerTitle = tags.length > 0
-    ? tags.map((t) => t.displayName).join(' · ')
-    : 'Grouped Trending';
+  const headerTitle =
+    tags.length > 0
+      ? tags.map((t) => t.displayName).join(' · ')
+      : 'Grouped Trending';
 
-  const headerCategory = tags.length > 0 && tags[0]?.category
-    ? tags[0].category
-    : null;
+  const headerCategory =
+    tags.length > 0 && tags[0]?.category ? tags[0].category : null;
 
   const feedContent = (
     <>
@@ -198,9 +198,7 @@ export default function GroupedTrendingPage() {
           </div>
 
           {/* Mobile content */}
-          <div className="flex-1 overflow-y-auto">
-            {feedContent}
-          </div>
+          <div className="flex-1 overflow-y-auto">{feedContent}</div>
         </div>
       </div>
     </PageContainer>

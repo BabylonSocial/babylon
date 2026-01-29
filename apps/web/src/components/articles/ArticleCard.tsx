@@ -165,9 +165,7 @@ export const ArticleCard = memo(function ArticleCard({
                 {post.byline}
               </span>
             )}
-            <span className="text-[#0066FF] text-sm">
-              Read Full Article →
-            </span>
+            <span className="text-[#0066FF] text-sm">Read Full Article →</span>
           </div>
         </div>
       </div>

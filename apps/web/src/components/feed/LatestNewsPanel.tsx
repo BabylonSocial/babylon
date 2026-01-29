@@ -309,37 +309,35 @@ export function LatestNewsPanel() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h2 className="mb-3 font-bold text-foreground text-lg">
-        Latest News
-      </h2>
-        {loading ? (
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : articles.length === 0 ? (
-          <div className="flex-1 text-muted-foreground text-sm">
-            No articles available yet.
-          </div>
-        ) : (
-          <div className="flex-1 space-y-2">
-            {articles.map((article) => (
-              <div
-                key={article.id}
-                onClick={() => handleArticleClick(article.id)}
-                className="-mx-2 cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-muted/50"
-              >
-                <p className="font-semibold text-foreground text-sm leading-snug">
-                  {article.title}
-                </p>
-                <p className="mt-0.5 text-muted-foreground text-xs">
-                  {article.authorOrgName} · {getTimeAgo(article.publishedAt)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+      <h2 className="mb-3 font-bold text-foreground text-lg">Latest News</h2>
+      {loading ? (
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ) : articles.length === 0 ? (
+        <div className="flex-1 text-muted-foreground text-sm">
+          No articles available yet.
+        </div>
+      ) : (
+        <div className="flex-1 space-y-2">
+          {articles.map((article) => (
+            <div
+              key={article.id}
+              onClick={() => handleArticleClick(article.id)}
+              className="-mx-2 cursor-pointer rounded-lg px-2 py-1.5 transition-colors duration-200 hover:bg-muted/50"
+            >
+              <p className="font-semibold text-foreground text-sm leading-snug">
+                {article.title}
+              </p>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                {article.authorOrgName} · {getTimeAgo(article.publishedAt)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

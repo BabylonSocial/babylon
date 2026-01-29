@@ -244,9 +244,7 @@ export default function TrendingTagPage() {
           </div>
 
           {/* Mobile content */}
-          <div className="flex-1 overflow-y-auto">
-            {feedContent}
-          </div>
+          <div className="flex-1 overflow-y-auto">{feedContent}</div>
         </div>
       </div>
     </PageContainer>

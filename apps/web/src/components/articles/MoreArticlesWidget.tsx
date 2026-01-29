@@ -103,9 +103,7 @@ export function MoreArticlesWidget({
 
   return (
     <div className={className}>
-      <h2 className="mb-3 font-bold text-foreground text-lg">
-        More Articles
-      </h2>
+      <h2 className="mb-3 font-bold text-foreground text-lg">More Articles</h2>
 
       <div className="space-y-2">
         {articles.map((article) => (

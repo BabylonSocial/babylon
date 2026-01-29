@@ -101,9 +101,7 @@ export function TrendingPanel() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h2 className="mb-3 font-bold text-foreground text-lg">
-        Trending
-      </h2>
+      <h2 className="mb-3 font-bold text-foreground text-lg">Trending</h2>
       {loading ? (
         <div className="flex-1 space-y-3">
           <Skeleton className="h-14 w-full" />
@@ -126,7 +124,9 @@ export function TrendingPanel() {
                 {/* Category and tag name(s) */}
                 <p className="font-semibold text-foreground text-sm leading-snug">
                   {item.category && (
-                    <span className="text-muted-foreground">{item.category} · </span>
+                    <span className="text-muted-foreground">
+                      {item.category} ·{' '}
+                    </span>
                   )}
                   {item.tags.join(' · ')}
                 </p>

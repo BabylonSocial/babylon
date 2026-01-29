@@ -132,7 +132,7 @@ const CommentPreviewItem = memo(function CommentPreviewItem({
 
   return (
     <div
-      className="cursor-pointer flex gap-3"
+      className="flex cursor-pointer gap-3"
       onClick={(e) => {
         e.stopPropagation();
         router.push(`/comment/${comment.id}`);
@@ -162,7 +162,7 @@ const CommentPreviewItem = memo(function CommentPreviewItem({
           <div className="flex min-w-0 items-center gap-1">
             <Link
               href={getProfileUrl(comment.userId, comment.userUsername)}
-              className="truncate font-semibold text-foreground text-[15px] hover:underline"
+              className="truncate font-semibold text-[15px] text-foreground hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               {comment.userName}

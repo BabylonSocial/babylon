@@ -11,7 +11,13 @@ import {
   type Organization,
   POST_TYPES,
 } from '@babylon/shared';
-import { ArrowLeft, Coins, FileText, MessageCircle, Search } from 'lucide-react';
+import {
+  ArrowLeft,
+  Coins,
+  FileText,
+  MessageCircle,
+  Search,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -1050,7 +1056,7 @@ export default function ActorProfilePage() {
                     description={
                       searchQuery
                         ? 'Try adjusting your search terms'
-                        : "Replies to other posts will appear here"
+                        : 'Replies to other posts will appear here'
                     }
                   />
                 ) : (
@@ -1090,7 +1096,7 @@ export default function ActorProfilePage() {
                   description={
                     searchQuery
                       ? 'Try adjusting your search terms'
-                      : "Posts will appear here once published"
+                      : 'Posts will appear here once published'
                   }
                 />
               ) : (
