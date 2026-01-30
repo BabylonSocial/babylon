@@ -126,20 +126,27 @@ export function UserMenu() {
         }
       }
 
-      // Update reputation points from profile
+      // Update points from profile
       if (profileResponse.ok) {
         const profileData = await profileResponse.json();
         if (isMounted && !fetchController.signal.aborted && profileData.user) {
+          const newTotalPoints = profileData.user.totalPoints;
           const newReputationPoints = profileData.user.reputationPoints;
-          // Only update if reputation points changed
+          const updates: Partial<typeof user> = {};
+          if (
+            newTotalPoints !== undefined &&
+            newTotalPoints !== user.totalPoints
+          ) {
+            updates.totalPoints = newTotalPoints;
+          }
           if (
             newReputationPoints !== undefined &&
             newReputationPoints !== user.reputationPoints
           ) {
-            setUser({
-              ...user,
-              reputationPoints: newReputationPoints,
-            });
+            updates.reputationPoints = newReputationPoints;
+          }
+          if (Object.keys(updates).length > 0) {
+            setUser({ ...user, ...updates });
           }
         }
       }
@@ -238,8 +245,8 @@ export function UserMenu() {
     </div>
   );
 
-  // Use reputation points from authStore (synced when rewards are claimed)
-  const reputationPoints = user?.reputationPoints ?? 0;
+  // Use total points from authStore (synced from profile API)
+  const totalPointsValue = user?.totalPoints ?? 0;
   const tradingBalanceValue = tradingBalance ?? 0;
 
   return (
@@ -248,10 +255,10 @@ export function UserMenu() {
       <div className="border-sidebar-accent border-b px-5 py-4">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-muted-foreground text-sm">
-            Reputation
+            Total Points
           </span>
           <span className="font-bold text-foreground text-xl">
-            {reputationPoints.toLocaleString()}
+            {totalPointsValue.toLocaleString()}
           </span>
         </div>
         <div className="mt-2 flex items-center justify-between">
