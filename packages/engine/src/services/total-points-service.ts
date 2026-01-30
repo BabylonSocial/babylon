@@ -72,15 +72,19 @@ function calculatePredictionPositionValue(position: {
   }
 
   const sideKey = position.side ? 'yes' : 'no';
-  const sellPreview = PredictionPricing.calculateSellWithFees(
-    yesShares,
-    noShares,
-    sideKey,
-    shares,
-    feeRate
-  );
-
-  return sellPreview.netProceeds ?? sellPreview.totalCost;
+  try {
+    const sellPreview = PredictionPricing.calculateSellWithFees(
+      yesShares,
+      noShares,
+      sideKey,
+      shares,
+      feeRate
+    );
+    return sellPreview.netProceeds ?? sellPreview.totalCost;
+  } catch {
+    // Fall back to cost basis when sell preview fails (e.g. negative proceeds)
+    return costBasis;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -255,8 +259,19 @@ export const TotalPointsService = {
 
       await Promise.all(
         batch.map(async (user) => {
-          await TotalPointsService.recomputeTotalPoints(user.id);
-          // Only clear flag if it wasn't re-dirtied after we started
+          try {
+            await TotalPointsService.recomputeTotalPoints(user.id);
+          } catch (error) {
+            logger.error(
+              'Failed to recompute totalPoints for user',
+              {
+                userId: user.id,
+                error: error instanceof Error ? error.message : String(error),
+              },
+              'TotalPointsService'
+            );
+          }
+          // Clear flag even on error to avoid infinite retry loops
           await db
             .update(users)
             .set({ totalPointsDirtyAt: null })
