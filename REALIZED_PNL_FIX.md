@@ -68,21 +68,27 @@ You provided a curl command for agent `273508387734421504` (Lumen Oracle) and me
    }, 0);
    ```
 
-3. **Include open perp positions in aggregates**:
+3. **Query perp positions once and split open/closed**:
    ```typescript
-   const openPerpPositions = await db
-     .select({ id: perpPositions.id, unrealizedPnL: perpPositions.unrealizedPnL })
+   const perpPositionsResult = await db
+     .select({
+       id: perpPositions.id,
+       realizedPnL: perpPositions.realizedPnL,
+       closedAt: perpPositions.closedAt,
+     })
      .from(perpPositions)
-     .where(and(eq(perpPositions.userId, poolId), isNull(perpPositions.closedAt)));
+     .where(eq(perpPositions.userId, poolId));
+
+   const openPerpPositions = perpPositionsResult.filter(
+     (p) => p.closedAt === null
+   );
+   const closedPerpPositions = perpPositionsResult.filter(
+     (p) => p.closedAt !== null
+   );
    ```
 
 4. **Calculate realized PnL from closed perp positions**:
    ```typescript
-   const closedPerpPositions = await db
-     .select({ realizedPnL: perpPositions.realizedPnL })
-     .from(perpPositions)
-     .where(and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt)));
-
    const realizedPnLFromPerp = closedPerpPositions.reduce((sum, pos) => {
      return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
    }, 0);

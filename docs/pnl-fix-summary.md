@@ -28,9 +28,10 @@ The fix updates `getPortfolioMetrics()` to:
 
 1. **Query pool positions** and exclude any perps that already exist in `perpPositions`
 2. **Sum up `realizedPnL`** from all closed pool positions
-3. **Query open perp positions** for unrealized, invested, and position counts
-4. **Sum up `realizedPnL`** from all closed perp positions
-5. **Return the total** realized PnL (pool + perp) and updated aggregates
+3. **Query perp positions once** and split into open/closed in memory
+4. **Use open perps** for unrealized, invested, and position counts
+5. **Sum up `realizedPnL`** from all closed perp positions
+6. **Return the total** realized PnL (pool + perp) and updated aggregates
 
 ### Code Changes
 
@@ -51,15 +52,21 @@ const positionResults = await db
   .from(poolPositions)
   .where(eq(poolPositions.poolId, poolId));
 
-const openPerpPositions = await db
-  .select({ id: perpPositions.id })
+const perpPositionsResult = await db
+  .select({
+    id: perpPositions.id,
+    realizedPnL: perpPositions.realizedPnL,
+    closedAt: perpPositions.closedAt,
+  })
   .from(perpPositions)
-  .where(and(eq(perpPositions.userId, poolId), isNull(perpPositions.closedAt)));
+  .where(eq(perpPositions.userId, poolId));
 
-const closedPerpPositions = await db
-  .select({ id: perpPositions.id, realizedPnL: perpPositions.realizedPnL })
-  .from(perpPositions)
-  .where(and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt)));
+const openPerpPositions = perpPositionsResult.filter(
+  (p) => p.closedAt === null
+);
+const closedPerpPositions = perpPositionsResult.filter(
+  (p) => p.closedAt !== null
+);
 
 const perpPositionIds = new Set([
   ...openPerpPositions.map((p) => p.id),
@@ -86,12 +93,6 @@ realizedPnL: 0, // Could track from trade history
 const realizedPnLFromPool = closedPositions.reduce((sum, pos) => {
   return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
 }, 0);
-
-// Get closed perp positions for this actor (userId = poolId for NPCs)
-const closedPerpPositions = await db
-  .select({ realizedPnL: perpPositions.realizedPnL })
-  .from(perpPositions)
-  .where(and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt)));
 
 // Calculate realized PnL from closed perp positions
 const realizedPnLFromPerp = closedPerpPositions.reduce((sum, pos) => {

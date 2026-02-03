@@ -13,7 +13,6 @@ import {
   actorState,
   and,
   db,
-  isNotNull,
   isNull,
   organizationState,
   perpPositions,
@@ -94,8 +93,8 @@ export class NPCInvestmentManager {
       actorBalance.tradingBalance?.toString() ?? '0'
     );
 
-    // Get open perp positions (stored in perpPositions table)
-    const openPerpPositions = await db
+    // Get perp positions once and split into open/closed in memory.
+    const perpPositionsResult = await db
       .select({
         id: perpPositions.id,
         ticker: perpPositions.ticker,
@@ -105,19 +104,18 @@ export class NPCInvestmentManager {
         currentPrice: perpPositions.currentPrice,
         unrealizedPnL: perpPositions.unrealizedPnL,
         leverage: perpPositions.leverage,
+        realizedPnL: perpPositions.realizedPnL,
+        closedAt: perpPositions.closedAt,
       })
       .from(perpPositions)
-      .where(
-        and(eq(perpPositions.userId, poolId), isNull(perpPositions.closedAt))
-      );
+      .where(eq(perpPositions.userId, poolId));
 
-    // Query closed perp positions only (future optimization: use SQL aggregation)
-    const closedPerpPositions = await db
-      .select({ id: perpPositions.id, realizedPnL: perpPositions.realizedPnL })
-      .from(perpPositions)
-      .where(
-        and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt))
-      );
+    const openPerpPositions = perpPositionsResult.filter(
+      (p) => p.closedAt === null
+    );
+    const closedPerpPositions = perpPositionsResult.filter(
+      (p) => p.closedAt !== null
+    );
 
     const perpPositionIds = new Set([
       ...openPerpPositions.map((p) => p.id),
