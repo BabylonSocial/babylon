@@ -13,6 +13,7 @@ import {
   actorState,
   and,
   db,
+  isNotNull,
   isNull,
   organizationState,
   perpPositions,
@@ -127,17 +128,16 @@ export class NPCInvestmentManager {
       return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
     }, 0);
 
-    // Get all perp positions for this actor (userId = poolId for NPCs)
-    const allPerpPositions = await db
-      .select()
+    // Query closed perp positions only (future optimization: use SQL aggregation)
+    const closedPerpPositions = await db
+      .select({ realizedPnL: perpPositions.realizedPnL })
       .from(perpPositions)
-      .where(eq(perpPositions.userId, poolId));
-
-    // Filter for closed perp positions
-    const closedPerps = allPerpPositions.filter((p) => p.closedAt !== null);
+      .where(
+        and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt))
+      );
 
     // Calculate realized PnL from closed perp positions
-    const realizedPnLFromPerp = closedPerps.reduce((sum, pos) => {
+    const realizedPnLFromPerp = closedPerpPositions.reduce((sum, pos) => {
       return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
     }, 0);
 

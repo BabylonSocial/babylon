@@ -12,7 +12,6 @@ import {
   poolPositions,
   perpPositions,
   eq,
-  sql,
 } from '@babylon/db';
 import { NPCInvestmentManager } from '@babylon/engine';
 import { generateSnowflakeId } from '@babylon/shared';
@@ -158,6 +157,60 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
     expect(metrics.positionCount).toBe(0);
 
     // Clean up
+    await db
+      .delete(perpPositions)
+      .where(eq(perpPositions.userId, TEST_ACTOR_ID));
+  });
+
+  test('should sum realized PnL from closed pool and perp positions', async () => {
+    const poolPosId = await generateSnowflakeId();
+    const perpPosId = await generateSnowflakeId();
+
+    await db.insert(poolPositions).values({
+      id: poolPosId,
+      poolId: TEST_ACTOR_ID,
+      marketType: 'prediction',
+      marketId: 'test-market-3b',
+      side: 'YES',
+      entryPrice: 50,
+      currentPrice: 55,
+      size: 120,
+      unrealizedPnL: 0,
+      realizedPnL: 120, // Profit of $120
+      openedAt: new Date(Date.now() - 7200000),
+      closedAt: new Date(Date.now() - 3600000),
+      updatedAt: new Date(),
+    });
+
+    await db.insert(perpPositions).values({
+      id: perpPosId,
+      userId: TEST_ACTOR_ID,
+      organizationId: 'org-2b',
+      ticker: 'OMEGA',
+      side: 'short',
+      entryPrice: 200,
+      size: 300,
+      leverage: 1,
+      liquidationPrice: 400,
+      unrealizedPnL: 0,
+      unrealizedPnLPercent: 0,
+      realizedPnL: -30, // Loss of $30
+      openedAt: new Date(Date.now() - 5400000),
+      closedAt: new Date(Date.now() - 1800000),
+      lastUpdated: new Date(),
+    });
+
+    const metrics = await NPCInvestmentManager.getPortfolioMetrics(
+      TEST_ACTOR_ID
+    );
+
+    expect(metrics.realizedPnL).toBe(90);
+    expect(metrics.unrealizedPnL).toBe(0);
+    expect(metrics.positionCount).toBe(0);
+
+    await db
+      .delete(poolPositions)
+      .where(eq(poolPositions.poolId, TEST_ACTOR_ID));
     await db
       .delete(perpPositions)
       .where(eq(perpPositions.userId, TEST_ACTOR_ID));

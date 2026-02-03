@@ -16,6 +16,9 @@ COOKIES=$(cat .staging-cookies.txt)
 BASE_URL="https://staging.babylon.market"
 
 # Array of known user-controlled agent IDs (update with actual IDs)
+# To find agents with closed positions, query:
+#   SELECT DISTINCT "poolId" FROM "PoolPosition" WHERE "closedAt" IS NOT NULL LIMIT 10;
+#   SELECT DISTINCT "userId" FROM "PerpPosition" WHERE "closedAt" IS NOT NULL LIMIT 10;
 AGENT_IDS=(
   "273508387734421504"  # Lumen Oracle
   # Add more agent IDs here
