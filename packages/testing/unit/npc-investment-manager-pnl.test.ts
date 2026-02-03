@@ -309,8 +309,8 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
     // Total value should include unrealized PnL
     const expectedTotalValue =
       INITIAL_BALANCE + // 10000
-      300 + // openPoolPos.size
-      300 + // openPerpPos.size
+      100 + // openPoolPos.size
+      300 + // openPerpPos.size (margin at 1x leverage)
       25; // unrealizedPnL
     expect(metrics.totalValue).toBe(expectedTotalValue);
 

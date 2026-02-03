@@ -123,6 +123,7 @@ This data was being written correctly, just not being read by `getPortfolioMetri
 ### Testing the Fix
 
 1. **API Test**: Call the portfolio endpoint for an agent with closed positions
+
    ```bash
    curl 'https://staging.babylon.market/api/npc/[actorId]/portfolio' \
      -H 'Cookie: ...'
@@ -131,6 +132,7 @@ This data was being written correctly, just not being read by `getPortfolioMetri
    Expected: `realizedPnL` should show the sum of all closed position P&L, not 0
 
 2. **Database Query**: Check agent's closed positions directly
+
    ```sql
    SELECT COUNT(*), SUM(realized_pnl) as total_realized
    FROM "PoolPosition"
