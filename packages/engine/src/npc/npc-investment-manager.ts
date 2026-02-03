@@ -90,25 +90,6 @@ export class NPCInvestmentManager {
       .from(poolPositions)
       .where(eq(poolPositions.poolId, poolId));
 
-    const openPositions = positionResults.filter((p) => p.closedAt === null);
-    const closedPositions = positionResults.filter((p) => p.closedAt !== null);
-    // Map database PoolPosition to PortfolioPosition interface
-    const positions: PortfolioPosition[] = openPositions.map((p) => ({
-      id: p.id,
-      poolId: p.poolId,
-      marketType:
-        p.marketType === 'perp' || p.marketType === 'prediction'
-          ? p.marketType
-          : 'prediction',
-      ticker: p.ticker ?? undefined,
-      marketId: p.marketId ?? undefined,
-      side: p.side,
-      size: Number(p.size),
-      entryPrice: Number(p.entryPrice),
-      currentPrice: Number(p.currentPrice),
-      unrealizedPnL: Number(p.unrealizedPnL),
-      leverage: p.leverage ?? undefined,
-    }));
     const availableBalance = Number.parseFloat(
       actorBalance.tradingBalance?.toString() ?? '0'
     );
@@ -130,6 +111,49 @@ export class NPCInvestmentManager {
         and(eq(perpPositions.userId, poolId), isNull(perpPositions.closedAt))
       );
 
+    // Query closed perp positions only (future optimization: use SQL aggregation)
+    const closedPerpPositions = await db
+      .select({ id: perpPositions.id, realizedPnL: perpPositions.realizedPnL })
+      .from(perpPositions)
+      .where(
+        and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt))
+      );
+
+    const perpPositionIds = new Set([
+      ...openPerpPositions.map((p) => p.id),
+      ...closedPerpPositions.map((p) => p.id),
+    ]);
+
+    // poolPositions may contain legacy perps; avoid double counting when perps
+    // already exist in perpPositions.
+    const shouldIncludePoolPosition = (position: typeof positionResults[0]) =>
+      position.marketType !== 'perp' || !perpPositionIds.has(position.id);
+
+    const openPositions = positionResults.filter(
+      (p) => p.closedAt === null && shouldIncludePoolPosition(p)
+    );
+    const closedPositions = positionResults.filter(
+      (p) => p.closedAt !== null && shouldIncludePoolPosition(p)
+    );
+
+    // Map database PoolPosition to PortfolioPosition interface
+    const positions: PortfolioPosition[] = openPositions.map((p) => ({
+      id: p.id,
+      poolId: p.poolId,
+      marketType:
+        p.marketType === 'perp' || p.marketType === 'prediction'
+          ? p.marketType
+          : 'prediction',
+      ticker: p.ticker ?? undefined,
+      marketId: p.marketId ?? undefined,
+      side: p.side,
+      size: Number(p.size),
+      entryPrice: Number(p.entryPrice),
+      currentPrice: Number(p.currentPrice),
+      unrealizedPnL: Number(p.unrealizedPnL),
+      leverage: p.leverage ?? undefined,
+    }));
+
     const perpPortfolioPositions: PortfolioPosition[] = openPerpPositions.map(
       (p) => ({
         id: p.id,
@@ -147,7 +171,14 @@ export class NPCInvestmentManager {
 
     // Calculate total invested capital (pool positions only)
     const poolInvested = positions.reduce((sum, pos) => {
-      return sum + Number.parseFloat(pos.size?.toString() || '0');
+      const size = Number.parseFloat(pos.size?.toString() || '0');
+      if (pos.marketType === 'perp') {
+        const leverage = Number.parseFloat(pos.leverage?.toString() || '1');
+        const effectiveLeverage =
+          Number.isFinite(leverage) && leverage > 0 ? leverage : 1;
+        return sum + Math.abs(size / effectiveLeverage);
+      }
+      return sum + Math.abs(size);
     }, 0);
 
     const perpInvested = openPerpPositions.reduce((sum, pos) => {
@@ -175,14 +206,6 @@ export class NPCInvestmentManager {
     const realizedPnLFromPool = closedPositions.reduce((sum, pos) => {
       return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
     }, 0);
-
-    // Query closed perp positions only (future optimization: use SQL aggregation)
-    const closedPerpPositions = await db
-      .select({ realizedPnL: perpPositions.realizedPnL })
-      .from(perpPositions)
-      .where(
-        and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt))
-      );
 
     // Calculate realized PnL from closed perp positions
     const realizedPnLFromPerp = closedPerpPositions.reduce((sum, pos) => {

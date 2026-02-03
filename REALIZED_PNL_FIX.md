@@ -68,24 +68,30 @@ You provided a curl command for agent `273508387734421504` (Lumen Oracle) and me
    }, 0);
    ```
 
-3. **Calculate realized PnL from perp positions**:
+3. **Include open perp positions in aggregates**:
    ```typescript
-   const allPerpPositions = await db
-     .select()
+   const openPerpPositions = await db
+     .select({ id: perpPositions.id, unrealizedPnL: perpPositions.unrealizedPnL })
      .from(perpPositions)
-     .where(eq(perpPositions.userId, poolId));
+     .where(and(eq(perpPositions.userId, poolId), isNull(perpPositions.closedAt)));
+   ```
 
-   const closedPerps = allPerpPositions.filter((p) => p.closedAt !== null);
+4. **Calculate realized PnL from closed perp positions**:
+   ```typescript
+   const closedPerpPositions = await db
+     .select({ realizedPnL: perpPositions.realizedPnL })
+     .from(perpPositions)
+     .where(and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt)));
 
-   const realizedPnLFromPerp = closedPerps.reduce((sum, pos) => {
+   const realizedPnLFromPerp = closedPerpPositions.reduce((sum, pos) => {
      return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
    }, 0);
    ```
 
-4. **Return combined realized PnL**:
+5. **Return combined realized PnL**:
    ```typescript
    const realizedPnL = realizedPnLFromPool + realizedPnLFromPerp;
-   
+
    return {
      // ...
      realizedPnL,  // ✅ Now properly calculated
@@ -134,7 +140,7 @@ Expected response should now include non-zero `realizedPnL` for agents with clos
 Check closed positions directly:
 ```sql
 -- Pool positions
-SELECT 
+SELECT
   "poolId",
   COUNT(*) as closed_count,
   SUM("realizedPnL") as total_realized_pnl
@@ -144,7 +150,7 @@ GROUP BY "poolId"
 HAVING COUNT(*) > 0;
 
 -- Perp positions
-SELECT 
+SELECT
   "userId",
   COUNT(*) as closed_count,
   SUM("realizedPnL") as total_realized_pnl

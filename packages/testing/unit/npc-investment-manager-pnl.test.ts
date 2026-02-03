@@ -5,7 +5,15 @@
  * instead of calculating the sum of realized PnL from closed positions.
  */
 
-import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
+import {
+  describe,
+  expect,
+  test,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from 'bun:test';
 import {
   db,
   actorState,
@@ -29,6 +37,24 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
       hasPool: true,
       updatedAt: new Date(),
     });
+  });
+
+  beforeEach(async () => {
+    await db
+      .delete(poolPositions)
+      .where(eq(poolPositions.poolId, TEST_ACTOR_ID));
+    await db
+      .delete(perpPositions)
+      .where(eq(perpPositions.userId, TEST_ACTOR_ID));
+  });
+
+  afterEach(async () => {
+    await db
+      .delete(poolPositions)
+      .where(eq(poolPositions.poolId, TEST_ACTOR_ID));
+    await db
+      .delete(perpPositions)
+      .where(eq(perpPositions.userId, TEST_ACTOR_ID));
   });
 
   afterAll(async () => {
@@ -118,6 +144,7 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
         ticker: 'ACME',
         side: 'long',
         entryPrice: 100,
+        currentPrice: 110,
         size: 500,
         leverage: 2,
         liquidationPrice: 50,
@@ -135,6 +162,7 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
         ticker: 'BETA',
         side: 'short',
         entryPrice: 200,
+        currentPrice: 190,
         size: 300,
         leverage: 1,
         liquidationPrice: 400,
@@ -189,6 +217,7 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
       ticker: 'OMEGA',
       side: 'short',
       entryPrice: 200,
+      currentPrice: 190,
       size: 300,
       leverage: 1,
       liquidationPrice: 400,
@@ -264,6 +293,7 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
         ticker: 'GAMMA',
         side: 'long',
         entryPrice: 100,
+        currentPrice: 95,
         size: 300,
         leverage: 1,
         liquidationPrice: 50,
@@ -281,6 +311,7 @@ describe('NPCInvestmentManager - Realized PnL Calculation', () => {
         ticker: 'DELTA',
         side: 'short',
         entryPrice: 150,
+        currentPrice: 140,
         size: 400,
         leverage: 2,
         liquidationPrice: 300,

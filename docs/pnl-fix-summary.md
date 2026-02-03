@@ -26,18 +26,18 @@ This was a TODO comment that was never implemented. The function was calculating
 
 The fix updates `getPortfolioMetrics()` to:
 
-1. **Query closed pool positions** in addition to open positions
+1. **Query pool positions** and exclude any perps that already exist in `perpPositions`
 2. **Sum up `realizedPnL`** from all closed pool positions
-3. **Query all perp positions** for the actor/pool
-4. **Sum up `realizedPnL`** from all closed perp positions  
-5. **Return the total** realized PnL (pool + perp)
+3. **Query open perp positions** for unrealized, invested, and position counts
+4. **Sum up `realizedPnL`** from all closed perp positions
+5. **Return the total** realized PnL (pool + perp) and updated aggregates
 
 ### Code Changes
 
 **File**: `packages/engine/src/npc/npc-investment-manager.ts`
 
 ```typescript
-// Before: Line 90
+// Before
 const positionResults = await db
   .select()
   .from(poolPositions)
@@ -45,37 +45,56 @@ const positionResults = await db
 
 const openPositions = positionResults.filter((p) => p.closedAt === null);
 
-// After: Lines 87-92
+// After
 const positionResults = await db
   .select()
   .from(poolPositions)
   .where(eq(poolPositions.poolId, poolId));
 
-const openPositions = positionResults.filter((p) => p.closedAt === null);
-const closedPositions = positionResults.filter((p) => p.closedAt !== null);
+const openPerpPositions = await db
+  .select({ id: perpPositions.id })
+  .from(perpPositions)
+  .where(and(eq(perpPositions.userId, poolId), isNull(perpPositions.closedAt)));
+
+const closedPerpPositions = await db
+  .select({ id: perpPositions.id, realizedPnL: perpPositions.realizedPnL })
+  .from(perpPositions)
+  .where(and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt)));
+
+const perpPositionIds = new Set([
+  ...openPerpPositions.map((p) => p.id),
+  ...closedPerpPositions.map((p) => p.id),
+]);
+
+const shouldIncludePoolPosition = (position) =>
+  position.marketType !== 'perp' || !perpPositionIds.has(position.id);
+
+const openPositions = positionResults.filter(
+  (p) => p.closedAt === null && shouldIncludePoolPosition(p)
+);
+const closedPositions = positionResults.filter(
+  (p) => p.closedAt !== null && shouldIncludePoolPosition(p)
+);
 ```
 
 ```typescript
-// Before: Line 140
+// Before
 realizedPnL: 0, // Could track from trade history
 
-// After: Lines 125-145
+// After
 // Calculate realized PnL from closed pool positions
 const realizedPnLFromPool = closedPositions.reduce((sum, pos) => {
   return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
 }, 0);
 
-// Get all perp positions for this actor (userId = poolId for NPCs)
-const allPerpPositions = await db
-  .select()
+// Get closed perp positions for this actor (userId = poolId for NPCs)
+const closedPerpPositions = await db
+  .select({ realizedPnL: perpPositions.realizedPnL })
   .from(perpPositions)
-  .where(eq(perpPositions.userId, poolId));
-
-// Filter for closed perp positions
-const closedPerps = allPerpPositions.filter((p) => p.closedAt !== null);
+  .where(and(eq(perpPositions.userId, poolId), isNotNull(perpPositions.closedAt)));
 
 // Calculate realized PnL from closed perp positions
-const realizedPnLFromPerp = closedPerps.reduce((sum, pos) => {
+const realizedPnLFromPerp = closedPerpPositions.reduce((sum, pos) => {
   return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
 }, 0);
 
@@ -128,7 +147,7 @@ This data was being written correctly, just not being read by `getPortfolioMetri
    curl 'https://staging.babylon.market/api/npc/[actorId]/portfolio' \
      -H 'Cookie: ...'
    ```
-   
+
    Expected: `realizedPnL` should show the sum of all closed position P&L, not 0
 
 2. **Database Query**: Check agent's closed positions directly
@@ -137,7 +156,7 @@ This data was being written correctly, just not being read by `getPortfolioMetri
    SELECT COUNT(*), SUM(realized_pnl) as total_realized
    FROM "PoolPosition"
    WHERE "poolId" = 'AGENT_ID' AND "closedAt" IS NOT NULL;
-   
+
    SELECT COUNT(*), SUM(realized_pnl) as total_realized
    FROM "PerpPosition"
    WHERE "userId" = 'AGENT_ID' AND "closedAt" IS NOT NULL;
