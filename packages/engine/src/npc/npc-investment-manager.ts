@@ -83,13 +83,14 @@ export class NPCInvestmentManager {
       throw new Error(`Actor state not found: ${poolId} (poolId = actorId)`);
     }
 
-    // Get open positions (closedAt is null)
+    // Get all positions (both open and closed) for this pool
     const positionResults = await db
       .select()
       .from(poolPositions)
       .where(eq(poolPositions.poolId, poolId));
 
     const openPositions = positionResults.filter((p) => p.closedAt === null);
+    const closedPositions = positionResults.filter((p) => p.closedAt !== null);
     // Map database PoolPosition to PortfolioPosition interface
     const positions: PortfolioPosition[] = openPositions.map((p) => ({
       id: p.id,
@@ -121,6 +122,28 @@ export class NPCInvestmentManager {
       return sum + Number.parseFloat(pos.unrealizedPnL?.toString() || '0');
     }, 0);
 
+    // Calculate realized PnL from closed pool positions
+    const realizedPnLFromPool = closedPositions.reduce((sum, pos) => {
+      return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
+    }, 0);
+
+    // Get all perp positions for this actor (userId = poolId for NPCs)
+    const allPerpPositions = await db
+      .select()
+      .from(perpPositions)
+      .where(eq(perpPositions.userId, poolId));
+
+    // Filter for closed perp positions
+    const closedPerps = allPerpPositions.filter((p) => p.closedAt !== null);
+
+    // Calculate realized PnL from closed perp positions
+    const realizedPnLFromPerp = closedPerps.reduce((sum, pos) => {
+      return sum + Number.parseFloat(pos.realizedPnL?.toString() || '0');
+    }, 0);
+
+    // Total realized PnL
+    const realizedPnL = realizedPnLFromPool + realizedPnLFromPerp;
+
     // Calculate total portfolio value
     const totalValue = availableBalance + totalInvested + unrealizedPnL;
 
@@ -137,7 +160,7 @@ export class NPCInvestmentManager {
       totalValue,
       availableBalance,
       unrealizedPnL,
-      realizedPnL: 0, // Could track from trade history
+      realizedPnL,
       positionCount: positions.length,
       utilization,
       riskScore,
