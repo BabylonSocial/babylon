@@ -9,51 +9,6 @@
  * Manages profile favorites. POST favorites a profile. DELETE removes
  * favorite. Only accessible by authenticated user.
  *
- * @openapi
- * /api/profiles/{id}/favorite:
- *   post:
- *     tags:
- *       - Profiles
- *     summary: Favorite profile
- *     description: Adds profile to favorites (authenticated user only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Profile ID
- *     responses:
- *       200:
- *         description: Profile favorited successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Profile not found
- *   delete:
- *     tags:
- *       - Profiles
- *     summary: Unfavorite profile
- *     description: Removes profile from favorites (authenticated user only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Profile ID
- *     responses:
- *       200:
- *         description: Profile unfavorited successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Profile not found
- *
  * @example
  * ```typescript
  * // Favorite

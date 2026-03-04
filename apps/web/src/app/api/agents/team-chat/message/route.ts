@@ -10,37 +10,6 @@
  * for each selected agent (parallel execution model).
  *
  * On the first user message, an LLM-generated title is created for the conversation.
- *
- * @openapi
- * /api/agents/team-chat/message:
- *   post:
- *     tags:
- *       - Agents
- *     summary: Send team chat message
- *     description: |
- *       Sends a message to Agents.
- *       Agent responses are triggered separately via /api/agents/[agentId]/chat.
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - content
- *             properties:
- *               content:
- *                 type: string
- *                 description: Message content
- *     responses:
- *       201:
- *         description: Message sent successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: No team chat exists
  */
 
 import { createGroq } from '@ai-sdk/groq';

@@ -8,32 +8,6 @@
  * Awards points for following @PlayBabylon on Twitter/X.
  * Uses a trusted reward system (no API verification needed).
  *
- * @openapi
- * /api/users/{userId}/verify-twitter-follow:
- *   post:
- *     tags:
- *       - Users
- *     summary: Award points for Twitter follow
- *     description: Awards points for following @PlayBabylon (trusted system, authenticated user only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: Points awarded successfully
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Not authorized for this user
- *
  * @example
  * ```typescript
  * await fetch(`/api/users/${userId}/verify-twitter-follow`, {

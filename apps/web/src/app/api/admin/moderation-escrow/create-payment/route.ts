@@ -9,51 +9,6 @@
  * Admin can send money to users with escrow protection. Returns payment
  * request details for on-chain completion.
  *
- * @openapi
- * /api/admin/moderation-escrow/create-payment:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Create escrow payment
- *     description: Creates escrow payment request via X402 (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - recipientId
- *               - amount
- *             properties:
- *               recipientId:
- *                 type: string
- *               amount:
- *                 type: string
- *                 description: Amount in ETH (as string)
- *               reason:
- *                 type: string
- *     responses:
- *       200:
- *         description: Payment request created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 escrowId:
- *                   type: string
- *                 paymentRequest:
- *                   type: object
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/moderation-escrow/create-payment', {

@@ -9,34 +9,6 @@
  * autonomous actions (trading, posting, commenting, DMs, group chats). Processes
  * agents in sequence with optional point deduction (configured via TICK_POINTS_COST).
  *
- * @openapi
- * /api/cron/agent-tick:
- *   post:
- *     tags:
- *       - Cron
- *     summary: Execute agent tick
- *     description: Runs all autonomous agents with coordinated execution (requires CRON_SECRET)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Agent tick executed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 agentsProcessed:
- *                   type: integer
- *                 agentsPaused:
- *                   type: integer
- *                 errors:
- *                   type: array
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *
  * @example
  * ```typescript
  * await fetch('/api/cron/agent-tick', {

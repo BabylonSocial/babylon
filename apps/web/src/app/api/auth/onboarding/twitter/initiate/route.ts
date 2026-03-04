@@ -8,21 +8,6 @@
  * Initiates Twitter OAuth 2.0 flow for importing profile data during onboarding.
  * Redirects user to Twitter authorization page. State includes user ID for callback.
  *
- * @openapi
- * /api/auth/onboarding/twitter/initiate:
- *   get:
- *     tags:
- *       - Auth
- *     summary: Initiate Twitter OAuth for onboarding
- *     description: Redirects to Twitter OAuth authorization page for profile import
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       302:
- *         description: Redirect to Twitter OAuth
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * // Redirects to Twitter OAuth

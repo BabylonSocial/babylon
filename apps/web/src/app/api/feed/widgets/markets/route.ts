@@ -8,28 +8,6 @@
  * Returns trending prediction markets for sidebar widget. Includes caching
  * for performance. Optional authentication applies RLS for personalized results.
  *
- * @openapi
- * /api/feed/widgets/markets:
- *   get:
- *     tags:
- *       - Feed
- *     summary: Get trending markets
- *     description: Returns trending prediction markets for widget (optional auth for RLS)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Markets retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 markets:
- *                   type: array
- *       401:
- *         description: Unauthorized (optional)
- *
  * @example
  * ```typescript
  * const { markets } = await fetch('/api/feed/widgets/markets')

@@ -8,41 +8,6 @@
  * Returns the user group ID associated with a group chat. Only works for
  * group chats (not DMs). Requires user to be a participant.
  *
- * @openapi
- * /api/chats/{id}/group:
- *   get:
- *     tags:
- *       - Chats
- *     summary: Get group ID for chat
- *     description: Returns user group ID associated with group chat (participants only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Chat ID
- *     responses:
- *       200:
- *         description: Group ID retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 groupId:
- *                   type: string
- *       400:
- *         description: Chat is not a group chat
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Not a participant
- *       404:
- *         description: Chat not found
- *
  * @example
  * ```typescript
  * const { groupId } = await fetch(`/api/chats/${chatId}/group`, {

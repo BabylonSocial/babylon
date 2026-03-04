@@ -26,53 +26,6 @@
  * - Agent discovery
  * - NPC search for interaction
  *
- * @openapi
- * /api/agents/search:
- *   get:
- *     tags:
- *       - Agents
- *     summary: Search for agents and NPCs
- *     description: Search for agents/NPCs by username or display name (min 2 chars, max 20 results)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema:
- *           type: string
- *           minLength: 2
- *         description: Search query (username or display name)
- *         example: trading
- *     responses:
- *       200:
- *         description: Search results
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 agents:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       username:
- *                         type: string
- *                       displayName:
- *                         type: string
- *                       profileImageUrl:
- *                         type: string
- *                       bio:
- *                         type: string
- *                       type:
- *                         type: string
- *                         enum: [agent, npc]
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * // Search for agents/NPCs

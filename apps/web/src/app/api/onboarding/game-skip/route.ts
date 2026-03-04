@@ -25,46 +25,8 @@ import { NextResponse } from 'next/server';
  * POST /api/onboarding/game-skip
  *
  * Skips the onboarding tutorial for the authenticated user.
- *
- * @openapi
- * /api/onboarding/game-skip:
- *   post:
- *     summary: Skip the onboarding tutorial
- *     description: Marks the user's onboarding as complete without awarding points
- *     tags:
- *       - Onboarding
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Onboarding skipped successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 onboardingStatus:
- *                   type: object
- *                   nullable: true
- *                   properties:
- *                     currentStep:
- *                       type: string
- *                     completedSteps:
- *                       type: array
- *                       items:
- *                         type: string
- *                     totalPointsEarned:
- *                       type: number
- *                     isComplete:
- *                       type: boolean
- *       401:
- *         description: Unauthorized - missing or invalid authentication
- *       500:
- *         description: Internal server error
  */
+
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const user = await authenticate(request);
 

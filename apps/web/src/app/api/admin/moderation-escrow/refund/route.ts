@@ -8,43 +8,6 @@
  * Refunds an escrow payment back to the recipient. Requires refund transaction
  * hash for on-chain verification. Updates payment status to refunded.
  *
- * @openapi
- * /api/admin/moderation-escrow/refund:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Refund escrow payment
- *     description: Refunds payment back to recipient (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - escrowId
- *               - refundTxHash
- *             properties:
- *               escrowId:
- *                 type: string
- *               refundTxHash:
- *                 type: string
- *                 description: Refund transaction hash
- *               reason:
- *                 type: string
- *                 description: Optional refund reason
- *     responses:
- *       200:
- *         description: Refund processed successfully
- *       400:
- *         description: Invalid escrow or transaction
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/moderation-escrow/refund', {

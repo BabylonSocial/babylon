@@ -9,44 +9,6 @@
  * for batch lookups. Organizations represent groups, factions, and institutions
  * in the Babylon game world.
  *
- * @openapi
- * /api/organizations:
- *   get:
- *     tags:
- *       - Organizations
- *     summary: Get organizations
- *     description: Returns list of organizations, optionally filtered by IDs
- *     parameters:
- *       - in: query
- *         name: ids
- *         schema:
- *           type: string
- *         description: Comma-separated organization IDs for batch lookup
- *         example: org1,org2,org3
- *     responses:
- *       200:
- *         description: Organizations retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 organizations:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       name:
- *                         type: string
- *                       type:
- *                         type: string
- *                       description:
- *                         type: string
- *
  * @example
  * ```typescript
  * // Get all organizations

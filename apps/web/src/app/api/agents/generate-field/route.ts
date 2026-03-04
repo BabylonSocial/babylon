@@ -9,56 +9,6 @@
  * or Claude. Generates contextually appropriate content for agent profiles,
  * personalities, system prompts, trading strategies, etc.
  *
- * @openapi
- * /api/agents/generate-field:
- *   post:
- *     tags:
- *       - Agents
- *     summary: Generate field content
- *     description: Generates AI content for agent configuration fields
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - fieldName
- *             properties:
- *               fieldName:
- *                 type: string
- *                 enum: [name, description, system, bio, personality, tradingStrategy]
- *                 description: Field to generate
- *               currentValue:
- *                 type: string
- *                 description: Current/partial value for enhancement
- *               context:
- *                 type: object
- *                 description: Context for generation
- *                 properties:
- *                   name:
- *                     type: string
- *                   description:
- *                     type: string
- *                   system:
- *                     type: string
- *     responses:
- *       200:
- *         description: Content generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 value:
- *                   type: string
- *       400:
- *         description: Missing field name
- *       503:
- *         description: No LLM API key configured
- *
  * @example
  * ```typescript
  * const { value } = await fetch('/api/agents/generate-field', {

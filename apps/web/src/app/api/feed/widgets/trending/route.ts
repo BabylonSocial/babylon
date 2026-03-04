@@ -9,54 +9,6 @@
  * samples. Uses cached trending data from tag storage service. Includes AI-generated
  * summaries for each trending tag. Groups related tags together using LLM analysis.
  *
- * @openapi
- * /api/feed/widgets/trending:
- *   get:
- *     tags:
- *       - Feed
- *     summary: Get trending tags (grouped)
- *     description: Returns current trending tags with summaries and post counts, intelligently grouped
- *     responses:
- *       200:
- *         description: Trending tags retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 trending:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       tags:
- *                         type: array
- *                         items:
- *                           type: string
- *                       tagSlugs:
- *                         type: array
- *                         items:
- *                           type: string
- *                       tagIds:
- *                         type: array
- *                         items:
- *                           type: string
- *                       category:
- *                         type: string
- *                       totalPostCount:
- *                         type: integer
- *                       summary:
- *                         type: string
- *                       rank:
- *                         type: integer
- *                 message:
- *                   type: string
- *                   nullable: true
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/feed/widgets/trending');

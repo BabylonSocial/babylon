@@ -8,51 +8,6 @@
  * Awards points to users for achievements and milestones. Creates balance
  * transaction records for transparency. Used internally by points service.
  *
- * @openapi
- * /api/users/points/award:
- *   post:
- *     tags:
- *       - Users
- *     summary: Award points to user
- *     description: Awards points to a user and creates transaction record (internal use)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *               - points
- *               - reason
- *             properties:
- *               userId:
- *                 type: string
- *               points:
- *                 type: number
- *               reason:
- *                 type: string
- *                 enum: [profile_completion, farcaster_link, twitter_link, wallet_connect, referral_bonus, report_reward, moderation_reward]
- *               description:
- *                 type: string
- *                 description: Custom description for transaction
- *     responses:
- *       200:
- *         description: Points awarded successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 transaction:
- *                   type: object
- *                 newBalance:
- *                   type: number
- *       400:
- *         description: Invalid input or user not found
- *
  * @example
  * ```typescript
  * await fetch('/api/users/points/award', {

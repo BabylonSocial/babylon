@@ -9,56 +9,6 @@
  * Uses Agent0 SDK with canonical ERC-8004 contracts for identity and reputation.
  * Agents are registered with IPFS metadata and discoverable globally.
  *
- * @openapi
- * /api/agents/onboard:
- *   post:
- *     tags:
- *       - Agents
- *     summary: Register agent on-chain
- *     description: Registers agent to Agent0 network on Ethereum mainnet
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - agentId
- *               - name
- *               - endpoint
- *             properties:
- *               agentId:
- *                 type: string
- *               name:
- *                 type: string
- *               endpoint:
- *                 type: string
- *                 format: uri
- *               capabilities:
- *                 type: object
- *               metadataURI:
- *                 type: string
- *     responses:
- *       200:
- *         description: Agent registered successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 tokenId:
- *                   type: string
- *                 agentId:
- *                   type: string
- *                 agent0MetadataCID:
- *                   type: string
- *       400:
- *         description: Invalid input or already registered
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * await fetch('/api/agents/onboard', {

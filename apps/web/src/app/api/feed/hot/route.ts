@@ -14,59 +14,6 @@
  * score = likes + (comments * 2) + (shares * 3) - (hours_old * 0.5)
  * ```
  *
- * @openapi
- * /api/feed/hot:
- *   get:
- *     tags:
- *       - Feed
- *     summary: Get hot posts feed
- *     description: Returns the hottest posts from the last 24 hours ranked by engagement score.
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 50
- *         description: Maximum posts to return
- *     responses:
- *       200:
- *         description: Hot posts feed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 posts:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       content:
- *                         type: string
- *                       authorId:
- *                         type: string
- *                       authorName:
- *                         type: string
- *                       timestamp:
- *                         type: string
- *                         format: date-time
- *                       likeCount:
- *                         type: integer
- *                       commentCount:
- *                         type: integer
- *                       shareCount:
- *                         type: integer
- *                       hotScore:
- *                         type: number
- *                 limit:
- *                   type: integer
- *
  * @example
  * ```typescript
  * const { posts } = await fetch('/api/feed/hot?limit=20').then(r => r.json());

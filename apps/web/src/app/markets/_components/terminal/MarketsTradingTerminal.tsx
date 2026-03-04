@@ -454,7 +454,7 @@ function PerpMarketHeader({
       <div className="min-w-0">
         <div className={titleClass}>${selectedPerp.ticker}</div>
         <div className="truncate text-muted-foreground text-xs">
-          {selectedPerp.name}
+          {selectedPerp.name ?? ''}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -867,7 +867,7 @@ export function MarketsTradingTerminal({
       key: { kind: 'perp', id: m.ticker },
       kind: 'perp',
       title: m.ticker,
-      subtitle: m.name,
+      subtitle: m.name ?? m.ticker,
       valuePrimary: `${BABYLON_POINTS_SYMBOL}${m.currentPrice.toFixed(2)}`,
       valueSecondary: `Vol ${formatCompactNumber(m.volume24h)}`,
       change24hPct: m.changePercent24h,
@@ -914,7 +914,7 @@ export function MarketsTradingTerminal({
       return (
         row.title.toLowerCase().includes(q) ||
         row.subtitle.toLowerCase().includes(q) ||
-        (row.kind === 'perp' && row.perpMarket?.name.toLowerCase().includes(q))
+        (row.kind === 'perp' && row.perpMarket?.name?.toLowerCase().includes(q))
       );
     });
 
@@ -1920,7 +1920,7 @@ export function MarketsTradingTerminal({
                   ${selectedPerp.ticker}
                 </span>
                 <span className="truncate text-muted-foreground text-xs">
-                  {selectedPerp.name}
+                  {selectedPerp.name ?? ''}
                 </span>
               </button>
               {marketDropdown}

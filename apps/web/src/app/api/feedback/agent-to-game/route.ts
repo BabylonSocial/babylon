@@ -7,49 +7,6 @@
  * @description
  * Allows registered agents to rate games after participation (Phase 1 Yelp-style loop).
  * Stores feedback entries tied to the gameId for future analytics.
- *
- * @openapi
- * /api/feedback/agent-to-game:
- *   post:
- *     tags:
- *       - Feedback
- *     summary: Submit agent feedback for a game
- *     description: Agents submit a rating/comment for a completed game
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - agentId
- *               - gameId
- *               - score
- *             properties:
- *               agentId:
- *                 type: string
- *               gameId:
- *                 type: string
- *               score:
- *                 type: number
- *                 minimum: 0
- *                 maximum: 100
- *               comment:
- *                 type: string
- *                 maxLength: 5000
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *               metadata:
- *                 type: object
- *     responses:
- *       201:
- *         description: Feedback recorded successfully
- *       400:
- *         description: Invalid input
- *       409:
- *         description: Duplicate feedback for the same game
  */
 
 import {

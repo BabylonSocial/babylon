@@ -9,30 +9,6 @@
  * data needed for client-side game initialization. Designed for Vercel
  * serverless deployment where file system access is limited.
  *
- * @openapi
- * /api/game-assets:
- *   get:
- *     tags:
- *       - Game
- *     summary: Get game assets
- *     description: Returns game assets for client initialization (optional auth for RLS)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Assets retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 groupChats:
- *                   type: array
- *                 actors:
- *                   type: array
- *       401:
- *         description: Unauthorized (optional)
- *
  * @example
  * ```typescript
  * const assets = await fetch('/api/game-assets').then(r => r.json());

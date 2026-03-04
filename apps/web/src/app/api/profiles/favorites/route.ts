@@ -8,41 +8,6 @@
  * Returns list of profiles favorited by the authenticated user. Supports
  * pagination.
  *
- * @openapi
- * /api/profiles/favorites:
- *   get:
- *     tags:
- *       - Profiles
- *     summary: Get favorited profiles
- *     description: Returns profiles favorited by authenticated user
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Results per page
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *         description: Pagination offset
- *     responses:
- *       200:
- *         description: Favorites retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 favorites:
- *                   type: array
- *                 pagination:
- *                   type: object
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * const { favorites } = await fetch('/api/profiles/favorites?limit=20', {

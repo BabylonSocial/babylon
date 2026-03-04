@@ -415,7 +415,7 @@ export function useMarketsPageData(): MarketsPageData {
     return perpMarkets.filter(
       (m) =>
         m.ticker.toLowerCase().includes(query) ||
-        m.name.toLowerCase().includes(query)
+        (m.name ?? '').toLowerCase().includes(query)
     );
   }, [perpMarkets, deferredSearchQuery]);
 

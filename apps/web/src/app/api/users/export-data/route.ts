@@ -9,45 +9,6 @@
  * Includes user profile, posts, comments, reactions, positions, transactions, referrals,
  * notifications, and all associated data.
  *
- * @openapi
- * /api/users/export-data:
- *   get:
- *     tags:
- *       - Users
- *     summary: Export user data
- *     description: Exports all user data for GDPR compliance (right to data portability)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: User data exported successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                 posts:
- *                   type: array
- *                 comments:
- *                   type: array
- *                 reactions:
- *                   type: array
- *                 positions:
- *                   type: array
- *                 transactions:
- *                   type: array
- *                 referrals:
- *                   type: array
- *                 notifications:
- *                   type: array
- *                 exportedAt:
- *                   type: string
- *                   format: date-time
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * const data = await fetch('/api/users/export-data', {

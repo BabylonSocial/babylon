@@ -9,56 +9,6 @@
  * top fee payers, and recent transactions. Supports date range filtering.
  * Requires admin authentication.
  *
- * @openapi
- * /api/admin/fees:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get fee statistics
- *     description: Returns comprehensive fee statistics and analytics (admin only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date-time
- *         description: Start date for filtering (ISO 8601)
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date-time
- *         description: End date for filtering (ISO 8601)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Limit for recent transactions
- *     responses:
- *       200:
- *         description: Fee statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 totals:
- *                   type: object
- *                 breakdown:
- *                   type: object
- *                 topPayers:
- *                   type: array
- *                 recentTransactions:
- *                   type: array
- *       400:
- *         description: Invalid date parameters
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const stats = await fetch('/api/admin/fees?startDate=2024-01-01&limit=50', {

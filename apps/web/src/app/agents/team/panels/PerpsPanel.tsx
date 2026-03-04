@@ -32,6 +32,7 @@ function toPerpMarket(market: PerpMarketData): PerpMarket {
     volume24h: market.volume24h,
     openInterest: market.openInterest ?? 0,
     fundingRate: {
+      ticker: market.ticker,
       rate: market.fundingRate ?? 0,
       nextFundingTime: '',
       predictedRate: 0,

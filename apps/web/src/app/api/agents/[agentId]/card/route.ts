@@ -8,47 +8,6 @@
  * Returns A2A-compatible agent card for discovery and capability advertisement.
  * Follows Agent0 SDK v0.31.0 conventions for OASF taxonomy and A2A endpoints.
  *
- * @openapi
- * /api/agents/{agentId}/card:
- *   get:
- *     tags:
- *       - Agents
- *       - A2A Protocol
- *     summary: Get agent card
- *     description: Returns A2A agent card with capabilities, skills, domains, and endpoints
- *     parameters:
- *       - in: path
- *         name: agentId
- *         required: true
- *         schema:
- *           type: string
- *         description: Agent identifier
- *     responses:
- *       200:
- *         description: Agent card retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 version:
- *                   type: string
- *                   example: "1.0"
- *                 agentId:
- *                   type: string
- *                 name:
- *                   type: string
- *                 description:
- *                   type: string
- *                 endpoints:
- *                   type: object
- *                 capabilities:
- *                   type: object
- *       404:
- *         description: Agent not found
- *       500:
- *         description: Internal server error
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/agents/npc-trader-001/card');

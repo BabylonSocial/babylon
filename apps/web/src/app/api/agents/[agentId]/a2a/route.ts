@@ -11,51 +11,6 @@
  * A2A protocol. This enables agent-to-agent communication outside of the
  * ordinary gameplay. Uses MessageRouter scoped to the specific agent.
  *
- * @openapi
- * /api/agents/{agentId}/a2a:
- *   post:
- *     tags:
- *       - Agents
- *     summary: Handle A2A message
- *     description: Processes A2A protocol message for agent (agent authentication required)
- *     parameters:
- *       - in: path
- *         name: agentId
- *         required: true
- *         schema:
- *           type: string
- *         description: Agent user ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Message processed successfully
- *       400:
- *         description: Invalid A2A message
- *       404:
- *         description: Agent not found or A2A not enabled
- *   get:
- *     tags:
- *       - Agents
- *     summary: Get A2A capabilities
- *     description: Returns A2A capabilities for agent
- *     parameters:
- *       - in: path
- *         name: agentId
- *         required: true
- *         schema:
- *           type: string
- *         description: Agent user ID
- *     responses:
- *       200:
- *         description: Capabilities retrieved successfully
- *       404:
- *         description: Agent not found or A2A not enabled
- *
  * @example
  * ```typescript
  * // Send A2A message

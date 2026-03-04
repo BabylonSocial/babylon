@@ -8,47 +8,6 @@
  * Executes investment actions for an NPC actor including portfolio monitoring,
  * rebalancing, risk management, and position adjustments.
  *
- * @openapi
- * /api/npc/{actorId}/invest:
- *   post:
- *     tags:
- *       - NPC
- *     summary: Execute investment actions
- *     description: Executes investment actions for NPC actor
- *     parameters:
- *       - in: path
- *         name: actorId
- *         required: true
- *         schema:
- *           type: string
- *         description: NPC actor ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - action
- *             properties:
- *               action:
- *                 type: string
- *                 enum: [monitor, rebalance, execute]
- *               strategy:
- *                 type: string
- *                 enum: [aggressive, conservative, balanced]
- *                 description: Optional, inferred from personality if omitted
- *               rebalanceAction:
- *                 type: object
- *                 description: Required for 'execute' action
- *     responses:
- *       200:
- *         description: Action executed successfully
- *       400:
- *         description: Invalid action or input
- *       404:
- *         description: NPC actor not found
- *
  * @example
  * ```typescript
  * await fetch(`/api/npc/${actorId}/invest`, {

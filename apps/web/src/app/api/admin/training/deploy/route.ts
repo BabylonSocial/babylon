@@ -8,45 +8,6 @@
  * Deploys a trained model version to agents. Supports gradual rollout with
  * percentage-based deployment strategy.
  *
- * @openapi
- * /api/admin/training/deploy:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Deploy model version
- *     description: Deploys model version to agents with rollout strategy (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - modelVersion
- *             properties:
- *               modelVersion:
- *                 type: string
- *               strategy:
- *                 type: string
- *                 enum: [gradual, immediate]
- *                 default: gradual
- *               rolloutPercentage:
- *                 type: integer
- *                 minimum: 1
- *                 maximum: 100
- *                 default: 10
- *     responses:
- *       200:
- *         description: Model deployed successfully
- *       400:
- *         description: Model version required
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/training/deploy', {

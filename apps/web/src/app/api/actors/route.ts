@@ -9,50 +9,6 @@
  * imports for optimal performance and type safety. Includes NPCs, organizations,
  * and their metadata.
  *
- * @openapi
- * /api/actors:
- *   get:
- *     tags:
- *       - Actors
- *     summary: Get all actors and organizations
- *     description: Returns complete list of all actors (NPCs) and organizations in the game world with their metadata, roles, and relationships.
- *     responses:
- *       200:
- *         description: Actors data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 actors:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       name:
- *                         type: string
- *                       role:
- *                         type: string
- *                       tier:
- *                         type: string
- *                       description:
- *                         type: string
- *                 organizations:
- *                   type: array
- *                   items:
- *                     type: object
- *       500:
- *         description: Failed to load actors data
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *
  * @returns {Promise<NextResponse>} JSON response with actors and organizations data
  *
  * @example

@@ -8,33 +8,6 @@
  * Returns information about model selection for training including summary
  * and recommended base model selection.
  *
- * @openapi
- * /api/admin/training/model-selection:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get model selection information
- *     description: Returns model selection summary and recommendations (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Selection information retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 summary:
- *                   type: object
- *                 selection:
- *                   type: object
- *                   nullable: true
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const info = await fetch('/api/admin/training/model-selection', {

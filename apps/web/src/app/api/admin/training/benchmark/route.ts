@@ -8,51 +8,6 @@
  * Benchmarks a trained model and optionally compares with previous best model.
  * Returns performance metrics and comparison results.
  *
- * @openapi
- * /api/admin/training/benchmark:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Benchmark trained model
- *     description: Benchmarks model and compares with previous best (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - modelId
- *             properties:
- *               modelId:
- *                 type: string
- *               compare:
- *                 type: boolean
- *                 default: true
- *               threshold:
- *                 type: number
- *                 default: 0.95
- *     responses:
- *       200:
- *         description: Benchmark completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 results:
- *                   type: object
- *       400:
- *         description: Model ID required
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/training/benchmark', {

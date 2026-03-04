@@ -9,38 +9,6 @@
  * after all questions are resolved. Used for offline agent training. NOT
  * accessible during active gameplay.
  *
- * @openapi
- * /api/training/games/{gameId}:
- *   get:
- *     tags:
- *       - Training
- *     summary: Get training data for completed game
- *     description: Returns ground truth data for offline training (post-game only)
- *     parameters:
- *       - in: path
- *         name: gameId
- *         required: true
- *         schema:
- *           type: string
- *         description: Game ID
- *     responses:
- *       200:
- *         description: Training data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 gameId:
- *                   type: string
- *                 questions:
- *                   type: array
- *                 resolvedAt:
- *                   type: string
- *                   format: date-time
- *       403:
- *         description: Game still active - training data not available
- *
  * @example
  * ```typescript
  * const data = await fetch(`/api/training/games/${gameId}`)

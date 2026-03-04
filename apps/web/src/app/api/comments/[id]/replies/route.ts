@@ -8,66 +8,6 @@
  * Creates a reply to an existing comment. Automatically ensures parent post exists
  * and maintains comment threading. Replies are nested under their parent comment.
  *
- * @openapi
- * /api/comments/{id}/replies:
- *   post:
- *     tags:
- *       - Comments
- *     summary: Add reply to comment
- *     description: Creates a nested reply to an existing comment. Automatically ensures parent post exists.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Parent comment ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - content
- *             properties:
- *               content:
- *                 type: string
- *                 minLength: 1
- *                 description: Reply content
- *     responses:
- *       201:
- *         description: Reply created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 content:
- *                   type: string
- *                 postId:
- *                   type: string
- *                 authorId:
- *                   type: string
- *                 parentCommentId:
- *                   type: string
- *                 author:
- *                   type: object
- *                 likeCount:
- *                   type: integer
- *                 replyCount:
- *                   type: integer
- *       400:
- *         description: Invalid content
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Parent comment not found
- *
  * @example
  * ```typescript
  * const response = await fetch(`/api/comments/${commentId}/replies`, {

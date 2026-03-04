@@ -10,53 +10,6 @@
  *
  * Points are credited via webhook after successful payment, not in this endpoint.
  *
- * @openapi
- * /api/stripe/checkout/session:
- *   post:
- *     tags:
- *       - Stripe
- *       - Points
- *     summary: Create Stripe Checkout Session for points purchase
- *     description: Creates a Stripe Checkout Session and returns the URL for redirect
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - amountUSD
- *             properties:
- *               amountUSD:
- *                 type: number
- *                 minimum: 1
- *                 maximum: 1000
- *                 description: Amount in USD (1-1000)
- *     responses:
- *       200:
- *         description: Checkout session created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 sessionId:
- *                   type: string
- *                   description: Stripe Checkout Session ID
- *                 url:
- *                   type: string
- *                   description: URL to redirect user to Stripe Checkout
- *       400:
- *         description: Invalid input (amount out of range)
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Stripe API error
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/stripe/checkout/session', {

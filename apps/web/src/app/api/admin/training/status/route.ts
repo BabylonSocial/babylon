@@ -8,44 +8,6 @@
  * Returns complete training system status for admin panel including automation
  * status, readiness checks, recent jobs, models, and trajectory statistics.
  *
- * @openapi
- * /api/admin/training/status:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get training system status
- *     description: Returns complete training system status (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: healthy
- *                 automation:
- *                   type: object
- *                 readiness:
- *                   type: object
- *                 recentJobs:
- *                   type: array
- *                 models:
- *                   type: array
- *                 trajectoryStats:
- *                   type: object
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const status = await fetch('/api/admin/training/status', {

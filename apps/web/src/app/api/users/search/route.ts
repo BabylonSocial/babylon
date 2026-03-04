@@ -29,60 +29,6 @@
  * - Group chat member addition
  * - Follow/unfollow user search
  *
- * @openapi
- * /api/users/search:
- *   get:
- *     tags:
- *       - Users
- *     summary: Search for users
- *     description: Search for users by username or display name (min 2 chars, max 20 results)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema:
- *           type: string
- *           minLength: 2
- *         description: Search query (username or display name)
- *         example: alice
- *       - in: query
- *         name: includeAgents
- *         required: false
- *         schema:
- *           type: boolean
- *         description: Include AI agents in results (default false)
- *         example: false
- *     responses:
- *       200:
- *         description: Search results
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       username:
- *                         type: string
- *                       displayName:
- *                         type: string
- *                       profileImageUrl:
- *                         type: string
- *                       bio:
- *                         type: string
- *                       isAgent:
- *                         type: boolean
- *                         description: Present when includeAgents=true, indicates if this is a user-created agent
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * // Search for users

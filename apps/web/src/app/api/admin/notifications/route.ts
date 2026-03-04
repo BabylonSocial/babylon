@@ -8,56 +8,6 @@
  * Creates and sends a notification to a specific user or all users.
  * Supports various notification types and optional links. Admin only.
  *
- * @openapi
- * /api/admin/notifications:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Create notification
- *     description: Sends notification to user or all users (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - message
- *             properties:
- *               userId:
- *                 type: string
- *                 description: Target user ID (optional, sends to all if omitted)
- *               message:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 500
- *               type:
- *                 type: string
- *                 enum: [system, comment, reaction, follow, mention, reply, share]
- *                 default: system
- *               postId:
- *                 type: string
- *               commentId:
- *                 type: string
- *               link:
- *                 type: string
- *               sendToAll:
- *                 type: boolean
- *                 default: false
- *     responses:
- *       200:
- *         description: Notification created successfully
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *       404:
- *         description: User not found (if userId specified)
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/notifications', {

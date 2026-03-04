@@ -9,49 +9,6 @@
  * Training functionality is handled by separate Eliza agent processes.
  * This endpoint is kept for future integration but currently returns disabled status.
  *
- * @openapi
- * /api/training/run-cycle:
- *   get:
- *     tags:
- *       - Training
- *     summary: Get training cycle status
- *     description: Returns training automation status (currently disabled)
- *     responses:
- *       200:
- *         description: Status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 enabled:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                 hint:
- *                   type: string
- *   post:
- *     tags:
- *       - Training
- *     summary: Run training cycle (disabled)
- *     description: Manual training cycles are currently disabled
- *     responses:
- *       200:
- *         description: Training cycle disabled
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                 hint:
- *                   type: string
- *
  * @example
  * ```typescript
  * const status = await fetch('/api/training/run-cycle')

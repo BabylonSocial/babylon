@@ -8,35 +8,6 @@
  * Returns the authenticated user's ID based on their API key.
  * Used by external agents/clients to discover their user ID for A2A requests.
  *
- * @openapi
- * /api/auth/whoami:
- *   get:
- *     tags:
- *       - Authentication
- *     summary: Get current user info from API key
- *     description: Returns user ID for the authenticated API key owner. Used to get the contextId for A2A requests.
- *     security:
- *       - ApiKeyAuth: []
- *     responses:
- *       200:
- *         description: User info
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 userId:
- *                   type: string
- *                   description: The user's unique ID (use as contextId in A2A requests)
- *                 username:
- *                   type: string
- *                   nullable: true
- *                   description: Username for debugging/logging purposes
- *       401:
- *         description: Invalid or missing API key
- *       404:
- *         description: User not found
- *
  * @example
  * ```bash
  * curl -H "X-Babylon-Api-Key: YOUR_API_KEY_HERE" https://babylon.market/api/auth/whoami

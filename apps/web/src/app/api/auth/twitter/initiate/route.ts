@@ -8,23 +8,6 @@
  * Initiates Twitter OAuth 2.0 flow with PKCE, redirecting user to Twitter
  * authorization page. Generates secure state parameter with CSRF protection.
  *
- * @openapi
- * /api/auth/twitter/initiate:
- *   get:
- *     tags:
- *       - Auth
- *     summary: Initiate Twitter OAuth
- *     description: Starts Twitter OAuth 2.0 flow with PKCE (redirects to Twitter)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       302:
- *         description: Redirect to Twitter authorization page
- *       401:
- *         description: Unauthorized
- *       503:
- *         description: Twitter OAuth not configured
- *
  * @example
  * ```typescript
  * // Redirect user to initiate Twitter OAuth

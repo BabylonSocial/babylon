@@ -8,63 +8,6 @@
  * Authenticates an agent using SIWE (Sign-In With Ethereum).
  * - If wallet exists: Issues a new API key (login)
  * - If wallet doesn't exist: Creates new user with isAgent=true (register)
- *
- * @openapi
- * /api/auth/siwe/authenticate:
- *   post:
- *     tags:
- *       - Authentication
- *     summary: Authenticate/Register agent via SIWE
- *     description: |
- *       Verify SIWE signature and either login (existing wallet) or register (new wallet).
- *       For new registrations, username is required.
- *       For existing users, a new API key is issued.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - message
- *               - signature
- *               - username
- *             properties:
- *               message:
- *                 type: string
- *                 description: EIP-4361 SIWE message
- *               signature:
- *                 type: string
- *                 description: Signature from wallet
- *               username:
- *                 type: string
- *                 description: Desired username (3-30 chars) - used for registration, ignored for login
- *     responses:
- *       200:
- *         description: Authentication successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 isNewUser:
- *                   type: boolean
- *                   description: True if this was a new registration
- *                 userId:
- *                   type: string
- *                 username:
- *                   type: string
- *                 walletAddress:
- *                   type: string
- *                 apiKey:
- *                   type: string
- *                   description: API key (only shown once!)
- *       400:
- *         description: Invalid nonce, signature, domain, or username
- *       409:
- *         description: Username already taken
  */
 
 import {

@@ -11,51 +11,6 @@
  *
  * The team chat is automatically created when the first agent is created,
  * but this endpoint allows explicit creation/retrieval.
- *
- * @openapi
- * /api/agents/team-chat:
- *   get:
- *     tags:
- *       - Agents
- *     summary: Get team chat info
- *     description: Returns the user's Agents team chat with member list.
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Team chat info with members
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 teamChat:
- *                   type: object
- *                   properties:
- *                     chatId:
- *                       type: string
- *                     groupId:
- *                       type: string
- *                     agents:
- *                       type: array
- *       404:
- *         description: No team chat exists (user has no agents)
- *       401:
- *         description: Unauthorized
- *   post:
- *     tags:
- *       - Agents
- *     summary: Ensure team chat exists
- *     description: Creates team chat if it doesn't exist, returns existing if it does.
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Team chat info
- *       401:
- *         description: Unauthorized
  */
 
 import { teamChatService } from '@babylon/agents';

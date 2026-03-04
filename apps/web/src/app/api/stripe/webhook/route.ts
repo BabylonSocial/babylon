@@ -13,25 +13,6 @@
  * - Idempotency is ensured via paymentRequestId uniqueness
  * - No authentication required (signature verification is auth)
  *
- * @openapi
- * /api/stripe/webhook:
- *   post:
- *     tags:
- *       - Stripe
- *     summary: Handle Stripe webhook events
- *     description: Receives Stripe webhook events (signature-verified)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Webhook processed successfully
- *       400:
- *         description: Invalid signature or malformed event
- *
  * Handled Events:
  * - checkout.session.completed: Credit points to user
  * - checkout.session.expired: Log expiration (no action needed)

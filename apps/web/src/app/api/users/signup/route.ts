@@ -9,65 +9,6 @@
  * social account linking, and points awards. Supports waitlist users, legal
  * acceptance tracking, and identity token verification from Privy.
  *
- * @openapi
- * /api/users/signup:
- *   post:
- *     tags:
- *       - Users
- *     summary: Complete user signup
- *     description: Completes off-chain onboarding with profile creation and points awards
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - displayName
- *             properties:
- *               username:
- *                 type: string
- *               displayName:
- *                 type: string
- *               bio:
- *                 type: string
- *               profileImageUrl:
- *                 type: string
- *               coverImageUrl:
- *                 type: string
- *               referralCode:
- *                 type: string
- *               identityToken:
- *                 type: string
- *                 description: Privy identity token for social account linking
- *               isWaitlist:
- *                 type: boolean
- *                 default: false
- *               tosAccepted:
- *                 type: boolean
- *               privacyPolicyAccepted:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Signup completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                 referral:
- *                   type: object
- *                   nullable: true
- *       400:
- *         description: Username taken or invalid input
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * await fetch('/api/users/signup', {

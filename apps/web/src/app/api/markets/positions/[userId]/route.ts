@@ -9,63 +9,6 @@
  * Supports filtering by type and status. Includes position details, P&L, and
  * market information.
  *
- * @openapi
- * /api/markets/positions/{userId}:
- *   get:
- *     tags:
- *       - Markets
- *     summary: Get user positions
- *     description: Returns user's positions in perpetuals and prediction markets
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [all, perps, predictions]
- *           default: all
- *         description: Position type filter
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [open, closed, all]
- *           default: open
- *         description: Position status filter
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Results per page
- *     responses:
- *       200:
- *         description: Positions retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 positions:
- *                   type: array
- *                   items:
- *                     type: object
- *                 total:
- *                   type: integer
- *                 hasMore:
- *                   type: boolean
- *       404:
- *         description: User not found
- *
  * @example
  * ```typescript
  * const response = await fetch(`/api/markets/positions/${userId}?type=all&status=open`);

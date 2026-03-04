@@ -8,54 +8,6 @@
  * Returns posts for a group of trending tags. Used when displaying grouped
  * trends (e.g., "OpenAGI" + "Sam Altman" as one trending topic).
  *
- * @openapi
- * /api/trending/group:
- *   get:
- *     tags:
- *       - Trending
- *     summary: Get posts for grouped trending tags
- *     description: Returns posts that match any of the provided tag slugs
- *     parameters:
- *       - in: query
- *         name: tags
- *         required: true
- *         schema:
- *           type: string
- *         description: Comma-separated tag slugs (e.g., "openagi,sam-altman")
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 50
- *         description: Maximum number of posts to return
- *     responses:
- *       200:
- *         description: Posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 posts:
- *                   type: array
- *                   items:
- *                     type: object
- *                 tags:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       displayName:
- *                         type: string
- *                       category:
- *                         type: string
- *       400:
- *         description: Invalid parameters
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/trending/group?tags=openagi,sam-altman');

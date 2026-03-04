@@ -9,33 +9,6 @@
  * total connections, channels, and connection details. Useful for debugging and
  * monitoring real-time features.
  *
- * @openapi
- * /api/sse/stats:
- *   get:
- *     tags:
- *       - SSE
- *     summary: Get SSE connection statistics
- *     description: Returns statistics about connected SSE clients
- *     responses:
- *       200:
- *         description: Statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 stats:
- *                   type: object
- *                   properties:
- *                     totalClients:
- *                       type: integer
- *                     channels:
- *                       type: object
- *                 timestamp:
- *                   type: integer
- *
  * @example
  * ```typescript
  * const { stats } = await fetch('/api/sse/stats')

@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { formatPrice } from '@/app/markets/_lib/formatters';
 import { FollowButton } from '@/components/interactions';
 import { useAuth } from '@/hooks/useAuth';
-import { usePerpMarketsStore } from '@/stores/perpMarketsStore';
+import { type PerpMarket, usePerpMarkets } from '@/stores/perpMarketsStore';
 
 /**
  * Format error message from API response payload.
@@ -110,20 +110,7 @@ interface PositionDetailModalProps {
   onSuccess?: () => void; // Callback after successful trade
 }
 
-/**
- * Perpetual market structure for position detail modal.
- */
-interface PerpMarket {
-  ticker: string;
-  name: string;
-  currentPrice: number;
-  fundingRate: {
-    rate: number;
-    nextFundingTime: string;
-  };
-  maxLeverage: number;
-  minOrderSize: number;
-}
+// PerpMarket type imported from @/stores/perpMarketsStore (generated from API spec)
 
 /**
  * Prediction market structure for position detail modal.
@@ -156,20 +143,16 @@ export function PositionDetailModal({
   const [loading, setLoading] = useState(false);
 
   // Market data - use shared store for perps
-  const fetchPerpMarketsFromStore = usePerpMarketsStore(
-    (state) => state.fetchMarkets
-  );
+  const { markets: perpMarkets, refetch: refetchPerpMarkets } =
+    usePerpMarkets();
   const [perpMarket, setPerpMarket] = useState<PerpMarket | null>(null);
   const [predictionMarket, setPredictionMarket] =
     useState<PredictionMarket | null>(null);
 
   const fetchPerpMarket = useCallback(
     async (ticker: string) => {
-      // Ensure store is populated
-      await fetchPerpMarketsFromStore();
-      // Get fresh markets from store
-      const markets = usePerpMarketsStore.getState().markets;
-      const market = markets.find(
+      await refetchPerpMarkets();
+      const market = perpMarkets.find(
         (m) => m.ticker.toLowerCase() === ticker.toLowerCase()
       );
       if (market) {
@@ -177,7 +160,7 @@ export function PositionDetailModal({
         setSide('long');
       }
     },
-    [fetchPerpMarketsFromStore]
+    [perpMarkets, refetchPerpMarkets]
   );
 
   const fetchPredictionMarket = useCallback(async (marketId: string) => {

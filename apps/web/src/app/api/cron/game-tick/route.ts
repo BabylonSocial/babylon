@@ -9,34 +9,6 @@
  * updates, and reputation syncs. Runs every minute via Vercel Cron. Uses generation
  * locks to prevent concurrent execution. Max execution time: 300s.
  *
- * @openapi
- * /api/cron/game-tick:
- *   post:
- *     tags:
- *       - Cron
- *     summary: Execute game tick
- *     description: Scheduled cron job for game content generation (requires CRON_SECRET)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Game tick executed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 generated:
- *                   type: object
- *                 duration:
- *                   type: number
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *       409:
- *         description: Game tick already in progress
- *
  * @example
  * ```typescript
  * await fetch('/api/cron/game-tick', {
@@ -44,7 +16,6 @@
  *   headers: { 'Authorization': `Bearer ${CRON_SECRET}` }
  * });
  * ```
- *
  */
 
 import {

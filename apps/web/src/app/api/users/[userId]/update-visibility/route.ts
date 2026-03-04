@@ -8,61 +8,6 @@
  * Updates social media visibility preferences (Twitter, Farcaster, wallet address).
  * Controls which social accounts are shown publicly on user profile.
  *
- * @openapi
- * /api/users/{userId}/update-visibility:
- *   post:
- *     tags:
- *       - Users
- *     summary: Update visibility preferences
- *     description: Updates social media visibility settings (own profile only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID (must match authenticated user)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - platform
- *               - visible
- *             properties:
- *               platform:
- *                 type: string
- *                 enum: [twitter, farcaster, wallet]
- *               visible:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Visibility updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 visibility:
- *                   type: object
- *                   properties:
- *                     twitter:
- *                       type: boolean
- *                     farcaster:
- *                       type: boolean
- *                     wallet:
- *                       type: boolean
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Cannot update another user's preferences
- *
  * @example
  * ```typescript
  * await fetch(`/api/users/${userId}/update-visibility`, {

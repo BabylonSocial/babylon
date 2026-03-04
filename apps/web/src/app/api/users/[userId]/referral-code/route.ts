@@ -8,41 +8,6 @@
  * Gets user's referral code, generating one if it doesn't exist. Creates referral
  * entry if needed. Returns referral code, count, and shareable URL.
  *
- * @openapi
- * /api/users/{userId}/referral-code:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get referral code
- *     description: Gets or generates user's referral code (own profile only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID (must match authenticated user)
- *     responses:
- *       200:
- *         description: Referral code retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 referralCode:
- *                   type: string
- *                 referralCount:
- *                   type: integer
- *                 referralUrl:
- *                   type: string
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Cannot access another user's referral code
- *
  * @example
  * ```typescript
  * const { referralCode, referralUrl } = await fetch(`/api/users/${userId}/referral-code`, {

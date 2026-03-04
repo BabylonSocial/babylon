@@ -8,51 +8,6 @@
  * Returns all messages in a specific group chat for admin verification
  * and debugging. Includes pagination support.
  *
- * @openapi
- * /api/admin/groups/{id}/messages:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get group messages
- *     description: Returns all messages in a group chat (admin only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Group chat ID
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Messages per page
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *         description: Pagination offset
- *     responses:
- *       200:
- *         description: Messages retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 messages:
- *                   type: array
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *       400:
- *         description: Chat is not a group (DM messages not accessible via this endpoint)
- *       404:
- *         description: Group not found
- *
  * @example
  * ```typescript
  * const { messages } = await fetch(`/api/admin/groups/${groupId}/messages`, {

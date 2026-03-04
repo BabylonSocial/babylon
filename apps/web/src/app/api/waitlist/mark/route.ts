@@ -9,45 +9,6 @@
  * referral code if provided and awards initial waitlist points. Users should complete
  * onboarding first via /api/users/signup with isWaitlist flag.
  *
- * @openapi
- * /api/waitlist/mark:
- *   post:
- *     tags:
- *       - Waitlist
- *     summary: Mark user as waitlisted
- *     description: Marks authenticated user as waitlisted and processes referral code
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               referralCode:
- *                 type: string
- *                 description: Optional referral code
- *     responses:
- *       200:
- *         description: User marked as waitlisted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 waitlistPosition:
- *                   type: integer
- *                 inviteCode:
- *                   type: string
- *                 points:
- *                   type: number
- *                 referrerRewarded:
- *                   type: boolean
- *       400:
- *         description: Invalid input or already waitlisted
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * await fetch('/api/waitlist/mark', {

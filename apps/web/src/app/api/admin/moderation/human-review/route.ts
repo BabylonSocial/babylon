@@ -8,42 +8,6 @@
  * Returns list of user appeals that need human review. Shows banned users
  * with appeal status 'human_review' and their appeal details.
  *
- * @openapi
- * /api/admin/moderation/human-review:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get appeals for human review
- *     description: Returns appeals needing human review (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Appeals retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 appeals:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       username:
- *                         type: string
- *                       bannedAt:
- *                         type: string
- *                         format: date-time
- *                       appealStaked:
- *                         type: number
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const { appeals } = await fetch('/api/admin/moderation/human-review', {

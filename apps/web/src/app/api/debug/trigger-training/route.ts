@@ -8,35 +8,6 @@
  * Manually triggers GitHub Actions training workflow for testing. Only
  * available in development or with admin authentication.
  * 
- * @openapi
- * /api/debug/trigger-training:
- *   get:
- *     tags:
- *       - Debug
- *     summary: Trigger training manually
- *     description: Manually triggers training workflow (admin/dev only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: force
- *         schema:
- *           type: boolean
- *         description: Skip readiness check
- *       - in: query
- *         name: window
- *         schema:
- *           type: string
- *           format: date-time
- *         description: Specific training window
- *     responses:
- *       200:
- *         description: Training triggered successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- * 
  * @example
  * ```typescript
  * await fetch('/api/debug/trigger-training?force=true', {
@@ -44,6 +15,7 @@
  * });
  * ```
  */
+
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';

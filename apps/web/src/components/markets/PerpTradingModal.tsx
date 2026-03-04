@@ -64,13 +64,13 @@ export function PerpTradingModal({
   onSuccess,
   defaultSide = 'long',
 }: PerpTradingModalProps) {
-  const { user, authenticated, login, getAccessToken } = useAuth();
+  const { user, authenticated, login } = useAuth();
   const { trackMarketView, trackTrade } = useMarketTracking();
   const [side, setSide] = useState<TradeSide>(defaultSide);
   const [size, setSize] = useState('100');
   const [leverage, setLeverage] = useState(10);
   const [loading, setLoading] = useState(false);
-  const { openPosition } = usePerpTrade({ getAccessToken });
+  const { openPosition } = usePerpTrade();
   const {
     balance,
     loading: balanceLoading,

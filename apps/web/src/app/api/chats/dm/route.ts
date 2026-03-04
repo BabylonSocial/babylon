@@ -9,53 +9,6 @@
  * idempotent chat creation with consistent ID generation based on participant
  * user IDs. Includes validation to prevent self-DMing and NPC interactions.
  *
- * @openapi
- * /api/chats/dm:
- *   post:
- *     tags:
- *       - Chats
- *     summary: Create or get DM chat
- *     description: Creates or retrieves a direct message chat between two users. Idempotent - same chat returned for same participants.
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *             properties:
- *               userId:
- *                 type: string
- *                 description: Target user ID to DM
- *     responses:
- *       200:
- *         description: DM chat created or retrieved
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 chat:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     isGroup:
- *                       type: boolean
- *                     otherUser:
- *                       type: object
- *       400:
- *         description: Missing userId or self-DM attempt
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Target is NPC actor
- *       404:
- *         description: Target user not found
- *
  * **DM Chat Features:**
  * - Idempotent creation (same chat for same participants)
  * - Consistent chat ID format: `dm-{userId1}-{userId2}` (sorted)

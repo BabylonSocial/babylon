@@ -1,54 +1,6 @@
 /**
  * API Route: /api/chats/[id]
  * Methods: GET (get chat details and messages)
- *
- * @openapi
- * /api/chats/{id}:
- *   get:
- *     tags:
- *       - Chats
- *     summary: Get chat details and messages
- *     description: Returns chat details with paginated messages. Supports cursor-based pagination.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Chat ID
- *       - in: query
- *         name: cursor
- *         schema:
- *           type: string
- *         description: Cursor for pagination (message ID)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 50
- *         description: Messages per page
- *     responses:
- *       200:
- *         description: Chat details with messages
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 chat:
- *                   type: object
- *                 messages:
- *                   type: array
- *                   items:
- *                     type: object
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Chat not found
  */
 
 import {

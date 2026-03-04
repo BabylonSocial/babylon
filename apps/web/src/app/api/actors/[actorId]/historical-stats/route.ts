@@ -10,60 +10,6 @@
  * MMO - based on observable results only. Includes post history, game participation,
  * and historical accuracy metrics.
  *
- * @openapi
- * /api/actors/{actorId}/historical-stats:
- *   get:
- *     tags:
- *       - Actors
- *     summary: Get actor historical statistics
- *     description: Returns historical performance data based on past game outcomes. Does not expose oracle data or predetermined outcomes. Safe for competitive MMO.
- *     parameters:
- *       - in: path
- *         name: actorId
- *         required: true
- *         schema:
- *           type: string
- *         description: Actor ID
- *     responses:
- *       200:
- *         description: Historical statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 actorId:
- *                   type: string
- *                 name:
- *                   type: string
- *                 role:
- *                   type: string
- *                 tier:
- *                   type: string
- *                 description:
- *                   type: string
- *                 totalPosts:
- *                   type: integer
- *                 gamesParticipated:
- *                   type: integer
- *                 historicalAccuracy:
- *                   type: number
- *                   nullable: true
- *                 totalPredictions:
- *                   type: integer
- *                   nullable: true
- *                 correctPredictions:
- *                   type: integer
- *                   nullable: true
- *                 recentPosts:
- *                   type: array
- *                   items:
- *                     type: object
- *       404:
- *         description: Actor not found
- *       500:
- *         description: Internal server error
- *
  * @param {string} actorId - Actor ID (path parameter)
  *
  * @returns {Promise<NextResponse>} Historical statistics for the actor

@@ -9,71 +9,6 @@
  * and social media visibility settings. Includes rate limiting, on-chain profile
  * updates, points awards for profile completion, and backend signing support.
  *
- * @openapi
- * /api/users/{userId}/update-profile:
- *   post:
- *     tags:
- *       - Users
- *     summary: Update user profile
- *     description: Updates user profile with rate limiting and on-chain support
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID (must match authenticated user)
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               displayName:
- *                 type: string
- *               bio:
- *                 type: string
- *               profileImageUrl:
- *                 type: string
- *               coverImageUrl:
- *                 type: string
- *               showTwitterPublic:
- *                 type: boolean
- *               showFarcasterPublic:
- *                 type: boolean
- *               showWalletPublic:
- *                 type: boolean
- *               onchainTxHash:
- *                 type: string
- *                 description: Transaction hash for on-chain profile update
- *     responses:
- *       200:
- *         description: Profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                 message:
- *                   type: string
- *                 pointsAwarded:
- *                   type: array
- *                 onchain:
- *                   type: object
- *                   nullable: true
- *       400:
- *         description: Username taken or rate limit exceeded
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Cannot update another user's profile
- *
  * @example
  * ```typescript
  * await fetch(`/api/users/${userId}/update-profile`, {
@@ -86,7 +21,6 @@
  *   })
  * });
  * ```
- *
  */
 
 import type { JsonValue } from '@babylon/api';

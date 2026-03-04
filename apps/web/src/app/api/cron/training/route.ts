@@ -9,35 +9,6 @@
  * metrics. Training is triggered by GitHub Actions; this endpoint monitors readiness.
  * Max execution time: 60s.
  *
- * @openapi
- * /api/cron/training:
- *   get:
- *     tags:
- *       - Cron
- *     summary: Check training readiness
- *     description: Checks if system is ready for training and reports status (requires CRON_SECRET)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Training status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ready:
- *                   type: boolean
- *                 reason:
- *                   type: string
- *                   nullable: true
- *                 stats:
- *                   type: object
- *                 status:
- *                   type: object
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/cron/training', {

@@ -8,40 +8,6 @@
  * Returns price history for a perpetual market including price, change,
  * and OHLCV data. Useful for charting and analytics.
  *
- * @openapi
- * /api/markets/perps/{ticker}/history:
- *   get:
- *     tags:
- *       - Markets
- *     summary: Get perpetual market price history
- *     description: Returns price history with OHLCV data for charting
- *     parameters:
- *       - in: path
- *         name: ticker
- *         required: true
- *         schema:
- *           type: string
- *         description: Market ticker symbol (e.g., AAPL, TSLA)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 2000
- *           default: 200
- *         description: Number of history points to return
- *       - in: query
- *         name: range
- *         schema:
- *           type: string
- *           enum: [1H, 4H, 1D, 1W, ALL]
- *         description: Optional server-side time range filter/downsampling
- *     responses:
- *       200:
- *         description: Price history retrieved successfully
- *       404:
- *         description: Market not found
- *
  * @example
  * ```typescript
  * const response = await fetch(`/api/markets/perps/${ticker}/history?limit=100&range=1W`);

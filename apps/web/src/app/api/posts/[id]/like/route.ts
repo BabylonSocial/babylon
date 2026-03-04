@@ -1,53 +1,6 @@
 /**
  * API Route: /api/posts/[id]/like
  * Methods: POST (like), DELETE (unlike)
- *
- * @openapi
- * /api/posts/{id}/like:
- *   post:
- *     tags:
- *       - Posts
- *     summary: Like a post
- *     description: Adds a like reaction to a post. Creates notification for post author.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID
- *     responses:
- *       200:
- *         description: Post liked successfully
- *       400:
- *         description: Already liked or rate limited
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Post not found
- *   delete:
- *     tags:
- *       - Posts
- *     summary: Unlike a post
- *     description: Removes a like reaction from a post.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID
- *     responses:
- *       200:
- *         description: Post unliked successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Post or like not found
  */
 
 import {

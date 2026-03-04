@@ -8,37 +8,6 @@
  * Rolls back to a previous model version. Useful for reverting problematic
  * deployments. Updates all agents to use the specified version.
  *
- * @openapi
- * /api/admin/training/rollback:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Rollback model version
- *     description: Rolls back to previous model version (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - targetVersion
- *             properties:
- *               targetVersion:
- *                 type: string
- *                 description: Model version to rollback to
- *     responses:
- *       200:
- *         description: Rollback completed successfully
- *       400:
- *         description: Target version required
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/training/rollback', {

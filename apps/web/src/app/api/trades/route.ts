@@ -11,51 +11,6 @@
  * - NPC/agent trades with sentiment and reasoning
  * - Balance transactions (buys, sells, deposits, withdrawals)
  *
- * @openapi
- * /api/trades:
- *   get:
- *     tags:
- *       - Trading
- *     summary: Get trading feed
- *     description: Public trading feed showing recent activity across all market types with user/agent profiles.
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 50
- *         description: Trades per page
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           minimum: 0
- *           default: 0
- *         description: Pagination offset
- *       - in: query
- *         name: userId
- *         schema:
- *           type: string
- *         description: Filter by specific user/agent
- *     responses:
- *       200:
- *         description: Trading feed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 trades:
- *                   type: array
- *                   items:
- *                     type: object
- *                 total:
- *                   type: integer
- *                 hasMore:
- *                   type: boolean
- *
  * **Trade Types:**
  * - **balance:** User balance transactions (pred_buy, pred_sell, perp operations)
  * - **npc:** Agent/NPC trades with AI reasoning and sentiment

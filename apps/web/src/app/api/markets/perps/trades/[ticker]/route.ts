@@ -9,54 +9,6 @@
  * caching (30s TTL). Includes perp positions and balance transactions. Includes
  * NPC/agent trades with reasoning.
  *
- * @openapi
- * /api/markets/perps/trades/{ticker}:
- *   get:
- *     tags:
- *       - Markets
- *     summary: Get perpetual futures trades
- *     description: Returns all trades for a ticker with pagination and caching
- *     parameters:
- *       - in: path
- *         name: ticker
- *         required: true
- *         schema:
- *           type: string
- *         description: Ticker symbol (e.g., BTC, AAPL)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 50
- *         description: Trades per page
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           minimum: 0
- *           default: 0
- *         description: Pagination offset
- *     responses:
- *       200:
- *         description: Trades retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 trades:
- *                   type: array
- *                 total:
- *                   type: integer
- *                 hasMore:
- *                   type: boolean
- *                 ticker:
- *                   type: string
- *                 organization:
- *                   type: object
- *
  * @example
  * ```typescript
  * const { trades, hasMore } = await fetch('/api/markets/perps/trades/BTC?limit=20')

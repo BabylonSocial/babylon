@@ -8,44 +8,6 @@
  * Returns ranked list of NPC actors by portfolio performance. Includes
  * filtering options for minimum portfolio value and result limit.
  *
- * @openapi
- * /api/npc/performance/leaderboard:
- *   get:
- *     tags:
- *       - NPC
- *     summary: Get NPC performance leaderboard
- *     description: Returns ranked NPC actors by portfolio performance
- *     parameters:
- *       - in: query
- *         name: minValue
- *         schema:
- *           type: number
- *         description: Minimum portfolio value filter
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Maximum results to return
- *     responses:
- *       200:
- *         description: Leaderboard retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 leaderboard:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       actorId:
- *                         type: string
- *                       totalValue:
- *                         type: number
- *                       pnl:
- *                         type: number
- *
  * @example
  * ```typescript
  * const { leaderboard } = await fetch('/api/npc/performance/leaderboard?limit=10')

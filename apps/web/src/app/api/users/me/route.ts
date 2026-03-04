@@ -14,54 +14,6 @@
  * one doesn't exist. This allows tracking of users through the onboarding
  * funnel and ensures a user record is always available for authenticated requests.
  *
- * @openapi
- * /api/users/me:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get current user profile
- *     description: Returns the authenticated user complete profile including onboarding status, social connections, and reputation.
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: User profile
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 authenticated:
- *                   type: boolean
- *                 needsOnboarding:
- *                   type: boolean
- *                 needsOnchain:
- *                   type: boolean
- *                 user:
- *                   type: object
- *                   nullable: true
- *                   properties:
- *                     id:
- *                       type: string
- *                     username:
- *                       type: string
- *                     displayName:
- *                       type: string
- *                     bio:
- *                       type: string
- *                     profileImageUrl:
- *                       type: string
- *                     walletAddress:
- *                       type: string
- *                     reputationPoints:
- *                       type: number
- *                     isAdmin:
- *                       type: boolean
- *                     stats:
- *                       type: object
- *       401:
- *         description: Unauthorized
- *
  * **Profile Data Includes:**
  * - **Identity:** username, display name, bio, avatar, cover image
  * - **Onboarding Status:** profile completion, on-chain registration

@@ -8,35 +8,6 @@
  * Handles Twitter OAuth callback during onboarding. Verifies state, exchanges
  * code for tokens, imports profile data, and redirects to app with success/error.
  *
- * @openapi
- * /api/auth/onboarding/twitter/callback:
- *   get:
- *     tags:
- *       - Auth
- *     summary: Twitter OAuth callback for onboarding
- *     description: Handles Twitter OAuth callback and imports profile data
- *     parameters:
- *       - in: query
- *         name: code
- *         schema:
- *           type: string
- *         description: OAuth authorization code
- *       - in: query
- *         name: state
- *         schema:
- *           type: string
- *         description: OAuth state parameter
- *       - in: query
- *         name: error
- *         schema:
- *           type: string
- *         description: OAuth error (if any)
- *     responses:
- *       302:
- *         description: Redirect to app with success/error
- *       400:
- *         description: Invalid parameters or state
- *
  * @example
  * ```typescript
  * // Called by Twitter OAuth redirect

@@ -8,31 +8,6 @@
  * Generates Open Graph image for referral sharing. Returns PNG image
  * with user referral information. Cached for 1 hour.
  *
- * @openapi
- * /api/og/referral/{userId}:
- *   get:
- *     tags:
- *       - OG Images
- *     summary: Generate referral OG image
- *     description: Generates OG image for referral sharing
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: Image generated successfully
- *         content:
- *           image/png:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: User not found
- *
  * @example
  * ```typescript
  * // Use in <img> tag or meta tag

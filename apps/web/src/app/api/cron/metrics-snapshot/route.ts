@@ -17,41 +17,6 @@
  * - Social: posts, comments, reactions (1h)
  * - Financial: total balance, fees collected (1h)
  * - System: uptime, response time, error rate, cron health
- *
- * @openapi
- * /api/cron/metrics-snapshot:
- *   get:
- *     tags:
- *       - Cron
- *     summary: Create hourly metrics snapshot
- *     description: Collects platform metrics and stores in SystemMetricsSnapshot table
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Snapshot created or skipped (if already exists)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 skipped:
- *                   type: boolean
- *                 snapshotId:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                 environment:
- *                   type: string
- *                 durationMs:
- *                   type: number
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *       500:
- *         description: Snapshot collection failed
  */
 
 import {

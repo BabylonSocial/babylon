@@ -8,30 +8,6 @@
  * Runs hourly to score new trajectories with RULER, check training readiness,
  * and monitor system health. Triggered by Vercel Cron (hourly).
  *
- * @openapi
- * /api/cron/training-check:
- *   get:
- *     tags:
- *       - Cron
- *     summary: Training check cron
- *     description: Hourly training check (scores trajectories, checks readiness)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Check completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 trajectoriesScored:
- *                   type: integer
- *                 readiness:
- *                   type: object
- *
  * @example
  * ```typescript
  * // Called by Vercel Cron (hourly)

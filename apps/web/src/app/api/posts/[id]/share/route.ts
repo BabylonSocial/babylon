@@ -10,78 +10,6 @@
  * in user feeds, handles quote posts with commentary, and manages share tracking.
  * Includes rate limiting, duplicate prevention, and automatic notifications.
  *
- * @openapi
- * /api/posts/{id}/share:
- *   post:
- *     tags:
- *       - Posts
- *     summary: Share/repost a post
- *     description: Creates a share/repost of a post. Optionally includes quote commentary. Creates repost post in user's feed.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID to share
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               comment:
- *                 type: string
- *                 description: Optional quote comment/commentary
- *     responses:
- *       201:
- *         description: Post shared successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: object
- *                   properties:
- *                     shareCount:
- *                       type: integer
- *                     isShared:
- *                       type: boolean
- *                     repostPost:
- *                       type: object
- *       400:
- *         description: Post already shared or invalid
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Post not found
- *       429:
- *         description: Rate limit exceeded
- *   delete:
- *     tags:
- *       - Posts
- *     summary: Unshare a post
- *     description: Removes share and deletes associated repost post
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID to unshare
- *     responses:
- *       200:
- *         description: Post unshared successfully
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Share not found
- *
  * @example
  * ```typescript
  * // Share with quote comment
@@ -99,7 +27,6 @@
  *   headers: { 'Authorization': `Bearer ${token}` }
  * });
  * ```
- *
  */
 
 import type { JsonValue } from '@babylon/api';

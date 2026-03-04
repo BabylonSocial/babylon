@@ -7,32 +7,6 @@
  * @description
  * Returns current AI provider configuration and available providers.
  *
- * @openapi
- * /api/admin/ai-models:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get AI model configuration
- *     description: Returns current AI configuration and available providers (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Configuration retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 activeProvider:
- *                   type: string
- *                 providers:
- *                   type: object
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const config = await fetch('/api/admin/ai-models', {

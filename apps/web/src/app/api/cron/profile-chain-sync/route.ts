@@ -13,39 +13,6 @@
  * - Profile updates are database-first for instant UX
  * - On-chain sync is optional and user-initiated (requires wallet signature)
  * - This job provides visibility into sync status for monitoring
- *
- * @openapi
- * /api/cron/profile-chain-sync:
- *   post:
- *     tags:
- *       - Cron
- *     summary: Monitor profile chain sync status
- *     description: Reports metrics on profiles needing on-chain sync
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Sync status reported successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 metrics:
- *                   type: object
- *                   properties:
- *                     totalOnChainUsers:
- *                       type: integer
- *                     pendingSyncCount:
- *                       type: integer
- *                     syncedCount:
- *                       type: integer
- *                     errorCount:
- *                       type: integer
- *       401:
- *         description: Invalid or missing CRON_SECRET
  */
 
 import {

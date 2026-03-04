@@ -9,57 +9,6 @@
  * Setting strength to 0 deactivates the bias. Allows fine-tuning of bias
  * parameters.
  *
- * @openapi
- * /api/markets/bias/tune:
- *   post:
- *     tags:
- *       - Markets
- *     summary: Tune market bias
- *     description: Adjusts strength of existing market bias (0 deactivates)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - entityId
- *               - strength
- *             properties:
- *               entityId:
- *                 type: string
- *                 description: Entity ID to tune
- *               strength:
- *                 type: number
- *                 minimum: 0
- *                 maximum: 1
- *                 description: New strength (0 deactivates)
- *               decayRate:
- *                 type: number
- *                 minimum: 0
- *                 maximum: 1
- *                 description: Optional new decay rate
- *     responses:
- *       200:
- *         description: Bias tuned successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 bias:
- *                   type: object
- *       400:
- *         description: Invalid parameters
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * await fetch('/api/markets/bias/tune', {

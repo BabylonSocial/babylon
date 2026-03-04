@@ -18,31 +18,6 @@
  * - System status displays
  * - Public statistics widgets
  *
- * @openapi
- * /api/stats:
- *   get:
- *     tags:
- *       - System
- *     summary: Get system statistics
- *     description: Returns comprehensive system statistics including database metrics, game engine status, and platform health
- *     responses:
- *       200:
- *         description: System statistics
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   description: Operation success status
- *                 stats:
- *                   type: object
- *                   description: Database and platform statistics
- *                 engineStatus:
- *                   type: object
- *                   description: Game engine operational status
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/stats');

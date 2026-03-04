@@ -8,37 +8,6 @@
  * Returns PUBLIC market data including prices, volumes, and momentum.
  * Safe for competitive MMO - all observable information. NO oracle data exposed.
  *
- * @openapi
- * /api/questions/{id}/dynamics:
- *   get:
- *     tags:
- *       - Markets
- *     summary: Get market dynamics
- *     description: Returns public market data (prices, volumes, momentum)
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Question/market ID
- *     responses:
- *       200:
- *         description: Dynamics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 price:
- *                   type: number
- *                 volume:
- *                   type: number
- *                 momentum:
- *                   type: number
- *       404:
- *         description: Market not found
- *
  * @example
  * ```typescript
  * const dynamics = await fetch(`/api/questions/${questionId}/dynamics`)

@@ -9,51 +9,6 @@
  * reasoning. Approving unban restores user and refunds stake. Denying
  * keeps user banned and may transfer stake.
  *
- * @openapi
- * /api/admin/moderation/human-review/{userId}:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Process user appeal
- *     description: Approves or denies user appeal (admin only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID to process appeal for
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - action
- *               - reasoning
- *             properties:
- *               action:
- *                 type: string
- *                 enum: [approve, deny]
- *               reasoning:
- *                 type: string
- *                 minLength: 10
- *                 maxLength: 2000
- *     responses:
- *       200:
- *         description: Appeal processed successfully
- *       400:
- *         description: Invalid action or reasoning
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *       404:
- *         description: User or appeal not found
- *
  * @example
  * ```typescript
  * await fetch(`/api/admin/moderation/human-review/${userId}`, {

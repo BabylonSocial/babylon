@@ -8,34 +8,6 @@
  * Returns real-time network and database statistics including query performance,
  * slow queries, connection metrics, and database health. Admin only.
  *
- * @openapi
- * /api/admin/network-stats:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get network statistics
- *     description: Returns real-time network and database statistics (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 queryStats:
- *                   type: object
- *                 slowQueries:
- *                   type: array
- *                 recentQueries:
- *                   type: array
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const stats = await fetch('/api/admin/network-stats', {

@@ -9,34 +9,6 @@
  * Publishes reputation as feedback signals on-chain and updates local metrics.
  * Runs daily with more frequent updates for new accounts. Max execution time: 300s.
  *
- * @openapi
- * /api/cron/reputation-sync:
- *   post:
- *     tags:
- *       - Cron
- *     summary: Sync reputation to ERC-8004
- *     description: Syncs reputation scores to blockchain via Agent0 SDK (requires CRON_SECRET)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Reputation sync completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 synced:
- *                   type: integer
- *                 failed:
- *                   type: integer
- *                 duration:
- *                   type: number
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *
  * @example
  * ```typescript
  * await fetch('/api/cron/reputation-sync', {

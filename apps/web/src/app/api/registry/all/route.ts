@@ -12,34 +12,6 @@
  * (AI NPCs from static assets). This merges static actor data with human users
  * for a unified search experience.
  *
- * @openapi
- * /api/registry/all:
- *   get:
- *     tags:
- *       - Registry
- *     summary: Get all registry entities
- *     description: Returns all entities from ERC8004 registry and database (optional auth for RLS)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Entities retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: array
- *                 actors:
- *                   type: array
- *                 agents:
- *                   type: array
- *                 apps:
- *                   type: array
- *       401:
- *         description: Unauthorized (optional)
- *
  * @example
  * ```typescript
  * const { users, actors, agents } = await fetch('/api/registry/all')

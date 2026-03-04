@@ -9,43 +9,6 @@
  * total deposited, total withdrawn, and lifetime P&L. Uses caching for performance.
  * Balance is publicly viewable for all users (players).
  *
- * @openapi
- * /api/users/{userId}/balance:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get user balance
- *     description: Returns user's balance information (publicly viewable)
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: Balance retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 balance:
- *                   type: string
- *                   description: Current virtual balance
- *                 totalDeposited:
- *                   type: string
- *                   description: Total amount deposited
- *                 totalWithdrawn:
- *                   type: string
- *                   description: Total amount withdrawn
- *                 lifetimePnL:
- *                   type: string
- *                   description: Lifetime profit/loss
- *       404:
- *         description: Balance not found
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/users/user_123/balance');

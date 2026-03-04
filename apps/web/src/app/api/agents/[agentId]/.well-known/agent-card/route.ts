@@ -10,41 +10,6 @@
  * The agent card describes the agent's capabilities, skills, and how
  * to interact with it via the A2A protocol.
  *
- * @openapi
- * /api/agents/{agentId}/.well-known/agent-card:
- *   get:
- *     tags:
- *       - Agents
- *     summary: Get agent card
- *     description: Returns A2A agent card for agent discovery
- *     parameters:
- *       - in: path
- *         name: agentId
- *         required: true
- *         schema:
- *           type: string
- *         description: Agent user ID
- *     responses:
- *       200:
- *         description: Agent card retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 displayName:
- *                   type: string
- *                 bio:
- *                   type: string
- *                 capabilities:
- *                   type: array
- *       403:
- *         description: A2A not enabled for agent
- *       404:
- *         description: Agent not found
- *
  * @example
  * ```typescript
  * const card = await fetch(`/api/agents/${agentId}/.well-known/agent-card`)

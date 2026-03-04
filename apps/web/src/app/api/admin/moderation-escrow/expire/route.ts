@@ -8,31 +8,6 @@
  * Marks expired escrow payments as expired. Can be called by cron job or
  * manually by admin. Finds all pending payments past expiration time.
  *
- * @openapi
- * /api/admin/moderation-escrow/expire:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Expire old escrow payments
- *     description: Marks expired payments as expired (admin only, can be cron)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Expired payments processed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 expired:
- *                   type: integer
- *                   description: Number of payments expired
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/moderation-escrow/expire', {

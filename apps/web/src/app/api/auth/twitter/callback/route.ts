@@ -8,42 +8,6 @@
  * Handles OAuth callback from Twitter, exchanges code for token, fetches profile,
  * links Twitter account, and awards points. Redirects to rewards page with status.
  *
- * @openapi
- * /api/auth/twitter/callback:
- *   get:
- *     tags:
- *       - Auth
- *     summary: Handle Twitter OAuth callback
- *     description: Processes OAuth callback and links Twitter account (redirects to rewards page)
- *     parameters:
- *       - in: query
- *         name: code
- *         required: true
- *         schema:
- *           type: string
- *         description: Authorization code from Twitter
- *       - in: query
- *         name: state
- *         required: true
- *         schema:
- *           type: string
- *         description: State parameter (userId|timestamp|nonce)
- *       - in: query
- *         name: error
- *         schema:
- *           type: string
- *         description: OAuth error if authorization failed
- *     responses:
- *       302:
- *         description: Redirect to rewards page
- *         headers:
- *           Location:
- *             schema:
- *               type: string
- *               example: /rewards?success=twitter_linked&points=100
- *       400:
- *         description: Invalid parameters or state expired
- *
  * @example
  * ```typescript
  * // Twitter redirects to:

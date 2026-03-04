@@ -8,42 +8,6 @@
  * Handles Farcaster Frame actions and returns Frame responses. Processes
  * button clicks and user interactions within Farcaster frames.
  *
- * @openapi
- * /api/frame:
- *   post:
- *     tags:
- *       - Farcaster
- *     summary: Handle Frame action
- *     description: Processes Farcaster Frame button actions
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               untrustedData:
- *                 type: object
- *                 properties:
- *                   buttonIndex:
- *                     type: integer
- *                   fid:
- *                     type: integer
- *                   castId:
- *                     type: object
- *     responses:
- *       200:
- *         description: Frame response generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 version:
- *                   type: string
- *                 image:
- *                   type: string
- *
  * @example
  * ```typescript
  * await fetch('/api/frame', {

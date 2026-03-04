@@ -8,48 +8,6 @@
  * Allows users to submit feedback manually with star ratings or scores.
  * Supports various feedback categories and optional comments.
  *
- * @openapi
- * /api/feedback/submit:
- *   post:
- *     tags:
- *       - Feedback
- *     summary: Submit feedback
- *     description: Submits manual feedback with star ratings or scores
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - fromUserId
- *               - toUserId
- *             properties:
- *               fromUserId:
- *                 type: string
- *               toUserId:
- *                 type: string
- *               score:
- *                 type: number
- *                 minimum: 0
- *                 maximum: 100
- *                 description: Score (0-100) or converted from stars
- *               stars:
- *                 type: integer
- *                 minimum: 1
- *                 maximum: 5
- *                 description: Star rating (1-5, alternative to score)
- *               comment:
- *                 type: string
- *               category:
- *                 type: string
- *                 enum: [trade_performance, game_performance, general]
- *     responses:
- *       200:
- *         description: Feedback submitted successfully
- *       400:
- *         description: Invalid input
- *
  * @example
  * ```typescript
  * await fetch('/api/feedback/submit', {

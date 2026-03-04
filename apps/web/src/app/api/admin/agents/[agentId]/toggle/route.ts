@@ -9,53 +9,6 @@
  * commenting, DMs, group chats). Updates agent status accordingly.
  * Requires admin authentication.
  *
- * @openapi
- * /api/admin/agents/{agentId}/toggle:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Toggle agent autonomous mode
- *     description: Enables or disables all autonomous features for an agent (admin only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: agentId
- *         required: true
- *         schema:
- *           type: string
- *         description: Agent user ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - enabled
- *             properties:
- *               enabled:
- *                 type: boolean
- *                 description: Enable or disable autonomous mode
- *     responses:
- *       200:
- *         description: Agent toggled successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *       404:
- *         description: Agent not found
- *
  * @example
  * ```typescript
  * await fetch(`/api/admin/agents/${agentId}/toggle`, {

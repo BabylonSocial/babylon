@@ -10,51 +10,6 @@
  * credentials are validated against environment variables, and successful
  * authentication returns a time-limited session token.
  *
- * @openapi
- * /api/agents/auth:
- *   post:
- *     tags:
- *       - Agents
- *     summary: Authenticate agent
- *     description: Authenticates agent with credentials and returns session token
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - agentId
- *               - agentSecret
- *             properties:
- *               agentId:
- *                 type: string
- *                 description: Agent identifier
- *               agentSecret:
- *                 type: string
- *                 description: Agent secret key
- *     responses:
- *       200:
- *         description: Authentication successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 sessionToken:
- *                   type: string
- *                 expiresAt:
- *                   type: string
- *                   format: date-time
- *                 expiresIn:
- *                   type: integer
- *       400:
- *         description: Invalid request format
- *       401:
- *         description: Invalid credentials
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/agents/auth', {

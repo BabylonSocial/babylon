@@ -8,32 +8,6 @@
  * Lightweight endpoint for polling unread message counts. Returns pending DM
  * requests and new message indicators. Optimized for frequent polling.
  *
- * @openapi
- * /api/chats/unread-count:
- *   get:
- *     tags:
- *       - Chats
- *     summary: Get unread message counts
- *     description: Returns counts of pending DMs and unread messages (lightweight polling endpoint)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Counts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 pendingDMs:
- *                   type: integer
- *                   description: Number of pending DM requests
- *                 hasNewMessages:
- *                   type: boolean
- *                   description: Whether there are new messages in last 24h
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * // Poll for unread counts

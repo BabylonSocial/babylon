@@ -8,30 +8,6 @@
  * Returns random profile picture and banner indices for onboarding.
  * Used to assign random assets to new users.
  *
- * @openapi
- * /api/onboarding/random-assets:
- *   get:
- *     tags:
- *       - Onboarding
- *     summary: Get random assets
- *     description: Returns random profile picture and banner indices
- *     responses:
- *       200:
- *         description: Assets retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 profilePictureIndex:
- *                   type: integer
- *                   minimum: 0
- *                   maximum: 99
- *                 bannerIndex:
- *                   type: integer
- *                   minimum: 0
- *                   maximum: 99
- *
  * @example
  * ```typescript
  * const { profilePictureIndex, bannerIndex } = await fetch('/api/onboarding/random-assets')

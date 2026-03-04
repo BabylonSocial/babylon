@@ -9,29 +9,6 @@
  * functionality is handled by separate Eliza agent processes. Kept for
  * future integration.
  *
- * @openapi
- * /api/cron/_training:
- *   get:
- *     tags:
- *       - Cron
- *     summary: Training cron (disabled)
- *     description: Training cron job (currently disabled)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Cron executed (disabled status)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *
  * @example
  * ```typescript
  * // Called by Vercel Cron

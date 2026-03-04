@@ -8,49 +8,6 @@
  * Sends a group chat invite on behalf of an NPC to a user. Admin only.
  * Used for game mechanics and NPC interactions.
  *
- * @openapi
- * /api/admin/group-invite:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Send NPC group invite
- *     description: Sends group chat invite from NPC to user (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - npcId
- *               - userId
- *               - chatId
- *               - chatName
- *             properties:
- *               npcId:
- *                 type: string
- *                 description: NPC actor ID
- *               userId:
- *                 type: string
- *                 description: Target user ID
- *               chatId:
- *                 type: string
- *                 description: Chat ID
- *               chatName:
- *                 type: string
- *                 description: Chat name
- *     responses:
- *       200:
- *         description: Invite sent successfully
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * await fetch('/api/admin/group-invite', {

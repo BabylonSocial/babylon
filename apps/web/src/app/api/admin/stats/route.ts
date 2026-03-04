@@ -9,46 +9,6 @@
  * trading activity, social engagement, financial metrics, pools, and top users.
  * Requires admin authentication.
  *
- * @openapi
- * /api/admin/stats:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get system statistics
- *     description: Returns comprehensive system-wide statistics (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 users:
- *                   type: object
- *                 markets:
- *                   type: object
- *                 trading:
- *                   type: object
- *                 social:
- *                   type: object
- *                 financial:
- *                   type: object
- *                 pools:
- *                   type: object
- *                 engagement:
- *                   type: object
- *                 topUsers:
- *                   type: object
- *                 recentSignups:
- *                   type: array
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/admin/stats', {

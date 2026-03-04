@@ -8,39 +8,6 @@
  * Returns all trained model versions with metadata from database and blob storage.
  * Includes version, performance metrics, and deployment status.
  *
- * @openapi
- * /api/admin/training/models:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get trained models
- *     description: Returns all trained model versions with metadata (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Models retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 models:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       version:
- *                         type: string
- *                       performance:
- *                         type: object
- *                       deployed:
- *                         type: boolean
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const { models } = await fetch('/api/admin/training/models', {

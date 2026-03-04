@@ -14,32 +14,6 @@
  * Runs twice daily (6 AM and 6 PM UTC) to keep the world context fresh and prevent
  * content repetition across the game. Max execution time: 300s.
  *
- * @openapi
- * /api/cron/world-facts:
- *   post:
- *     tags:
- *       - Cron
- *     summary: Update world facts
- *     description: Fetches RSS feeds and generates parody headlines (requires CRON_SECRET)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: World facts updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 headlinesGenerated:
- *                   type: integer
- *                 headlinesCleaned:
- *                   type: integer
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *
  * @example
  * ```typescript
  * await fetch('/api/cron/world-facts', {

@@ -8,36 +8,6 @@
  * Generates a time-limited nonce for SIWE (Sign-In With Ethereum) authentication.
  * The nonce is single-use and expires after 5 minutes.
  *
- * @openapi
- * /api/auth/siwe/nonce:
- *   get:
- *     tags:
- *       - Authentication
- *     summary: Get SIWE nonce
- *     description: Generate a nonce for SIWE message signing. Rate limited to 10/min per IP.
- *     responses:
- *       200:
- *         description: Nonce generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 nonce:
- *                   type: string
- *                   description: Random nonce to include in SIWE message
- *                 issuedAt:
- *                   type: string
- *                   format: date-time
- *                 expiresAt:
- *                   type: string
- *                   format: date-time
- *                 domain:
- *                   type: string
- *                   description: Domain to use in SIWE message
- *       429:
- *         description: Rate limit exceeded
- *
  * @example
  * ```bash
  * curl https://babylon.market/api/auth/siwe/nonce

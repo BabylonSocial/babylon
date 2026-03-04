@@ -8,43 +8,6 @@
  * Returns list of users blocked by the current user with pagination support.
  * Includes blocked user details and block metadata.
  *
- * @openapi
- * /api/moderation/blocks:
- *   get:
- *     tags:
- *       - Moderation
- *     summary: Get blocked users
- *     description: Returns list of users blocked by current user
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *         description: Results per page
- *       - in: query
- *         name: offset
- *         schema:
- *           type: integer
- *           default: 0
- *         description: Pagination offset
- *     responses:
- *       200:
- *         description: Blocks retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 blocks:
- *                   type: array
- *                 pagination:
- *                   type: object
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * const { blocks } = await fetch('/api/moderation/blocks?limit=20', {

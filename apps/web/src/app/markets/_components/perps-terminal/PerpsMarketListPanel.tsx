@@ -45,7 +45,7 @@ export function PerpsMarketListPanel({
         : favorites.filter(
             (m) =>
               m.ticker.toLowerCase().includes(q) ||
-              m.name.toLowerCase().includes(q)
+              m.name?.toLowerCase().includes(q)
           );
 
     const sorted = [...searched].sort((a, b) => {

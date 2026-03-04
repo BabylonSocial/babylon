@@ -9,58 +9,6 @@
  * counts (from both ActorFollow and UserActorFollow), following count, and post count.
  * Supports lookup by actor ID or name (case-insensitive).
  *
- * @openapi
- * /api/actors/{actorId}/stats:
- *   get:
- *     tags:
- *       - Actors
- *     summary: Get actor statistics
- *     description: Returns follower counts, following count, and post count for a specific actor. Supports lookup by ID or name.
- *     parameters:
- *       - in: path
- *         name: actorId
- *         required: true
- *         schema:
- *           type: string
- *         description: Actor ID or name (case-insensitive)
- *     responses:
- *       200:
- *         description: Actor statistics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 stats:
- *                   type: object
- *                   properties:
- *                     followers:
- *                       type: integer
- *                       description: Total followers (actors + users)
- *                     following:
- *                       type: integer
- *                       description: Number of actors this actor follows
- *                     posts:
- *                       type: integer
- *                       description: Total posts by this actor
- *                     actorFollowers:
- *                       type: integer
- *                       description: Followers who are NPCs
- *                     userFollowers:
- *                       type: integer
- *                       description: Followers who are users
- *       404:
- *         description: Actor not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *
  * @param {string} actorId - Actor ID or name (path parameter)
  *
  * @returns {Promise<NextResponse>} Actor statistics including followers, following, and posts

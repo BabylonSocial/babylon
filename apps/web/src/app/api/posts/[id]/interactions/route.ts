@@ -9,66 +9,6 @@
  * and share count. For authenticated users, also returns whether the user has liked
  * or shared the post. Highly optimized with caching for feed performance.
  *
- * @openapi
- * /api/posts/{id}/interactions:
- *   get:
- *     tags:
- *       - Posts
- *     summary: Get post interaction counts
- *     description: Returns like, comment, and share counts. For authenticated users, also returns interaction state.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID
- *       - in: query
- *         name: includeComments
- *         schema:
- *           type: boolean
- *           default: true
- *         description: Include comment count
- *       - in: query
- *         name: includeReactions
- *         schema:
- *           type: boolean
- *           default: true
- *         description: Include reaction/like count
- *       - in: query
- *         name: includeShares
- *         schema:
- *           type: boolean
- *           default: false
- *         description: Include share count
- *     responses:
- *       200:
- *         description: Interaction data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 postId:
- *                   type: string
- *                 likeCount:
- *                   type: integer
- *                 commentCount:
- *                   type: integer
- *                 shareCount:
- *                   type: integer
- *                 isLiked:
- *                   type: boolean
- *                 isShared:
- *                   type: boolean
- *                 fetchedAt:
- *                   type: string
- *                   format: date-time
- *       404:
- *         description: Post not found
- *
  * @example
  * ```typescript
  * const response = await fetch(`/api/posts/${postId}/interactions`);

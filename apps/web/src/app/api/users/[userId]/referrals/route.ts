@@ -8,48 +8,6 @@
  * Returns referral statistics and list of referred users. Includes total count,
  * referred users list, and optional detailed stats.
  *
- * @openapi
- * /api/users/{userId}/referrals:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get referral stats
- *     description: Returns referral statistics and referred users list (own profile only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID (must match authenticated user)
- *       - in: query
- *         name: includeStats
- *         schema:
- *           type: boolean
- *           default: false
- *         description: Include detailed statistics
- *     responses:
- *       200:
- *         description: Referrals retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 referrals:
- *                   type: array
- *                 total:
- *                   type: integer
- *                 stats:
- *                   type: object
- *                   nullable: true
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Cannot access another user's referrals
- *
  * @example
  * ```typescript
  * const { referrals, total } = await fetch(`/api/users/${userId}/referrals?includeStats=true`, {

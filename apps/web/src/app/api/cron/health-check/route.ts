@@ -9,41 +9,6 @@
  * functions warm, verify database connectivity, and log system health metrics.
  * Max execution time: 60s.
  *
- * @openapi
- * /api/cron/health-check:
- *   get:
- *     tags:
- *       - Cron
- *     summary: System health check
- *     description: Verifies database connectivity and system health (requires CRON_SECRET)
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: System healthy
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 status:
- *                   type: string
- *                   enum: [healthy, unhealthy]
- *                 database:
- *                   type: string
- *                   enum: [connected, error]
- *                 duration:
- *                   type: number
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       401:
- *         description: Invalid or missing CRON_SECRET
- *       500:
- *         description: System unhealthy
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/cron/health-check', {

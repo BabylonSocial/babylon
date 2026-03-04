@@ -49,32 +49,10 @@ export {
 /**
  * Perp market data structure from API.
  *
- * This is the simplified frontend version used for display in lists and cards.
- * Differences from SharedPerpMarket (from @babylon/shared):
- * - PerpMarket: Fewer fields, used for UI display (lists, cards, modals)
- * - SharedPerpMarket: Full API response with all fields (orderbook, trades, etc.)
- *
- * Use PerpMarket for components, SharedPerpMarket for API type validation.
+ * Re-exported from the generated API hooks package. This is the canonical
+ * PerpMarket type derived from the OpenAPI spec.
  */
-export interface PerpMarket {
-  ticker: string;
-  organizationId: string;
-  name: string;
-  currentPrice: number;
-  change24h: number;
-  changePercent24h: number;
-  high24h: number;
-  low24h: number;
-  volume24h: number;
-  openInterest: number;
-  fundingRate: {
-    rate: number;
-    nextFundingTime: string;
-    predictedRate: number;
-  };
-  maxLeverage: number;
-  minOrderSize: number;
-}
+export type { PerpMarket } from '@babylon/api-hooks';
 
 /**
  * Prediction market data structure from API.

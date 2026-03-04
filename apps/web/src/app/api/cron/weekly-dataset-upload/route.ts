@@ -9,32 +9,6 @@
  * HuggingFace, benchmarks RL models, and uploads improved models. Runs
  * weekly on Sundays at 2 AM UTC.
  *
- * @openapi
- * /api/cron/weekly-dataset-upload:
- *   post:
- *     tags:
- *       - Cron
- *     summary: Weekly dataset upload
- *     description: Weekly job for dataset upload and model benchmarking
- *     security:
- *       - CronSecret: []
- *     responses:
- *       200:
- *         description: Upload completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 datasetsUploaded:
- *                   type: integer
- *                 modelsBenchmarked:
- *                   type: integer
- *       401:
- *         description: Unauthorized (invalid CRON_SECRET)
- *
  * @example
  * ```typescript
  * // Called by Vercel Cron (weekly)

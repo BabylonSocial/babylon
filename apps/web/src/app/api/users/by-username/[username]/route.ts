@@ -8,57 +8,6 @@
  * Retrieves user profile by username with comprehensive profile data including
  * stats, social connections, on-chain status, and social media links.
  *
- * @openapi
- * /api/users/by-username/{username}:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get user by username
- *     description: Returns complete user profile by username lookup
- *     parameters:
- *       - in: path
- *         name: username
- *         required: true
- *         schema:
- *           type: string
- *         description: Username to lookup
- *     responses:
- *       200:
- *         description: User profile retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     username:
- *                       type: string
- *                     displayName:
- *                       type: string
- *                     bio:
- *                       type: string
- *                     profileImageUrl:
- *                       type: string
- *                     stats:
- *                       type: object
- *                       properties:
- *                         positions:
- *                           type: integer
- *                         comments:
- *                           type: integer
- *                         reactions:
- *                           type: integer
- *                         followers:
- *                           type: integer
- *                         following:
- *                           type: integer
- *       404:
- *         description: User not found
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/users/by-username/alice');

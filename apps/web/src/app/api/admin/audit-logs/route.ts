@@ -8,55 +8,6 @@
  * Returns admin audit logs for reviewing admin actions.
  * Supports both offset-based and cursor-based pagination.
  * Cursor-based pagination is recommended for large datasets.
- *
- * @openapi
- * /api/admin/audit-logs:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get admin audit logs
- *     description: Returns admin audit logs with pagination (admin only). Supports both offset-based and cursor-based pagination.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - name: limit
- *         in: query
- *         schema:
- *           type: integer
- *           default: 50
- *           maximum: 100
- *       - name: offset
- *         in: query
- *         description: Offset for offset-based pagination (max 1000). Use cursor for large datasets.
- *         schema:
- *           type: integer
- *           default: 0
- *           maximum: 1000
- *       - name: cursor
- *         in: query
- *         description: ISO timestamp cursor for cursor-based pagination. Use nextCursor from previous response.
- *         schema:
- *           type: string
- *           format: date-time
- *       - name: adminId
- *         in: query
- *         schema:
- *           type: string
- *       - name: action
- *         in: query
- *         schema:
- *           type: string
- *       - name: resourceType
- *         in: query
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Audit logs retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
  */
 
 import {

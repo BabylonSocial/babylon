@@ -7,31 +7,6 @@
  * @description
  * Returns time-series analytics data for the admin dashboard charts.
  * Supports various periods (day, week, month) and metrics.
- *
- * @openapi
- * /api/admin/analytics:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get analytics data
- *     description: Returns time-series analytics data for charts (admin only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - name: period
- *         in: query
- *         description: Time period granularity for analytics data
- *         schema:
- *           type: string
- *           enum: [day, week, month]
- *           default: week
- *     responses:
- *       200:
- *         description: Analytics data retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
  */
 
 import { requireAdmin, successResponse, withErrorHandling } from '@babylon/api';

@@ -8,34 +8,6 @@
  * Returns training data statistics and readiness information including
  * trajectory counts, window statistics, and training readiness metrics.
  *
- * @openapi
- * /api/admin/training-data:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get training data status
- *     description: Returns training data statistics and readiness (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 totalTrajectories:
- *                   type: integer
- *                 windowStats:
- *                   type: array
- *                 readyWindows:
- *                   type: array
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const status = await fetch('/api/admin/training-data', {
@@ -43,6 +15,7 @@
  * }).then(r => r.json());
  * ```
  */
+
 
 import {
   getClientIp,

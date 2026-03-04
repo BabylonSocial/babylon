@@ -29,61 +29,6 @@
  *
  * @see https://vercel.com/docs/image-optimization
  *
- * @openapi
- * /api/upload/image:
- *   post:
- *     tags:
- *       - Upload
- *     summary: Upload image
- *     description: Upload and optimize images for profiles, covers, or posts
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - file
- *             properties:
- *               file:
- *                 type: string
- *                 format: binary
- *                 description: Image file to upload
- *               type:
- *                 type: string
- *                 enum: [profile, cover, post]
- *                 description: Image type/category
- *     responses:
- *       200:
- *         description: Image uploaded successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 url:
- *                   type: string
- *                   description: Public URL of uploaded image
- *                 key:
- *                   type: string
- *                   description: Storage key/path
- *                 size:
- *                   type: integer
- *                   description: File size in bytes
- *                 filename:
- *                   type: string
- *                   description: Generated filename
- *       400:
- *         description: Invalid file or type
- *       401:
- *         description: Unauthorized
- *       429:
- *         description: Rate limit exceeded
- *
  * @example
  * ```typescript
  * // Upload profile image

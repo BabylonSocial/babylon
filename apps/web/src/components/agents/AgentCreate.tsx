@@ -66,9 +66,9 @@ export function AgentCreate({
   const { authenticated, getAccessToken, user: authUser } = useAuth();
 
   // Fetch balance fresh from API
-  const { balance, loading: balanceLoading } = useWalletBalance(authUser?.id, {
-    enabled: authenticated,
-  });
+  const { balance, loading: balanceLoading } = useWalletBalance(
+    authenticated ? authUser?.id : null
+  );
 
   const [currentStep, setCurrentStep] = useState<Step>(Step.Profile);
   const [isCreating, setIsCreating] = useState(false);

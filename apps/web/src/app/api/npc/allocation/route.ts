@@ -8,47 +8,6 @@
  * Calculates allocation amount adjusted by NPC's reputation score. Returns
  * adjusted amount, reputation score, multiplier, and whether fallback was used.
  *
- * @openapi
- * /api/npc/allocation:
- *   post:
- *     tags:
- *       - NPC
- *     summary: Calculate reputation-adjusted allocation
- *     description: Calculates allocation adjusted by NPC reputation score
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - npcUserId
- *               - baseAmount
- *             properties:
- *               npcUserId:
- *                 type: string
- *               baseAmount:
- *                 type: number
- *                 description: Base allocation amount
- *     responses:
- *       200:
- *         description: Allocation calculated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 adjustedAmount:
- *                   type: number
- *                 reputationScore:
- *                   type: number
- *                 multiplier:
- *                   type: number
- *                 usedFallback:
- *                   type: boolean
- *       400:
- *         description: Invalid input
- *
  * @example
  * ```typescript
  * const { adjustedAmount } = await fetch('/api/npc/allocation', {

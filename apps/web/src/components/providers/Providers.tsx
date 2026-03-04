@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { FontSizeProvider } from '@/contexts/FontSizeContext';
 import { WidgetRefreshProvider } from '@/contexts/WidgetRefreshContext';
 import { SessionHeartbeatProvider } from '@/hooks/useSessionHeartbeat';
+import { useWalletBalanceQueryClientBridge } from '@/stores/walletBalanceStore';
 import { DiscordActivityProvider } from './DiscordActivityProvider';
 import { FarcasterMiniAppProvider } from './FarcasterMiniAppProvider';
 import { GameGuideProvider } from './GameGuideProvider';
@@ -210,6 +211,11 @@ function ThemedPrivyProvider({ children }: { children: React.ReactNode }) {
  * @param props - Providers component props
  * @returns Providers wrapper element
  */
+function QueryClientBridge() {
+  useWalletBalanceQueryClientBridge();
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
@@ -255,6 +261,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <FontSizeProvider>
             <QueryClientProvider client={queryClient}>
               <GamePlaybackManager />
+              <QueryClientBridge />
               <WidgetRefreshProvider>
                 {mounted ? (
                   <Fragment>
@@ -293,6 +300,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <FontSizeProvider>
                 <QueryClientProvider client={queryClient}>
                   <GamePlaybackManager />
+                  <QueryClientBridge />
                   <ThemedPrivyProvider>
                     <FarcasterMiniAppProvider>
                       <TelegramMiniAppProvider>

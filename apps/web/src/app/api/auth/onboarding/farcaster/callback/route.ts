@@ -8,50 +8,6 @@
  * Handles Farcaster authentication callback during onboarding. Verifies signature,
  * imports profile data (username, display name, pfp, bio), and updates user profile.
  *
- * @openapi
- * /api/auth/onboarding/farcaster/callback:
- *   post:
- *     tags:
- *       - Auth
- *     summary: Farcaster onboarding callback
- *     description: Handles Farcaster auth callback and imports profile data
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - message
- *               - signature
- *               - fid
- *               - username
- *               - state
- *             properties:
- *               message:
- *                 type: string
- *               signature:
- *                 type: string
- *               fid:
- *                 type: integer
- *                 description: Farcaster ID
- *               username:
- *                 type: string
- *               displayName:
- *                 type: string
- *               pfpUrl:
- *                 type: string
- *                 format: uri
- *               bio:
- *                 type: string
- *               state:
- *                 type: string
- *     responses:
- *       200:
- *         description: Profile imported successfully
- *       400:
- *         description: Invalid signature or parameters
- *
  * @example
  * ```typescript
  * await fetch('/api/auth/onboarding/farcaster/callback', {

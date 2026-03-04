@@ -35,7 +35,7 @@ export function PerpsOrderEntryPanel({
   initialSide,
   onRequestBuyPoints,
 }: PerpsOrderEntryPanelProps) {
-  const { user, authenticated, login, getAccessToken } = useAuth();
+  const { user, authenticated, login } = useAuth();
   const userId = authenticated ? (user?.id ?? null) : null;
 
   const {
@@ -49,7 +49,7 @@ export function PerpsOrderEntryPanel({
     refresh: refreshUserPositions,
   } = usePerpPositions(userId);
 
-  const { openPosition } = usePerpTrade({ getAccessToken });
+  const { openPosition } = usePerpTrade();
 
   const [side, setSide] = useState<'long' | 'short'>(initialSide ?? 'long');
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market');

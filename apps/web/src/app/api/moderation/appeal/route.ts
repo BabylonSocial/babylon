@@ -9,54 +9,6 @@
  * and staked appeals ($10) for faster review. Uses AI evaluation and
  * human review workflow.
  *
- * @openapi
- * /api/moderation/appeal:
- *   post:
- *     tags:
- *       - Moderation
- *     summary: Appeal ban
- *     description: Submits ban appeal with optional stake for faster review
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - reason
- *             properties:
- *               reason:
- *                 type: string
- *                 minLength: 10
- *                 maxLength: 2000
- *                 description: Appeal reasoning
- *               stakeTxHash:
- *                 type: string
- *                 description: Optional transaction hash for staked appeal ($10)
- *     responses:
- *       200:
- *         description: Appeal submitted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 appealStatus:
- *                   type: string
- *                 evaluation:
- *                   type: object
- *                   nullable: true
- *       400:
- *         description: Invalid appeal or already appealed
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: User not banned
- *
  * @example
  * ```typescript
  * await fetch('/api/moderation/appeal', {

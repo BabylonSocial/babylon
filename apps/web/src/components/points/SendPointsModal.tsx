@@ -3,7 +3,6 @@
 import { cn } from '@babylon/shared';
 import { Check, Loader2, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useTransferPoints } from '@/hooks/useTransferPoints';
 
 /**
@@ -54,10 +53,7 @@ export function SendPointsModal({
   recipientUsername,
   onSuccess,
 }: SendPointsModalProps) {
-  const { getAccessToken } = useAuth();
-  const { transferPoints, isLoading: isSubmitting } = useTransferPoints({
-    getAccessToken,
-  });
+  const { transferPoints, isLoading: isSubmitting } = useTransferPoints();
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string | null>(null);

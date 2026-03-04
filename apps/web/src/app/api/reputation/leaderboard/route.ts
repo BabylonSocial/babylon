@@ -19,68 +19,6 @@
  * - Includes user metadata
  * - Real-time score calculation
  *
- * @openapi
- * /api/reputation/leaderboard:
- *   get:
- *     tags:
- *       - Reputation
- *     summary: Get reputation leaderboard
- *     description: Returns ranked list of top performers by reputation score
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 100
- *         description: Number of results to return
- *       - in: query
- *         name: minGames
- *         schema:
- *           type: integer
- *           minimum: 0
- *           default: 5
- *         description: Minimum games/trades threshold
- *     responses:
- *       200:
- *         description: Reputation leaderboard
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 leaderboard:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       rank:
- *                         type: integer
- *                       userId:
- *                         type: string
- *                       username:
- *                         type: string
- *                       displayName:
- *                         type: string
- *                       reputationScore:
- *                         type: number
- *                       gamesPlayed:
- *                         type: integer
- *                       accuracy:
- *                         type: number
- *                 metadata:
- *                   type: object
- *                   properties:
- *                     count:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     minGames:
- *                       type: integer
- *
  * @example
  * ```typescript
  * // Get top 50 by reputation

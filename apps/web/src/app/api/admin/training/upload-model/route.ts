@@ -8,40 +8,6 @@
  * Uploads trained model to Vercel Blob storage. Called by Python deployment
  * script after training completes. Supports multipart file uploads.
  *
- * @openapi
- * /api/admin/training/upload-model:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Upload trained model
- *     description: Uploads trained model to blob storage (admin only)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - modelFile
- *               - version
- *             properties:
- *               modelFile:
- *                 type: string
- *                 format: binary
- *               version:
- *                 type: string
- *     responses:
- *       200:
- *         description: Model uploaded successfully
- *       400:
- *         description: Invalid file or version
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const formData = new FormData();

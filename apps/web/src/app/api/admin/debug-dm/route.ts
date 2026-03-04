@@ -8,41 +8,6 @@
  * Debug endpoint to check what DM chats exist for a user. Bypasses RLS for
  * admin debugging purposes. Returns all chats and messages for the user.
  *
- * @openapi
- * /api/admin/debug-dm:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Debug user DM chats
- *     description: Returns all DM chats for a user (admin only, bypasses RLS)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID to debug
- *     responses:
- *       200:
- *         description: Debug info retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 user:
- *                   type: object
- *                 chats:
- *                   type: array
- *       400:
- *         description: userId parameter required
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const debug = await fetch('/api/admin/debug-dm?userId=user-id', {

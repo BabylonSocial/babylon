@@ -9,68 +9,6 @@
  * reputation sync. Includes points distribution to reporters for CSAM/scammer cases.
  * Requires admin authentication.
  *
- * @openapi
- * /api/admin/users/{userId}/ban:
- *   post:
- *     tags:
- *       - Admin
- *     summary: Ban or unban user
- *     description: Bans or unbans a user with moderation flags and reputation sync (admin only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID to ban/unban
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - action
- *             properties:
- *               action:
- *                 type: string
- *                 enum: [ban, unban]
- *               reason:
- *                 type: string
- *                 minLength: 1
- *                 maxLength: 500
- *                 description: Ban reason
- *               isScammer:
- *                 type: boolean
- *                 description: Mark as scammer
- *               isCSAM:
- *                 type: boolean
- *                 description: Mark as CSAM
- *     responses:
- *       200:
- *         description: Ban/unban action completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 user:
- *                   type: object
- *                 message:
- *                   type: string
- *       400:
- *         description: Invalid action or cannot ban admin/actor
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *       404:
- *         description: User not found
- *
  * @example
  * ```typescript
  * await fetch(`/api/admin/users/${userId}/ban`, {

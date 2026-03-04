@@ -8,31 +8,6 @@
  * Generates Open Graph image for P&L sharing. Returns PNG image with
  * portfolio profit/loss information. Cached for 1 hour.
  *
- * @openapi
- * /api/og/pnl/{userId}:
- *   get:
- *     tags:
- *       - OG Images
- *     summary: Generate P&L OG image
- *     description: Generates OG image for portfolio P&L sharing
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: Image generated successfully
- *         content:
- *           image/png:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: User not found
- *
  * @example
  * ```typescript
  * // Use in <img> tag or meta tag

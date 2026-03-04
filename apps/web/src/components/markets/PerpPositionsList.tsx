@@ -4,7 +4,6 @@ import { calculateUnrealizedPnL, cn, formatCurrency } from '@babylon/shared';
 import { AlertTriangle, Bot, TrendingDown, TrendingUp } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
 import { useMarketPrices } from '@/hooks/useMarketPrices';
 import { usePerpTrade } from '@/hooks/usePerpTrade';
 import { invalidatePerpMarketsCache } from '@/stores/perpMarketsStore';
@@ -67,10 +66,7 @@ export function PerpPositionsList({
     pnl: number;
     pnlPercent: number;
   } | null>(null);
-  const { getAccessToken } = useAuth();
-  const { closePosition: closePerpPosition } = usePerpTrade({
-    getAccessToken,
-  });
+  const { closePosition: closePerpPosition } = usePerpTrade();
 
   const tickers = useMemo(
     () => positions.map((pos) => pos.ticker),
@@ -126,12 +122,7 @@ export function PerpPositionsList({
     setConfirmDialogOpen(false);
 
     const data = await closePerpPosition(pendingClose.position.id);
-    const pnl =
-      typeof data?.pnl === 'number'
-        ? data.pnl
-        : typeof data?.realizedPnL === 'number'
-          ? data.realizedPnL
-          : 0;
+    const pnl = data?.pnl ?? 0;
 
     const pnlSign = pnl >= 0 ? '+' : '-';
     toast.success('Position closed!', {

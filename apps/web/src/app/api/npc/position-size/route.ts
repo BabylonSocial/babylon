@@ -8,52 +8,6 @@
  * Calculates recommended position size based on portfolio metrics, strategy,
  * and reputation. Returns position size as decimal (0.10 = 10%).
  *
- * @openapi
- * /api/npc/position-size:
- *   get:
- *     tags:
- *       - NPC
- *     summary: Get position size recommendation
- *     description: Calculates recommended position size for NPC
- *     parameters:
- *       - in: query
- *         name: npcUserId
- *         required: true
- *         schema:
- *           type: string
- *         description: NPC user ID
- *       - in: query
- *         name: poolId
- *         required: true
- *         schema:
- *           type: string
- *         description: Pool ID
- *       - in: query
- *         name: strategy
- *         schema:
- *           type: string
- *           enum: [aggressive, conservative, balanced]
- *         description: Investment strategy
- *     responses:
- *       200:
- *         description: Recommendation retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 positionSize:
- *                   type: number
- *                   description: Recommended size as decimal (0.10 = 10%)
- *                 riskAdjusted:
- *                   type: boolean
- *                 reputationBoost:
- *                   type: boolean
- *                 portfolioMetrics:
- *                   type: object
- *       400:
- *         description: Invalid query parameters
- *
  * @example
  * ```typescript
  * const { positionSize } = await fetch('/api/npc/position-size?npcUserId=id&poolId=pool&strategy=balanced')

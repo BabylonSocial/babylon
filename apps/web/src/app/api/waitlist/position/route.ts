@@ -8,53 +8,6 @@
  * Returns user's waitlist position including leaderboard rank, percentile, points,
  * and referral statistics. Handles users not yet on waitlist gracefully.
  *
- * @openapi
- * /api/waitlist/position:
- *   get:
- *     tags:
- *       - Waitlist
- *     summary: Get waitlist position
- *     description: Returns user's waitlist position, rank, and points breakdown
- *     parameters:
- *       - in: query
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID to check position for
- *     responses:
- *       200:
- *         description: Waitlist position retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 position:
- *                   type: integer
- *                   nullable: true
- *                   description: Leaderboard rank (null if not on waitlist)
- *                 leaderboardRank:
- *                   type: integer
- *                   nullable: true
- *                 waitlistPosition:
- *                   type: integer
- *                   nullable: true
- *                 totalAhead:
- *                   type: integer
- *                 totalCount:
- *                   type: integer
- *                 percentile:
- *                   type: number
- *                 inviteCode:
- *                   type: string
- *                 points:
- *                   type: number
- *                 pointsBreakdown:
- *                   type: object
- *                 referralCount:
- *                   type: integer
- *
  * @example
  * ```typescript
  * const { position, points } = await fetch('/api/waitlist/position?userId=user-id')

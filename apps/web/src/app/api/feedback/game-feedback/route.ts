@@ -3,45 +3,6 @@
  *
  * @route POST /api/feedback/game-feedback - Submit general game feedback
  * @access Authenticated
- *
- * @openapi
- * /api/feedback/game-feedback:
- *   post:
- *     tags:
- *       - Feedback
- *     summary: Submit general game feedback
- *     description: Submits general feedback about the game
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - feedbackType
- *               - description
- *             properties:
- *               feedbackType:
- *                 type: string
- *                 enum: [bug, feature_request, performance]
- *               description:
- *                 type: string
- *               stepsToReproduce:
- *                 type: string
- *                 description: Required for bug reports
- *               screenshotUrl:
- *                 type: string
- *                 description: Optional screenshot URL for bug reports
- *               rating:
- *                 type: number
- *                 minimum: 1
- *                 maximum: 5
- *                 description: Required for feature requests
- *     responses:
- *       201:
- *         description: Feedback submitted successfully
- *       400:
- *         description: Invalid input
  */
 
 import {

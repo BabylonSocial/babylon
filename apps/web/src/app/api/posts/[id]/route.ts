@@ -1,66 +1,6 @@
 /**
  * API Route: /api/posts/[id]
  * Methods: GET (get single post details), DELETE (soft delete post)
- *
- * @openapi
- * /api/posts/{id}:
- *   get:
- *     tags:
- *       - Posts
- *     summary: Get single post
- *     description: Returns a single post by ID with full details including author, interactions, and repost metadata.
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID
- *     responses:
- *       200:
- *         description: Post details
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 content:
- *                   type: string
- *                 authorId:
- *                   type: string
- *                 likeCount:
- *                   type: integer
- *                 commentCount:
- *                   type: integer
- *                 shareCount:
- *                   type: integer
- *       404:
- *         description: Post not found
- *   delete:
- *     tags:
- *       - Posts
- *     summary: Delete post
- *     description: Soft deletes a post (author only). Post is marked as deleted but data is retained.
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID
- *     responses:
- *       200:
- *         description: Post deleted successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Not the post author
- *       404:
- *         description: Post not found
  */
 
 import type { JsonValue } from '@babylon/api';

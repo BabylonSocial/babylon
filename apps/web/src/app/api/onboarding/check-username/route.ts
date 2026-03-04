@@ -26,53 +26,6 @@
  * 2. If taken, try username1, username2, ... username9999
  * 3. If all taken, append random 4-digit suffix
  *
- * @openapi
- * /api/onboarding/check-username:
- *   get:
- *     tags:
- *       - Onboarding
- *     summary: Check username availability
- *     description: Validates username availability and provides suggestions if taken
- *     parameters:
- *       - in: query
- *         name: username
- *         required: true
- *         schema:
- *           type: string
- *           minLength: 3
- *           maxLength: 20
- *         description: Desired username to check
- *         example: alice_trader
- *     responses:
- *       200:
- *         description: Username check result
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 available:
- *                   type: boolean
- *                   description: Whether username is available
- *                 username:
- *                   type: string
- *                   description: Sanitized username checked
- *                 suggestion:
- *                   type: string
- *                   description: Suggested alternative (if unavailable)
- *             examples:
- *               available:
- *                 value:
- *                   available: true
- *                   username: alice_trader
- *               unavailable:
- *                 value:
- *                   available: false
- *                   username: alice
- *                   suggestion: alice1
- *       400:
- *         description: Invalid username (too short, too long, or missing)
- *
  * @example
  * ```typescript
  * // Check if username is available

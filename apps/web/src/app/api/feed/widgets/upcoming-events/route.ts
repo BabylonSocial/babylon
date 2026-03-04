@@ -8,41 +8,6 @@
  * Returns upcoming events for feed widget. Includes game events, questions,
  * and related prediction markets. Supports filtering by timeframe.
  *
- * @openapi
- * /api/feed/widgets/upcoming-events:
- *   get:
- *     tags:
- *       - Feed
- *     summary: Get upcoming events
- *     description: Returns upcoming events for feed widget (optional auth for RLS)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Maximum events to return
- *       - in: query
- *         name: timeframe
- *         schema:
- *           type: string
- *           default: 7d
- *         description: Timeframe filter (e.g., 7d, 30d)
- *     responses:
- *       200:
- *         description: Events retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 events:
- *                   type: array
- *       401:
- *         description: Unauthorized (optional)
- *
  * @example
  * ```typescript
  * const { events } = await fetch('/api/feed/widgets/upcoming-events?limit=10')

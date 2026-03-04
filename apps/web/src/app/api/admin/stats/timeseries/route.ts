@@ -13,63 +13,6 @@
  * - endDate: ISO date string (default: now)
  * - environment: 'production' | 'staging' | 'development' (default: current)
  * - granularity: 'hourly' | 'daily' (default: 'hourly' for ≤3 days, else 'daily')
- *
- * @openapi
- * /api/admin/stats/timeseries:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get time-series metrics
- *     description: Returns historical platform metrics from hourly snapshots
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - name: startDate
- *         in: query
- *         description: Start of date range (ISO format)
- *         schema:
- *           type: string
- *           format: date-time
- *       - name: endDate
- *         in: query
- *         description: End of date range (ISO format)
- *         schema:
- *           type: string
- *           format: date-time
- *       - name: environment
- *         in: query
- *         description: Target environment
- *         schema:
- *           type: string
- *           enum: [production, staging, development]
- *       - name: granularity
- *         in: query
- *         description: Data granularity
- *         schema:
- *           type: string
- *           enum: [hourly, daily]
- *     responses:
- *       200:
- *         description: Time-series data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 timeSeries:
- *                   type: array
- *                   items:
- *                     type: object
- *                 summary:
- *                   type: object
- *                 metadata:
- *                   type: object
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *       400:
- *         description: Invalid date range
  */
 
 import {

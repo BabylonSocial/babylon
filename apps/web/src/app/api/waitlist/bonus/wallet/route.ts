@@ -8,45 +8,6 @@
  * Awards waitlist bonus points (25 points) for linking a wallet address. One-time
  * bonus per user. Returns whether bonus was awarded or already claimed.
  *
- * @openapi
- * /api/waitlist/bonus/wallet:
- *   post:
- *     tags:
- *       - Waitlist
- *     summary: Award wallet bonus
- *     description: Awards 25 waitlist points for linking wallet address (one-time bonus)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *               - walletAddress
- *             properties:
- *               userId:
- *                 type: string
- *               walletAddress:
- *                 type: string
- *     responses:
- *       200:
- *         description: Bonus processed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 awarded:
- *                   type: boolean
- *                 bonusAmount:
- *                   type: integer
- *                   example: 25
- *                 message:
- *                   type: string
- *       400:
- *         description: Invalid input or user not found
- *
  * @example
  * ```typescript
  * await fetch('/api/waitlist/bonus/wallet', {

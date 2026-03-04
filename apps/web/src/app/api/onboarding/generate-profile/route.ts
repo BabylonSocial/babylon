@@ -8,30 +8,6 @@
  * Generates AI profile data for new users including name, bio, and other
  * profile fields. Uses AI to create personalized profile content.
  *
- * @openapi
- * /api/onboarding/generate-profile:
- *   get:
- *     tags:
- *       - Onboarding
- *     summary: Generate AI profile
- *     description: Generates AI profile data for new users
- *     responses:
- *       200:
- *         description: Profile generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 name:
- *                   type: string
- *                 bio:
- *                   type: string
- *                 username:
- *                   type: string
- *       500:
- *         description: AI generation failed
- *
  * @example
  * ```typescript
  * const profile = await fetch('/api/onboarding/generate-profile')

@@ -8,51 +8,6 @@
  * Returns list of all autonomous agents with configuration, performance metrics,
  * status, and timing information. Requires admin authentication.
  *
- * @openapi
- * /api/admin/agents:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get all agents
- *     description: Returns list of all autonomous agents with stats (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Agents retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 agents:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       username:
- *                         type: string
- *                       displayName:
- *                         type: string
- *                       modelTier:
- *                         type: string
- *                       balance:
- *                         type: number
- *                       autonomousTrading:
- *                         type: boolean
- *                       autonomousPosting:
- *                         type: boolean
- *                       agentStatus:
- *                         type: string
- *                       lifetimePnL:
- *                         type: number
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/admin/agents', {

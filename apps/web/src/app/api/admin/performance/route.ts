@@ -8,36 +8,6 @@
  * Returns real-time performance metrics including bottlenecks, recommendations,
  * slow queries, and system health. Used for monitoring and optimization.
  *
- * @openapi
- * /api/admin/performance:
- *   get:
- *     tags:
- *       - Admin
- *     summary: Get performance metrics
- *     description: Returns real-time performance metrics (admin only)
- *     security:
- *       - PrivyAuth: []
- *     responses:
- *       200:
- *         description: Metrics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 stats:
- *                   type: object
- *                 bottlenecks:
- *                   type: array
- *                 recommendations:
- *                   type: array
- *                 slowQueries:
- *                   type: array
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Admin access required
- *
  * @example
  * ```typescript
  * const metrics = await fetch('/api/admin/performance', {

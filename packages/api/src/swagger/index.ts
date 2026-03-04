@@ -1,10 +1,12 @@
 /**
  * Swagger/OpenAPI Utilities
  *
- * @module lib/swagger
+ * @deprecated The old JSDoc-based swagger system has been replaced by
+ * zod-openapi in packages/api/src/openapi/. Use `bun run generate:api`
+ * to regenerate the OpenAPI spec and client hooks.
+ *
+ * Remaining exports are kept for backward compatibility only.
  */
 
-export { generateAutoSpec } from './auto-generator'; // JSDoc-based auto-generator (preferred)
 export { swaggerDefinition } from './config';
-export { generateOpenApiSpec } from './generator'; // Programmatic spec generator (fallback)
 export type { OpenAPIParameter, OpenAPIResponse, OpenAPIRoute } from './types';

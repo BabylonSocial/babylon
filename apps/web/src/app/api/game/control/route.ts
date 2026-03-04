@@ -10,58 +10,6 @@
  * Controls the main continuous game engine. GET returns current game state.
  * POST starts or pauses the game (admin only via requireAdmin middleware).
  *
- * @openapi
- * /api/game/control:
- *   get:
- *     tags:
- *       - Game
- *     summary: Get game state
- *     description: Returns current game state (public)
- *     responses:
- *       200:
- *         description: Game state retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 game:
- *                   type: object
- *                   nullable: true
- *                   properties:
- *                     id:
- *                       type: string
- *                     isRunning:
- *                       type: boolean
- *                     currentDay:
- *                       type: integer
- *   post:
- *     tags:
- *       - Game
- *     summary: Start/pause game
- *     description: Controls game engine (admin only, uses requireAdmin middleware)
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - action
- *             properties:
- *               action:
- *                 type: string
- *                 enum: [start, pause]
- *     responses:
- *       200:
- *         description: Game control action completed successfully
- *       401:
- *         description: Unauthorized (admin required)
- *
  * @example
  * ```typescript
  * // Get state (public)

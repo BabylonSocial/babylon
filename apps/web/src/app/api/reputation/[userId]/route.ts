@@ -9,60 +9,6 @@
  * trust level, feedback statistics, game performance metrics, and trading performance.
  * Includes ranking information and recent trends.
  *
- * @openapi
- * /api/reputation/{userId}:
- *   get:
- *     tags:
- *       - Reputation
- *     summary: Get user reputation
- *     description: Returns comprehensive reputation data including score, trust level, performance metrics, and ranking
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID, username, or wallet address
- *     responses:
- *       200:
- *         description: Reputation data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 userId:
- *                   type: string
- *                 reputationPoints:
- *                   type: integer
- *                 averageFeedbackScore:
- *                   type: number
- *                 totalFeedbackReceived:
- *                   type: integer
- *                 performance:
- *                   type: object
- *                   properties:
- *                     gamesPlayed:
- *                       type: integer
- *                     gamesWon:
- *                       type: integer
- *                     averageGameScore:
- *                       type: number
- *                     winRate:
- *                       type: number
- *                 recentTrend:
- *                   type: number
- *                 trustLevel:
- *                   type: string
- *                 rank:
- *                   type: integer
- *                 totalUsers:
- *                   type: integer
- *       404:
- *         description: User not found
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/reputation/user_123');

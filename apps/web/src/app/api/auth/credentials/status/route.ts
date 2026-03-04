@@ -9,28 +9,6 @@
  * Returns configuration status for Twitter and Farcaster. Used by frontend
  * to conditionally display social login options.
  *
- * @openapi
- * /api/auth/credentials/status:
- *   get:
- *     tags:
- *       - Auth
- *     summary: Check OAuth credentials status
- *     description: Returns configuration status for Twitter and Farcaster OAuth
- *     responses:
- *       200:
- *         description: Credentials status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 twitter:
- *                   type: boolean
- *                   description: Twitter OAuth 2.0 configured
- *                 farcaster:
- *                   type: boolean
- *                   description: Farcaster authentication configured
- *
  * @example
  * ```typescript
  * const { twitter, farcaster } = await fetch('/api/auth/credentials/status')

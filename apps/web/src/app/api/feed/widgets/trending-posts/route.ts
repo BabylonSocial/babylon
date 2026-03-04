@@ -8,68 +8,6 @@
  * Returns trending posts based on engagement (likes, comments, shares) and recency.
  * Uses weighted scoring algorithm with recency factor. Filters posts from last 24 hours.
  *
- * @openapi
- * /api/feed/widgets/trending-posts:
- *   get:
- *     tags:
- *       - Feed
- *     summary: Get trending posts
- *     description: Returns trending posts based on engagement and recency scoring
- *     parameters:
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Maximum number of posts
- *       - in: query
- *         name: timeframe
- *         schema:
- *           type: string
- *           default: 24h
- *         description: Time window for trending calculation
- *       - in: query
- *         name: minInteractions
- *         schema:
- *           type: integer
- *           default: 5
- *         description: Minimum interactions required
- *     responses:
- *       200:
- *         description: Trending posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 posts:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       content:
- *                         type: string
- *                       authorId:
- *                         type: string
- *                       authorName:
- *                         type: string
- *                       authorUsername:
- *                         type: string
- *                         nullable: true
- *                       timestamp:
- *                         type: string
- *                         format: date-time
- *                       likeCount:
- *                         type: integer
- *                       commentCount:
- *                         type: integer
- *                       shareCount:
- *                         type: integer
- *                       trendingScore:
- *                         type: number
- *
  * @example
  * ```typescript
  * const response = await fetch('/api/feed/widgets/trending-posts?limit=5');

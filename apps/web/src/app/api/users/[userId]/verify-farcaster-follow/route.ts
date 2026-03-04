@@ -8,32 +8,6 @@
  * Verifies that a user is following @playbabylon on Farcaster.
  * Awards points if verification succeeds.
  *
- * @openapi
- * /api/users/{userId}/verify-farcaster-follow:
- *   post:
- *     tags:
- *       - Users
- *     summary: Verify Farcaster follow
- *     description: Verifies user is following @playbabylon and awards points (authenticated user only)
- *     security:
- *       - PrivyAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
- *     responses:
- *       200:
- *         description: Follow verified successfully
- *       400:
- *         description: Invalid input
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Not authorized for this user
- *
  * @example
  * ```typescript
  * await fetch(`/api/users/${userId}/verify-farcaster-follow`, {

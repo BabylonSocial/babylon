@@ -8,50 +8,6 @@
  * Verifies an x402 payment and credits points to user's account. Checks
  * transaction hash and updates payment status. Credits points on success.
  *
- * @openapi
- * /api/points/purchase/verify-payment:
- *   post:
- *     tags:
- *       - Points
- *     summary: Verify payment and credit points
- *     description: Verifies on-chain payment and credits points to account
- *     security:
- *       - PrivyAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - requestId
- *               - txHash
- *               - fromAddress
- *               - toAddress
- *               - amount
- *             properties:
- *               requestId:
- *                 type: string
- *               txHash:
- *                 type: string
- *                 description: On-chain transaction hash
- *               fromAddress:
- *                 type: string
- *                 pattern: '^0x[a-fA-F0-9]{40}$'
- *               toAddress:
- *                 type: string
- *                 pattern: '^0x[a-fA-F0-9]{40}$'
- *               amount:
- *                 type: string
- *                 description: Payment amount
- *     responses:
- *       200:
- *         description: Payment verified and points credited successfully
- *       400:
- *         description: Invalid payment or transaction
- *       401:
- *         description: Unauthorized
- *
  * @example
  * ```typescript
  * await fetch('/api/points/purchase/verify-payment', {

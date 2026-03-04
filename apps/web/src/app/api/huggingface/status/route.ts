@@ -8,26 +8,6 @@
  * Returns status and statistics for the HuggingFace integration system.
  * Useful for monitoring, debugging, and dashboard displays.
  *
- * @openapi
- * /api/huggingface/status:
- *   get:
- *     tags:
- *       - Integrations
- *     summary: Get HuggingFace status
- *     description: Returns HuggingFace integration status and statistics
- *     responses:
- *       200:
- *         description: Status retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 statistics:
- *                   type: object
- *
  * @example
  * ```typescript
  * const status = await fetch('/api/huggingface/status')

@@ -8,57 +8,6 @@
  * Automatically generates feedback for completed games or trades. Calculates
  * performance scores and updates agent metrics. Supports game and trade completion.
  *
- * @openapi
- * /api/feedback/auto-generate:
- *   post:
- *     tags:
- *       - Feedback
- *     summary: Auto-generate feedback
- *     description: Automatically generates feedback for completed games or trades
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             oneOf:
- *               - type: object
- *                 required:
- *                   - type
- *                   - agentId
- *                   - gameId
- *                   - metrics
- *                 properties:
- *                   type:
- *                     type: string
- *                     enum: [game]
- *                   agentId:
- *                     type: string
- *                   gameId:
- *                     type: string
- *                   metrics:
- *                     type: object
- *               - type: object
- *                 required:
- *                   - type
- *                   - agentId
- *                   - tradeId
- *                   - metrics
- *                 properties:
- *                   type:
- *                     type: string
- *                     enum: [trade]
- *                   agentId:
- *                     type: string
- *                   tradeId:
- *                     type: string
- *                   metrics:
- *                     type: object
- *     responses:
- *       200:
- *         description: Feedback generated successfully
- *       400:
- *         description: Invalid input
- *
  * @example
  * ```typescript
  * await fetch('/api/feedback/auto-generate', {

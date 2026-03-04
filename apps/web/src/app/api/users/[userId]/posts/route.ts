@@ -9,65 +9,6 @@
  * filtering by type (posts or replies). Includes reposts/shares and excludes
  * future posts. Optimized with batch queries to prevent N+1 problems.
  *
- * @openapi
- * /api/users/{userId}/posts:
- *   get:
- *     tags:
- *       - Users
- *     summary: Get user posts and replies
- *     description: Returns user's posts or replies with interaction counts and author information
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID, username, or wallet address
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [posts, replies]
- *           default: posts
- *         description: Type of content to retrieve
- *     responses:
- *       200:
- *         description: User posts/replies retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 type:
- *                   type: string
- *                   enum: [posts, replies]
- *                 items:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       content:
- *                         type: string
- *                       authorId:
- *                         type: string
- *                       timestamp:
- *                         type: string
- *                         format: date-time
- *                       likeCount:
- *                         type: integer
- *                       commentCount:
- *                         type: integer
- *                       shareCount:
- *                         type: integer
- *                       isLiked:
- *                         type: boolean
- *                       isShared:
- *                         type: boolean
- *                 total:
- *                   type: integer
- *
  * @example
  * ```typescript
  * // Get user posts
