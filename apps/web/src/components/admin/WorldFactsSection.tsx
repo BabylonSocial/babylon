@@ -1,5 +1,6 @@
 'use client';
 
+import { adminGetWorldFacts, adminWorldFactAction } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   Edit,
@@ -76,16 +77,15 @@ export function WorldFactsSection() {
   const [newFactValue, setNewFactValue] = useState<string>('');
 
   const fetchData = useCallback(async () => {
-    const response = await fetch('/api/admin/world-facts');
-    if (!response.ok) {
+    try {
+      const result = await adminGetWorldFacts();
+      setData(result as unknown as WorldFactsData);
+      setError(null);
+      setLoading(false);
+    } catch {
       setError('Failed to fetch world facts');
       setLoading(false);
-      return;
     }
-    const result = await response.json();
-    setData(result);
-    setError(null);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -97,19 +97,15 @@ export function WorldFactsSection() {
     actionData?: Record<string, unknown>
   ) => {
     setActionLoading(true);
-    const response = await fetch('/api/admin/world-facts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, data: actionData }),
-    });
-
-    if (!response.ok) {
+    try {
+      await adminWorldFactAction({
+        action,
+        data: actionData,
+      } as unknown as Parameters<typeof adminWorldFactAction>[0]);
+      await fetchData();
+    } catch {
       setError(`Failed to ${action}`);
-      setActionLoading(false);
-      return;
     }
-
-    await fetchData();
     setActionLoading(false);
   };
 

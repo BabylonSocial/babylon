@@ -17,6 +17,7 @@
  */
 'use client';
 
+import { adminGetAuditLogs } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   ChevronLeft,
@@ -75,22 +76,21 @@ export function AuditLogsTab() {
   const fetchLogs = useCallback(
     (showRefreshing = false) => {
       const fetchLogic = async () => {
-        const params = new URLSearchParams({
-          limit: String(limit),
-          offset: String(offset),
-        });
-        if (actionFilter) params.set('action', actionFilter);
-        if (resourceTypeFilter) params.set('resourceType', resourceTypeFilter);
+        try {
+          const params: Record<string, string> = {
+            limit: String(limit),
+            offset: String(offset),
+          };
+          if (actionFilter) params.action = actionFilter;
+          if (resourceTypeFilter) params.resourceType = resourceTypeFilter;
 
-        const response = await fetch(`/api/admin/audit-logs?${params}`);
-        if (!response.ok) {
+          const responseData = await adminGetAuditLogs(params);
+          setData(responseData as unknown as AuditLogsResponse);
+          setLoading(false);
+        } catch {
           toast.error('Failed to load audit logs');
           setLoading(false);
-          return;
         }
-        const responseData = await response.json();
-        setData(responseData);
-        setLoading(false);
       };
 
       if (showRefreshing) {

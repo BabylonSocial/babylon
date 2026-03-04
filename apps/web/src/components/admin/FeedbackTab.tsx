@@ -13,6 +13,7 @@
  */
 'use client';
 
+import { adminGetFeedback, adminRetryFeedbackSync } from '@babylon/api-hooks';
 import { cn, FEEDBACK_TYPE_CONFIG, type FeedbackType } from '@babylon/shared';
 import {
   AlertTriangle,
@@ -155,33 +156,34 @@ export function FeedbackTab() {
     const fetchFeedback = async () => {
       setLoading(true);
       setError(null);
-      const params = new URLSearchParams({ limit: '50' });
+      const params: Record<string, string> = { limit: '50' };
 
       if (typeFilter !== 'all') {
-        params.set('type', typeFilter);
+        params.type = typeFilter;
       }
       if (linearFilter === 'synced') {
-        params.set('hasLinearIssue', 'true');
+        params.hasLinearIssue = 'true';
       } else if (linearFilter === 'not_synced') {
-        params.set('hasLinearIssue', 'false');
+        params.hasLinearIssue = 'false';
       }
       if (debouncedSearch.trim()) {
-        params.set('search', debouncedSearch.trim());
+        params.search = debouncedSearch.trim();
       }
 
-      const response = await fetch(`/api/admin/feedback?${params}`);
-      if (!response.ok) {
-        console.error('Failed to fetch feedback:', response.status);
-        setError(`Failed to load feedback (${response.status})`);
+      try {
+        const data = await adminGetFeedback(params);
+        const typedData = data as unknown as FeedbackResponse;
+        setFeedback(typedData.feedback);
+        setStats(typedData.stats);
+        setPagination(typedData.pagination);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to load feedback';
+        console.error('Failed to fetch feedback:', message);
+        setError(message);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const data: FeedbackResponse = await response.json();
-      setFeedback(data.feedback);
-      setStats(data.stats);
-      setPagination(data.pagination);
-      setLoading(false);
     };
 
     fetchFeedback();
@@ -207,38 +209,34 @@ export function FeedbackTab() {
     setSyncing(true);
     setSyncError(null);
 
-    const response = await fetch(
-      `/api/admin/feedback/${feedbackId}/retry-sync`,
-      { method: 'POST' }
-    );
+    try {
+      const data = await adminRetryFeedbackSync(feedbackId);
+      const typedData = data as unknown as {
+        linearIssue?: FeedbackItem['linearIssue'];
+      };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      setSyncError(`Sync failed: ${errorText}`);
+      // Update the feedback item in the list with the new Linear issue
+      if (typedData.linearIssue) {
+        setFeedback((prev) =>
+          prev.map((item) =>
+            item.id === feedbackId
+              ? { ...item, linearIssue: typedData.linearIssue! }
+              : item
+          )
+        );
+        // Also update selected feedback if it's the same item
+        setSelectedFeedback((prev) =>
+          prev?.id === feedbackId
+            ? { ...prev, linearIssue: typedData.linearIssue! }
+            : prev
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sync failed';
+      setSyncError(message);
+    } finally {
       setSyncing(false);
-      return;
     }
-
-    const data = await response.json();
-
-    // Update the feedback item in the list with the new Linear issue
-    if (data.linearIssue) {
-      setFeedback((prev) =>
-        prev.map((item) =>
-          item.id === feedbackId
-            ? { ...item, linearIssue: data.linearIssue }
-            : item
-        )
-      );
-      // Also update selected feedback if it's the same item
-      setSelectedFeedback((prev) =>
-        prev?.id === feedbackId
-          ? { ...prev, linearIssue: data.linearIssue }
-          : prev
-      );
-    }
-
-    setSyncing(false);
   }, []);
 
   const getTypeConfig = (type: string): FeedbackTypeUIConfig => {

@@ -750,7 +750,7 @@ export const miscPaths: ZodOpenApiPathsObject = {
       tags: ['Twitter'],
       summary: 'Disconnect Twitter account',
       description:
-        'Disconnects the authenticated user\'s linked Twitter account.',
+        "Disconnects the authenticated user's linked Twitter account.",
       security: [{ PrivyAuth: [] }],
       responses: {
         '201': {
@@ -776,7 +776,7 @@ export const miscPaths: ZodOpenApiPathsObject = {
       tags: ['Twitter'],
       summary: 'Post a tweet',
       description:
-        'Posts a tweet to the authenticated user\'s connected Twitter account.',
+        "Posts a tweet to the authenticated user's connected Twitter account.",
       security: [{ PrivyAuth: [] }],
       requestBody: {
         content: {
@@ -851,7 +851,9 @@ export const miscPaths: ZodOpenApiPathsObject = {
                     amount: z.string(),
                     from: z.string(),
                     to: z.string(),
-                    expiresAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
+                    expiresAt: z
+                      .string()
+                      .meta({ description: 'ISO 8601 timestamp' }),
                     pointsAmount: z.number(),
                     amountUSD: z.number(),
                   }),
@@ -871,8 +873,7 @@ export const miscPaths: ZodOpenApiPathsObject = {
       operationId: 'verifyPointsPayment',
       tags: ['Points'],
       summary: 'Verify a points purchase payment',
-      description:
-        'Verifies a crypto payment transaction and awards points.',
+      description: 'Verifies a crypto payment transaction and awards points.',
       security: [{ PrivyAuth: [] }],
       requestBody: {
         content: {

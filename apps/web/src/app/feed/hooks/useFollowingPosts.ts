@@ -1,3 +1,4 @@
+import { listPosts } from '@babylon/api-hooks';
 import type { FeedPost } from '@babylon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +26,7 @@ export function useFollowingPosts(
 ): UseFollowingPostsResult {
   const { enabled = true } = options;
 
-  const { authenticated, getAccessToken } = useAuth();
+  const { authenticated } = useAuth();
   const { user } = useAuthStore();
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -45,27 +46,20 @@ export function useFollowingPosts(
     setLoading(true);
 
     try {
-      const token = await getAccessToken();
+      const data = await listPosts({
+        following: 'true',
+        userId,
+        limit: String(PAGE_SIZE),
+      });
 
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch(
-        `/api/posts?following=true&userId=${userId}&limit=${PAGE_SIZE}&offset=0`,
-        { headers }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data.posts as FeedPost[]);
-      }
+      setPosts(data.posts as unknown as FeedPost[]);
     } catch {
       // Network error - no action needed
     } finally {
       setLoading(false);
       fetchInProgress.current = false;
     }
-  }, [enabled, authenticated, user?.id, getAccessToken]);
+  }, [enabled, authenticated, user?.id]);
 
   const refresh = useCallback(async () => {
     await fetchFollowingPosts();

@@ -194,8 +194,7 @@ export const moderationPaths: ZodOpenApiPathsObject = {
       operationId: 'listMutes',
       tags: ['Moderation'],
       summary: 'List muted users',
-      description:
-        'Returns the list of users muted by the authenticated user.',
+      description: 'Returns the list of users muted by the authenticated user.',
       security: [{ PrivyAuth: [] }],
       requestParams: {
         query: z.object({

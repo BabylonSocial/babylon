@@ -1,3 +1,4 @@
+import { listPosts } from '@babylon/api-hooks';
 import type { FeedPost } from '@babylon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSSEChannel } from '@/hooks/useSSE';
@@ -85,34 +86,30 @@ export function useFeedPosts(
         }
       };
 
-      const url = requestCursor
-        ? `/api/posts?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(requestCursor)}`
-        : `/api/posts?limit=${PAGE_SIZE}`;
+      const params: { limit: string; cursor?: string } = {
+        limit: String(PAGE_SIZE),
+      };
+      if (requestCursor) {
+        params.cursor = requestCursor;
+      }
 
-      let response: Response;
+      let data: Awaited<ReturnType<typeof listPosts>>;
       try {
-        response = await fetch(url, {
+        data = await listPosts(params, {
           cache: forceNoStore ? 'no-store' : undefined,
         });
       } catch {
-        stopLoading();
-        return;
-      }
-
-      if (!response.ok) {
         if (append && isMounted.current) setHasMore(false);
         stopLoading();
         return;
       }
 
-      const data = await response.json();
-
       // Check if still mounted before updating state
       if (!isMounted.current) return;
 
-      const newPosts = data.posts as FeedPost[];
-      const nextCursor = data.cursor as string | null;
-      const hasMoreFromAPI = data.hasMore as boolean;
+      const newPosts = data.posts as unknown as FeedPost[];
+      const nextCursor = (data.cursor ?? null) as string | null;
+      const hasMoreFromAPI = (data.hasMore ?? false) as boolean;
 
       setPosts((prev) => {
         const combined = append ? [...prev, ...newPosts] : newPosts;

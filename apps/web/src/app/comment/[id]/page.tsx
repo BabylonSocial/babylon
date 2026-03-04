@@ -1,5 +1,6 @@
 'use client';
 
+import { getCommentById } from '@babylon/api-hooks';
 import type { CommentData } from '@babylon/shared';
 import { cn, getProfileUrl } from '@babylon/shared';
 import { ArrowLeft, MessageCircle, Repeat2 } from 'lucide-react';
@@ -510,22 +511,18 @@ export default function CommentPage({ params }: CommentPageProps) {
     setIsLoading(true);
     setError(null);
 
-    const response = await fetch(`/api/comments/${commentId}`);
+    try {
+      const data = await getCommentById(commentId);
 
-    if (!response.ok) {
+      setComment(data.comment as unknown as CommentDetail);
+      setReplies((data.replies || []) as unknown as Reply[]);
+      setParentChain((data.parentChain || []) as unknown as ParentComment[]);
+      setPost((data.post || null) as unknown as PostData | null);
+      setIsLoading(false);
+    } catch {
       setError('Comment not found');
       setIsLoading(false);
-      return;
     }
-
-    const result = await response.json();
-    const data = result.data || result;
-
-    setComment(data.comment);
-    setReplies(data.replies || []);
-    setParentChain(data.parentChain || []);
-    setPost(data.post || null);
-    setIsLoading(false);
   }, [commentId]);
 
   useEffect(() => {

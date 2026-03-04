@@ -9,6 +9,7 @@
  */
 'use client';
 
+import { adminGetHeatmap } from '@babylon/api-hooks';
 import { cn, formatNumber } from '@babylon/shared';
 import { Calendar, Clock, RefreshCw } from 'lucide-react';
 import {
@@ -126,28 +127,24 @@ export function ActivityHeatmap() {
     (showRefreshing = false) => {
       const fetchLogic = async () => {
         setError(null);
-        const response = await fetch(
-          `/api/admin/stats/heatmap?type=${heatmapType}&activityType=${activityType}`
-        );
-        if (!response.ok) {
+        try {
+          const result = await adminGetHeatmap({
+            type: heatmapType,
+            activityType,
+          });
+          setData(result as unknown as HeatmapData);
+          setLoading(false);
+        } catch {
           setData(null);
           setError('Failed to load heatmap data');
           setLoading(false);
-          return;
         }
-        const result = await response.json();
-        setData(result);
-        setLoading(false);
       };
 
       if (showRefreshing) {
         startRefresh(fetchLogic);
       } else {
-        void fetchLogic().catch(() => {
-          setData(null);
-          setError('Failed to load heatmap data');
-          setLoading(false);
-        });
+        void fetchLogic();
       }
     },
     [heatmapType, activityType]

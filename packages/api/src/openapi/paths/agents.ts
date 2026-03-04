@@ -416,7 +416,8 @@ const AgentGoal = z
     id: z.string(),
     agentUserId: z.string(),
     type: z.string().meta({
-      description: 'Goal type: trading | social | learning | reputation | custom',
+      description:
+        'Goal type: trading | social | learning | reputation | custom',
     }),
     name: z.string(),
     description: z.string(),
@@ -976,8 +977,7 @@ export const agentPaths: ZodOpenApiPathsObject = {
       operationId: 'listAgentGoals',
       tags: ['Agents'],
       summary: 'List agent goals',
-      description:
-        'Returns all goals for the specified agent. Manager only.',
+      description: 'Returns all goals for the specified agent. Manager only.',
       security: [{ PrivyAuth: [] }],
       requestParams: { path: agentIdParam },
       responses: {
@@ -1002,8 +1002,7 @@ export const agentPaths: ZodOpenApiPathsObject = {
       operationId: 'createAgentGoal',
       tags: ['Agents'],
       summary: 'Create agent goal',
-      description:
-        'Create a new goal for the specified agent. Manager only.',
+      description: 'Create a new goal for the specified agent. Manager only.',
       security: [{ PrivyAuth: [] }],
       requestParams: { path: agentIdParam },
       requestBody: {

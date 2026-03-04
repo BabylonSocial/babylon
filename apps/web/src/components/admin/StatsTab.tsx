@@ -1,5 +1,6 @@
 'use client';
 
+import { adminGetFees, adminGetStats } from '@babylon/api-hooks';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import {
   Activity,
@@ -194,9 +195,7 @@ export function StatsTab() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
-    const response = await fetch('/api/admin/stats');
-    if (!response.ok) throw new Error('Failed to fetch stats');
-    const data = await response.json();
+    const data = await adminGetStats();
     const validation = SystemStatsSchema.safeParse(data);
     if (!validation.success) {
       throw new Error('Invalid system stats data structure');
@@ -207,12 +206,16 @@ export function StatsTab() {
   }, []);
 
   const fetchFeeStats = useCallback(async () => {
-    const response = await fetch('/api/admin/fees');
-    if (!response.ok) return; // Fail silently for fees
-    const data = await response.json();
-    const validation = FeeStatsSchema.safeParse(data.platformStats);
-    if (validation.success) {
-      setFeeStats(validation.data);
+    try {
+      const data = await adminGetFees();
+      const validation = FeeStatsSchema.safeParse(
+        (data as unknown as Record<string, unknown>).platformStats
+      );
+      if (validation.success) {
+        setFeeStats(validation.data);
+      }
+    } catch {
+      // Fail silently for fees
     }
   }, []);
 

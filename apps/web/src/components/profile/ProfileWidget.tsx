@@ -1,5 +1,6 @@
 'use client';
 
+import { getUserPositions, getUserProfile } from '@babylon/api-hooks';
 import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import type {
   PerpPositionFromAPI,
@@ -57,28 +58,20 @@ async function fetchProfileWidgetData(userId: string): Promise<{
   statsData: UserProfileStats | null;
   needsOnboarding?: boolean;
 }> {
-  const [breakdownRes, positionsRes, profileRes] = await Promise.all([
+  // portfolio-breakdown has no generated function yet, use raw fetch
+  const [breakdownRes, positionsData, profileData] = await Promise.allSettled([
     fetch(`/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`),
-    fetch(`/api/markets/positions/${encodeURIComponent(userId)}`),
-    fetch(`/api/users/${encodeURIComponent(userId)}/profile`),
+    getUserPositions(userId),
+    getUserProfile(userId),
   ]);
 
-  // Check for complete fetch failure (all requests failed)
-  if (!breakdownRes.ok && !positionsRes.ok && !profileRes.ok) {
-    const errorDetails = {
-      breakdown: {
-        status: breakdownRes.status,
-        statusText: breakdownRes.statusText,
-      },
-      positions: {
-        status: positionsRes.status,
-        statusText: positionsRes.statusText,
-      },
-      profile: { status: profileRes.status, statusText: profileRes.statusText },
-    };
-    throw new Error(
-      `All profile widget fetches failed: ${JSON.stringify(errorDetails)}`
-    );
+  // Check for complete failure (all requests failed)
+  if (
+    breakdownRes.status === 'rejected' &&
+    positionsData.status === 'rejected' &&
+    profileData.status === 'rejected'
+  ) {
+    throw new Error('All profile widget fetches failed');
   }
 
   let portfolioData: PortfolioBreakdownSnapshot | null = null;
@@ -86,9 +79,9 @@ async function fetchProfileWidgetData(userId: string): Promise<{
   let perpsData: PerpPositionFromAPI[] = [];
   let statsData: UserProfileStats | null = null;
 
-  // Process breakdown
-  if (breakdownRes.ok) {
-    const breakdownJson = (await breakdownRes.json()) as Record<
+  // Process breakdown (still raw fetch)
+  if (breakdownRes.status === 'fulfilled' && breakdownRes.value.ok) {
+    const breakdownJson = (await breakdownRes.value.json()) as Record<
       string,
       unknown
     >;
@@ -105,16 +98,30 @@ async function fetchProfileWidgetData(userId: string): Promise<{
     };
   }
 
-  // Process positions
-  if (positionsRes.ok) {
-    const positionsJson = await positionsRes.json();
+  // Process positions (generated function)
+  if (positionsData.status === 'fulfilled') {
+    const positionsJson = positionsData.value as unknown as {
+      predictions?: { positions: PredictionPosition[] };
+      perpetuals?: { positions: PerpPositionFromAPI[] };
+    };
     predictionsData = positionsJson.predictions?.positions || [];
     perpsData = positionsJson.perpetuals?.positions || [];
   }
 
-  // Process stats
-  if (profileRes.ok) {
-    const profileJson = await profileRes.json();
+  // Process stats (generated function)
+  if (profileData.status === 'fulfilled') {
+    const profileJson = profileData.value as unknown as {
+      needsOnboarding?: boolean;
+      user?: {
+        stats?: {
+          following?: number;
+          followers?: number;
+          comments?: number;
+          reactions?: number;
+          positions?: number;
+        };
+      };
+    };
 
     // Check if user needs onboarding (graceful handling)
     if (profileJson.needsOnboarding) {

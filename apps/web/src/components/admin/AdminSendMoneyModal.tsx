@@ -1,6 +1,10 @@
 'use client';
 
 import {
+  adminCreateEscrowPayment,
+  adminVerifyEscrowPayment,
+} from '@babylon/api-hooks';
+import {
   BABYLON_POINTS_SYMBOL,
   cn,
   logger,
@@ -88,8 +92,7 @@ export function AdminSendMoneyModal({
   recipientWalletAddress,
   onSuccess,
 }: AdminSendMoneyModalProps) {
-  const { embeddedWalletAddress, embeddedWalletReady, getAccessToken } =
-    useAuth();
+  const { embeddedWalletAddress, embeddedWalletReady } = useAuth();
   const { ensureFunds } = useWalletFunding();
   const { sendTransaction } = useSendTransaction();
 
@@ -244,45 +247,21 @@ export function AdminSendMoneyModal({
     setError(null);
 
     try {
-      const token = await getAccessToken();
-
-      // Check if cancelled after getting token
+      // Check if cancelled before starting
       if (signal.aborted || !isMountedRef.current) {
         setLoading(false);
         return;
       }
 
-      if (!token) {
-        logger.error(
-          'Authentication required',
-          undefined,
-          'AdminSendMoneyModal'
-        );
-        setError('Authentication required');
-        setStep('error');
-        toast.error('Failed to create payment request');
-        setLoading(false);
-        abortControllerRef.current = null;
-        return;
-      }
-
       // Create escrow payment request with abort signal
-      const response = await fetch(
-        '/api/admin/moderation-escrow/create-payment',
+      const data = await adminCreateEscrowPayment(
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipientId,
-            amountUSD: amountNum,
-            reason: reason.trim() || undefined,
-            recipientWalletAddress,
-          }),
-          signal,
-        }
+          recipientId,
+          amountUSD: amountNum,
+          reason: reason.trim() || undefined,
+          recipientWalletAddress: recipientWalletAddress!,
+        },
+        { signal }
       );
 
       // Check if cancelled after fetch
@@ -291,25 +270,12 @@ export function AdminSendMoneyModal({
         return;
       }
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMessage = data.error || 'Failed to create payment request';
-        logger.error(
-          'Failed to create escrow payment',
-          { error: errorMessage },
-          'AdminSendMoneyModal'
-        );
-        setError(errorMessage);
-        setStep('error');
-        toast.error('Failed to create payment request');
-        setLoading(false);
-        abortControllerRef.current = null;
-        return;
-      }
-
-      setEscrowId(data.escrow.id);
-      const paymentReq = data.paymentRequest as PaymentRequest;
+      const typedData = data as unknown as {
+        escrow: { id: string };
+        paymentRequest: PaymentRequest;
+      };
+      setEscrowId(typedData.escrow.id);
+      const paymentReq = typedData.paymentRequest;
       setStep('payment');
 
       // Initiate blockchain transaction
@@ -418,16 +384,6 @@ export function AdminSendMoneyModal({
       return;
     }
 
-    const token = await getAccessToken();
-    if (!token) {
-      logger.error('Authentication required', undefined, 'AdminSendMoneyModal');
-      setError('Authentication required');
-      setStep('error');
-      toast.error('Failed to verify payment');
-      setLoading(false);
-      return;
-    }
-
     // Wait for transaction confirmation (with cancellation support)
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(resolve, 3000);
@@ -445,43 +401,19 @@ export function AdminSendMoneyModal({
     }
 
     try {
-      const response = await fetch(
-        '/api/admin/moderation-escrow/verify-payment',
+      await adminVerifyEscrowPayment(
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            escrowId,
-            txHash: transactionHash,
-            fromAddress: embeddedWalletAddress || paymentReq.from,
-            toAddress: paymentReq.to,
-            amount: paymentReq.amount,
-          }),
-          signal,
-        }
+          escrowId: escrowId!,
+          txHash: transactionHash,
+          fromAddress: embeddedWalletAddress || paymentReq.from,
+          toAddress: paymentReq.to,
+          amount: Number(paymentReq.amount),
+        },
+        { signal }
       );
 
       // Check if cancelled after fetch
       if (signal.aborted || !isMountedRef.current) {
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMessage = data.error || 'Failed to verify payment';
-        logger.error(
-          'Payment verification failed',
-          { error: errorMessage },
-          'AdminSendMoneyModal'
-        );
-        setError(errorMessage);
-        setStep('error');
-        toast.error('Failed to verify payment');
         setLoading(false);
         return;
       }
@@ -500,6 +432,21 @@ export function AdminSendMoneyModal({
         setLoading(false);
         return;
       }
+
+      if (err instanceof Error) {
+        const errorMessage = err.message || 'Failed to verify payment';
+        logger.error(
+          'Payment verification failed',
+          { error: errorMessage },
+          'AdminSendMoneyModal'
+        );
+        setError(errorMessage);
+        setStep('error');
+        toast.error('Failed to verify payment');
+        setLoading(false);
+        return;
+      }
+
       throw err;
     }
   };

@@ -220,8 +220,14 @@ export const MARKET_TIME_RANGES: MarketTimeRange[] = [
 export interface PerpHistoryPoint {
   /** Timestamp in milliseconds */
   time: number;
-  /** Price at this timestamp */
+  /** Price at this point */
   price: number;
+  /** Price change from previous point */
+  change?: number;
+  /** Percentage change from previous point */
+  changePercent?: number;
+  /** Volume at this point */
+  volume?: number;
 }
 
 /**
@@ -230,37 +236,14 @@ export interface PerpHistoryPoint {
 export interface PredictionHistoryPoint {
   /** Timestamp in milliseconds */
   time: number;
-  /** YES price (0-1) */
+  /** Current YES outcome price (0-1) */
   yesPrice: number;
-  /** NO price (0-1) */
+  /** Current NO outcome price (0-1) */
   noPrice: number;
-}
-
-// =============================================================================
-// SSE Event Types
-// =============================================================================
-
-/**
- * SSE event for prediction market trades.
- */
-export interface PredictionTradeSSE {
-  type: 'prediction_trade';
-  marketId: string;
-  userId: string;
-  side: PredictionSide;
-  shares: number;
-  price: number;
-  timestamp: string;
-}
-
-/**
- * SSE event for prediction market resolution.
- */
-export interface PredictionResolutionSSE {
-  type: 'prediction_resolution';
-  marketId: string;
-  outcome: boolean;
-  timestamp: string;
+  /** Trading volume since last point */
+  volume: number;
+  /** Total liquidity in the market */
+  liquidity: number;
 }
 
 // =============================================================================

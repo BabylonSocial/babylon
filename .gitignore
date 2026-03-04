@@ -88,6 +88,10 @@ benchmarks/
 benchmark-output/
 research-output/
 
+# Generated API hooks (regenerate with: bun run generate:api)
+packages/api-hooks/src/generated/
+packages/api-client/src/generated/
+
 # Data exports
 **/*.jsonl
 **/scored_trajectories.csv

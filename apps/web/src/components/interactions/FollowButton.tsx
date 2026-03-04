@@ -1,6 +1,10 @@
 'use client';
 
-import { checkFollowStatus, followUser, unfollowUser } from '@babylon/api-hooks';
+import {
+  checkFollowStatus,
+  followUser,
+  unfollowUser,
+} from '@babylon/api-hooks';
 import { cn, logger } from '@babylon/shared';
 import { Minus, Plus, UserMinus, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';

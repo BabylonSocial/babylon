@@ -1,3 +1,4 @@
+import { checkUsername as checkUsernameApi } from '@babylon/api-hooks';
 import { useCallback, useEffect, useState } from 'react';
 
 export type UsernameStatus =
@@ -45,20 +46,11 @@ export function useAgentUsernameCheck(
     setUsernameStatus('checking');
 
     try {
-      const response = await fetch(
-        `/api/onboarding/check-username?username=${encodeURIComponent(trimmed)}`
+      const result = await checkUsernameApi({ username: trimmed });
+      setUsernameStatus(result.available ? 'available' : 'taken');
+      setUsernameSuggestion(
+        result.available ? null : (result.suggestions?.[0] ?? null)
       );
-
-      if (response.ok) {
-        const result = await response.json();
-        setUsernameStatus(result.available ? 'available' : 'taken');
-        setUsernameSuggestion(
-          result.available ? null : result.suggestion || null
-        );
-      } else {
-        setUsernameStatus('error');
-        setUsernameSuggestion(null);
-      }
     } catch (error) {
       console.error('Username check failed:', error);
       setUsernameStatus('error');

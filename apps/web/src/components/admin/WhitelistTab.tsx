@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  adminAddWhitelist,
+  adminGetWhitelist,
+  adminGetWhitelistConfig,
+  adminRemoveWhitelist,
+  adminUpdateWhitelistConfig,
+} from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   CheckCircle,
@@ -118,11 +125,13 @@ export function WhitelistTab() {
 
   const fetchEntries = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/whitelist');
-      if (!res.ok) throw new Error('Failed to fetch whitelist');
-      const data = await res.json();
-      setEntries(data.entries ?? []);
-      setStats(data.stats ?? null);
+      const data = await adminGetWhitelist();
+      const typedData = data as unknown as {
+        entries?: WhitelistEntry[];
+        stats?: WhitelistStats;
+      };
+      setEntries(typedData.entries ?? []);
+      setStats(typedData.stats ?? null);
     } catch (err) {
       toast.error('Failed to load whitelist data');
       console.error(err);
@@ -133,10 +142,9 @@ export function WhitelistTab() {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/whitelist/config');
-      if (!res.ok) throw new Error('Failed to fetch config');
-      const data = await res.json();
-      const cfg = data.config ?? null;
+      const data = await adminGetWhitelistConfig();
+      const typedData = data as unknown as { config?: WhitelistConfig };
+      const cfg = typedData.config ?? null;
       setConfig(cfg);
       setRankThreshold(
         cfg?.leaderboardRankThreshold != null
@@ -162,29 +170,23 @@ export function WhitelistTab() {
 
     startTransition(async () => {
       try {
-        const res = await fetch('/api/admin/whitelist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: addUserId.trim(),
-            source: 'admin_manual',
-            reason: addReason.trim() || undefined,
-          }),
+        const data = await adminAddWhitelist({
+          userId: addUserId.trim(),
+          source: 'admin_manual',
+          reason: addReason.trim() || undefined,
         });
+        const typedData = data as unknown as { username?: string };
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          toast.error(data.error ?? 'Failed to add user');
-          return;
-        }
-
-        toast.success(`User ${data.username ?? addUserId.trim()} whitelisted`);
+        toast.success(
+          `User ${typedData.username ?? addUserId.trim()} whitelisted`
+        );
         setAddUserId('');
         setAddReason('');
         await fetchEntries();
-      } catch {
-        toast.error('Failed to add user');
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to add user';
+        toast.error(message);
       }
     });
   }
@@ -201,23 +203,14 @@ export function WhitelistTab() {
 
     setRemovingUserId(userId);
     try {
-      const res = await fetch('/api/admin/whitelist', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Failed to remove user');
-        return;
-      }
+      await adminRemoveWhitelist({ userId });
 
       toast.success('User removed from whitelist');
       await fetchEntries();
-    } catch {
-      toast.error('Failed to remove user');
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to remove user';
+      toast.error(message);
     } finally {
       setRemovingUserId(null);
     }
@@ -235,25 +228,19 @@ export function WhitelistTab() {
         return;
       }
 
-      const res = await fetch('/api/admin/whitelist/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaderboardRankThreshold: threshold }),
+      const data = await adminUpdateWhitelistConfig({
+        leaderboardRankThreshold: threshold,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Failed to save config');
-        return;
-      }
+      const typedData = data as unknown as { config?: WhitelistConfig };
 
       toast.success(
         `Daily cron will whitelist Top ${threshold} users on the next run`
       );
-      setConfig(data.config ?? null);
-    } catch {
-      toast.error('Failed to save config');
+      setConfig(typedData.config ?? null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to save config';
+      toast.error(message);
     } finally {
       setIsSavingConfig(false);
     }

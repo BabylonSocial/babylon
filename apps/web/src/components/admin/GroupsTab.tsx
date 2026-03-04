@@ -1,5 +1,6 @@
 'use client';
 
+import { adminGetGroups } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   Calendar,
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { z } from 'zod';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Participant schema for validation.
@@ -92,27 +92,11 @@ export function GroupsTab() {
   const fetchGroups = useCallback(async () => {
     startRefresh(async () => {
       setIsLoading(true);
-      const token = getAuthToken();
-
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(
-        `/api/admin/groups?sortBy=${sortBy}&sortOrder=${sortOrder}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch groups');
-      }
-
-      const data = await response.json();
-      const validation = z.array(GroupChatSchema).safeParse(data.data.groups);
+      const data = await adminGetGroups({ sortBy, sortOrder });
+      const dataObj = data as unknown as { data: { groups: unknown[] } };
+      const validation = z
+        .array(GroupChatSchema)
+        .safeParse(dataObj.data.groups);
       if (!validation.success) {
         throw new Error('Invalid group data structure');
       }

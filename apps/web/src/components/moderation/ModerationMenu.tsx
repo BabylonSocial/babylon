@@ -1,6 +1,11 @@
 'use client';
 
 import {
+  checkFollowStatus,
+  followUser,
+  unfollowUser,
+} from '@babylon/api-hooks';
+import {
   Ban,
   Flag,
   Loader2,
@@ -15,7 +20,6 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useMenuPosition } from '@/hooks/useMenuPosition';
 import { useSocialTracking } from '@/hooks/usePostHog';
-import { getAuthToken } from '@/lib/auth';
 import { BlockUserModal } from './BlockUserModal';
 import { MuteUserModal } from './MuteUserModal';
 import { ReportModal } from './ReportModal';
@@ -114,29 +118,14 @@ export function ModerationMenu({
 
     const abortController = new AbortController();
 
-    const checkFollowStatus = async () => {
+    const checkFollow = async () => {
       setIsCheckingFollow(true);
-      const token = getAuthToken();
-      if (!token) {
-        setIsCheckingFollow(false);
-        return;
-      }
 
       try {
-        const encodedIdentifier = encodeURIComponent(targetUserId);
-        const response = await fetch(`/api/users/${encodedIdentifier}/follow`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const data = (await checkFollowStatus(targetUserId, {
           signal: abortController.signal,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setIsFollowing(data.isFollowing || false);
-        } else {
-          setIsFollowing(false);
-        }
+        })) as unknown as { isFollowing?: boolean };
+        setIsFollowing(data.isFollowing || false);
       } catch (error) {
         if (error instanceof Error && error.name !== 'AbortError') {
           setIsFollowing(false);
@@ -147,7 +136,7 @@ export function ModerationMenu({
       }
     };
 
-    checkFollowStatus();
+    checkFollow();
 
     return () => {
       abortController.abort();
@@ -161,47 +150,30 @@ export function ModerationMenu({
     }
 
     setIsFollowLoading(true);
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Authentication required');
-      setIsFollowLoading(false);
-      return;
-    }
 
     const newFollowingState = !isFollowing;
-    const method = newFollowingState ? 'POST' : 'DELETE';
 
     setIsFollowing(newFollowingState);
 
     try {
-      const encodedIdentifier = encodeURIComponent(targetUserId);
-      const response = await fetch(`/api/users/${encodedIdentifier}/follow`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        trackFollow(targetUserId, newFollowingState);
-        toast.success(
-          newFollowingState
-            ? `Following ${displayName}`
-            : `Unfollowed ${displayName}`
-        );
-        closeMenu();
+      if (newFollowingState) {
+        await followUser(targetUserId);
       } else {
-        setIsFollowing(!newFollowingState);
-        const errorData = await response.json();
-        const errorMessage =
-          typeof errorData?.error === 'string'
-            ? errorData.error
-            : errorData?.error?.message || 'Failed to update follow status';
-        toast.error(errorMessage);
+        await unfollowUser(targetUserId);
       }
-    } catch {
+
+      trackFollow(targetUserId, newFollowingState);
+      toast.success(
+        newFollowingState
+          ? `Following ${displayName}`
+          : `Unfollowed ${displayName}`
+      );
+      closeMenu();
+    } catch (err) {
       setIsFollowing(!newFollowingState);
-      toast.error('Network error. Please try again.');
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to update follow status';
+      toast.error(errorMessage);
     }
 
     setIsFollowLoading(false);

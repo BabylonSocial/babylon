@@ -1,5 +1,6 @@
 'use client';
 
+import { adminGetTrainingData } from '@babylon/api-hooks';
 import { BABYLON_POINTS_SYMBOL, cn } from '@babylon/shared';
 import {
   AlertCircle,
@@ -10,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Training data statistics structure for training data tab.
@@ -74,28 +74,14 @@ export function TrainingDataTab() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
+    try {
+      const result = await adminGetTrainingData();
+      setData(result.data as unknown as TrainingDataStats);
       setLoading(false);
-      toast.error('Not authenticated');
-      return;
-    }
-
-    const response = await fetch('/api/admin/training-data', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
+    } catch {
       setLoading(false);
       toast.error('Failed to load training data');
-      return;
     }
-
-    const result = await response.json();
-    setData(result.data);
-    setLoading(false);
   }, []);
 
   useEffect(() => {

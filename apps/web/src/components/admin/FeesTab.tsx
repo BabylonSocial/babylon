@@ -1,5 +1,6 @@
 'use client';
 
+import { adminGetFees } from '@babylon/api-hooks';
 import {
   BABYLON_POINTS_SYMBOL,
   cn,
@@ -114,11 +115,7 @@ export function FeesTab() {
 
   const fetchStats = useCallback(() => {
     startRefresh(async () => {
-      const response = await fetch('/api/admin/fees');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch fee statistics: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = await adminGetFees();
       const validated = FeeStatsSchema.parse(data);
       setStats(validated);
       setError(null);

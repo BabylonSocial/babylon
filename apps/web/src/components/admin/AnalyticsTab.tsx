@@ -19,6 +19,7 @@
  */
 'use client';
 
+import { adminGetAnalytics } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   ArrowDown,
@@ -82,14 +83,13 @@ export function AnalyticsTab() {
   const fetchAnalytics = useCallback(
     (showRefreshing = false) => {
       const fetchLogic = async () => {
-        const response = await fetch(`/api/admin/analytics?period=${period}`);
-        if (!response.ok) {
+        try {
+          const result = await adminGetAnalytics({ period });
+          setData(result as unknown as AnalyticsData);
           setLoading(false);
-          return;
+        } catch {
+          setLoading(false);
         }
-        const result = await response.json();
-        setData(result);
-        setLoading(false);
       };
 
       if (showRefreshing) {

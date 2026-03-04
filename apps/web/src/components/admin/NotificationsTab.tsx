@@ -1,10 +1,16 @@
 'use client';
 
+import {
+  adminDebugDm,
+  adminGroupInvite,
+  adminSendNotification,
+  adminTestDmMessages,
+  getCurrentUser,
+} from '@babylon/api-hooks';
 import { cn, logger } from '@babylon/shared';
 import { Bell, MessageCircle, Send, User, UserPlus, Users } from 'lucide-react';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Notification type for admin notifications tab.
@@ -60,18 +66,12 @@ export function NotificationsTab() {
   // Fetch current user ID on mount
   useEffect(() => {
     const fetchCurrentUser = async () => {
-      const token = getAuthToken();
-      if (!token) return;
-
-      const response = await fetch('/api/users/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentUserId(data.user?.id || null);
+      try {
+        const data = await getCurrentUser();
+        const dataObj = data as unknown as { user?: { id: string } };
+        setCurrentUserId(dataObj.user?.id || null);
+      } catch {
+        // Silently fail
       }
     };
 
@@ -90,36 +90,32 @@ export function NotificationsTab() {
     }
 
     startSending(async () => {
-      const token = getAuthToken();
-
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch('/api/admin/notifications', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      try {
+        const data = await adminSendNotification({
           message: message.trim(),
           type,
           ...(recipientType === 'specific'
             ? { userId: userId.trim() }
             : { sendToAll: true }),
-        }),
-      });
+        } as unknown as Parameters<typeof adminSendNotification>[0]);
 
-      const data = await response.json();
+        const dataObj = data as unknown as {
+          success?: boolean;
+          message?: string;
+        };
 
-      if (response.ok && data.success) {
-        toast.success(data.message || 'Notification sent successfully');
-        // Reset form
-        setMessage('');
-        setUserId('');
-      } else {
-        toast.error(data.message || 'Failed to send notification');
+        if (dataObj.success) {
+          toast.success(dataObj.message || 'Notification sent successfully');
+          // Reset form
+          setMessage('');
+          setUserId('');
+        } else {
+          toast.error(dataObj.message || 'Failed to send notification');
+        }
+      } catch (err) {
+        const errMessage =
+          err instanceof Error ? err.message : 'Failed to send notification';
+        toast.error(errMessage);
       }
     });
   }, [message, userId, type, recipientType]);
@@ -131,30 +127,20 @@ export function NotificationsTab() {
     }
 
     startSendingDm(async () => {
-      const token = getAuthToken();
+      const data = await adminDebugDm({ userId: dmRecipientId.trim() });
+      const dataObj = data as unknown as Record<string, unknown>;
+      logger.debug('Debug DM response', { data: dataObj }, 'NotificationsTab');
+      setDebugInfo(dataObj);
 
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(
-        `/api/admin/debug-dm?userId=${encodeURIComponent(dmRecipientId.trim())}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-      logger.debug('Debug DM response', { data }, 'NotificationsTab');
-      setDebugInfo(data);
-
-      if (data.participantRecords?.length === 0) {
+      const participantRecords = dataObj.participantRecords as
+        | unknown[]
+        | undefined;
+      const chats = dataObj.chats as unknown[] | undefined;
+      if (participantRecords?.length === 0) {
         toast.error(`No DM chats found for user ${dmRecipientId}`);
       } else {
         toast.success(
-          `Found ${data.participantRecords?.length || 0} DM participant records and ${data.chats?.length || 0} chats`
+          `Found ${participantRecords?.length || 0} DM participant records and ${chats?.length || 0} chats`
         );
       }
     });
@@ -177,50 +163,57 @@ export function NotificationsTab() {
     }
 
     startSendingDm(async () => {
-      const token = getAuthToken();
-
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
       toast.info('Sending 100 test DM messages... This may take a moment.');
 
-      const response = await fetch('/api/admin/test-dm-messages', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      try {
+        const data = await adminTestDmMessages({
           senderId: dmSenderId.trim(),
           recipientId: dmRecipientId.trim(),
           messageCount: 100,
-        }),
-      });
+        } as unknown as Parameters<typeof adminTestDmMessages>[0]);
 
-      const data = await response.json();
+        const dataObj = data as unknown as {
+          success?: boolean;
+          chatId?: string;
+          message?: string;
+        };
 
-      if (response.ok && data.success) {
-        const chatId = data.chatId;
-        logger.debug(
-          'Test DM messages sent',
-          { chatId, data },
-          'NotificationsTab'
-        );
-        toast.success(data.message || 'Test DM messages sent successfully', {
-          duration: 10000,
-          action: {
-            label: 'Go to Chats',
-            onClick: () => (window.location.href = '/chats'),
-          },
-        });
-      } else {
+        if (dataObj.success) {
+          const chatId = dataObj.chatId;
+          logger.debug(
+            'Test DM messages sent',
+            { chatId, data: dataObj },
+            'NotificationsTab'
+          );
+          toast.success(
+            dataObj.message || 'Test DM messages sent successfully',
+            {
+              duration: 10000,
+              action: {
+                label: 'Go to Chats',
+                onClick: () => (window.location.href = '/chats'),
+              },
+            }
+          );
+        } else {
+          logger.error(
+            'Failed to send test DM messages',
+            { data: dataObj },
+            'NotificationsTab'
+          );
+          toast.error(dataObj.message || 'Failed to send test DM messages');
+        }
+      } catch (err) {
         logger.error(
           'Failed to send test DM messages',
-          { data },
+          { error: err },
           'NotificationsTab'
         );
-        toast.error(data.message || 'Failed to send test DM messages');
+        const errMessage =
+          err instanceof Error
+            ? err.message
+            : 'Failed to send test DM messages';
+        toast.error(errMessage);
       }
     });
   }, [dmSenderId, dmRecipientId]);
@@ -635,36 +628,35 @@ function GroupInviteSection() {
 
     setSending(true);
 
-    const token = getAuthToken();
-
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await fetch('/api/admin/group-invite', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const data = await adminGroupInvite({
         npcId: npcId.trim(),
         userId: userId.trim(),
         chatId: chatId.trim() || undefined,
         chatName: chatName.trim() || undefined,
-      }),
-    });
+      } as unknown as Parameters<typeof adminGroupInvite>[0]);
 
-    const data = await response.json();
+      const dataObj = data as unknown as {
+        success?: boolean;
+        message?: string;
+        error?: string;
+      };
 
-    if (response.ok && data.success) {
-      toast.success(data.message || 'Group invite sent successfully');
-      // Reset form
-      setUserId('');
-      setChatId('');
-      setChatName('');
-    } else {
-      toast.error(data.error || data.message || 'Failed to send group invite');
+      if (dataObj.success) {
+        toast.success(dataObj.message || 'Group invite sent successfully');
+        // Reset form
+        setUserId('');
+        setChatId('');
+        setChatName('');
+      } else {
+        toast.error(
+          dataObj.error || dataObj.message || 'Failed to send group invite'
+        );
+      }
+    } catch (err) {
+      const errMessage =
+        err instanceof Error ? err.message : 'Failed to send group invite';
+      toast.error(errMessage);
     }
     setSending(false);
   }, [npcId, userId, chatId, chatName]);

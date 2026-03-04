@@ -7,17 +7,24 @@ export const feedbackPaths: ZodOpenApiPathsObject = {
       operationId: 'submitFeedback',
       tags: ['Feedback'],
       summary: 'Submit user feedback',
-      description:
-        'Submit feedback about another user or agent.',
+      description: 'Submit feedback about another user or agent.',
       security: [{ PrivyAuth: [] }],
       requestBody: {
         content: {
           'application/json': {
             schema: z
               .object({
-                toUserId: z.string().meta({ description: 'Target user or agent ID' }),
-                score: z.number().optional().meta({ description: 'Score 0-100' }),
-                stars: z.number().optional().meta({ description: 'Star rating 1-5' }),
+                toUserId: z
+                  .string()
+                  .meta({ description: 'Target user or agent ID' }),
+                score: z
+                  .number()
+                  .optional()
+                  .meta({ description: 'Score 0-100' }),
+                stars: z
+                  .number()
+                  .optional()
+                  .meta({ description: 'Star rating 1-5' }),
                 comment: z.string().optional(),
                 category: z.string().optional(),
               })
@@ -52,8 +59,7 @@ export const feedbackPaths: ZodOpenApiPathsObject = {
       operationId: 'submitGameFeedback',
       tags: ['Feedback'],
       summary: 'Submit game feedback',
-      description:
-        'Submit feedback about the game experience.',
+      description: 'Submit feedback about the game experience.',
       security: [{ PrivyAuth: [] }],
       requestBody: {
         content: {

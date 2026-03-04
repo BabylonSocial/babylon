@@ -18,6 +18,7 @@
  */
 'use client';
 
+import { adminGetSystemHealth } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   Activity,
@@ -73,15 +74,15 @@ export function SystemHealthTab() {
 
   const fetchHealth = useCallback((showRefreshing = false) => {
     const fetchLogic = async () => {
-      const response = await fetch('/api/admin/system-health');
-      if (!response.ok) {
+      try {
+        const result = await adminGetSystemHealth();
+        setData(result as unknown as SystemHealthData);
+        setLastUpdated(new Date());
+      } catch {
+        // Silently fail, leave data as null
+      } finally {
         setLoading(false);
-        return;
       }
-      const result: SystemHealthData = await response.json();
-      setData(result);
-      setLastUpdated(new Date());
-      setLoading(false);
     };
 
     if (showRefreshing) {

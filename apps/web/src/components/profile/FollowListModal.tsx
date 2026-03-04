@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  followUser,
+  getUserFollowers,
+  getUserFollowing,
+  unfollowUser,
+} from '@babylon/api-hooks';
 import { cn, getProfileUrl } from '@babylon/shared';
 import { Loader2, Users, X } from 'lucide-react';
 import Link from 'next/link';
@@ -57,7 +63,7 @@ export function FollowListModal({
   type,
   title,
 }: FollowListModalProps) {
-  const { authenticated, user, getAccessToken } = useAuth();
+  const { authenticated, user } = useAuth();
   const [users, setUsers] = useState<FollowUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,34 +97,22 @@ export function FollowListModal({
     setError(null);
 
     try {
-      const token = await getAccessToken();
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(
-        `/api/users/${encodeURIComponent(userId)}/${type}?page=1&limit=100`,
-        { headers, signal: abortController.signal }
-      );
-
-      if (!response.ok) {
-        setError('Failed to load list');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-      const list = type === 'followers' ? data.followers : data.following;
-      setUsers(list || []);
+      const fetchFn =
+        type === 'followers' ? getUserFollowers : getUserFollowing;
+      const data = await fetchFn(userId, {
+        signal: abortController.signal,
+      });
+      const list =
+        (type === 'followers'
+          ? (data as unknown as { followers: FollowUser[] }).followers
+          : (data as unknown as { following: FollowUser[] }).following) || [];
+      setUsers(list);
 
       // Initialize following status for each user
       // isFollowedByCurrentUser indicates if the current user follows each person in the list
       if (authenticated && user) {
         const statusMap: Record<string, boolean> = {};
-        for (const u of list || []) {
+        for (const u of list) {
           if (type === 'following' && userId === user.id) {
             // Viewing own following list - current user follows everyone in this list
             statusMap[u.id] = true;
@@ -140,7 +134,7 @@ export function FollowListModal({
       setError('Network error. Please try again.');
       setIsLoading(false);
     }
-  }, [isOpen, userId, type, authenticated, user, getAccessToken]);
+  }, [isOpen, userId, type, authenticated, user]);
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -195,15 +189,7 @@ export function FollowListModal({
 
     setLoadingFollow((prev) => ({ ...prev, [targetUserId]: true }));
 
-    const token = await getAccessToken();
-    if (!token) {
-      toast.error('Authentication required');
-      setLoadingFollow((prev) => ({ ...prev, [targetUserId]: false }));
-      return;
-    }
-
     const isCurrentlyFollowing = followingStatus[targetUserId] ?? false;
-    const method = isCurrentlyFollowing ? 'DELETE' : 'POST';
 
     // Optimistic update
     setFollowingStatus((prev) => ({
@@ -212,31 +198,18 @@ export function FollowListModal({
     }));
 
     try {
-      const response = await fetch(
-        `/api/users/${encodeURIComponent(targetUserId)}/follow`,
-        {
-          method,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        // Revert optimistic update
-        setFollowingStatus((prev) => ({
-          ...prev,
-          [targetUserId]: isCurrentlyFollowing,
-        }));
-        toast.error('Failed to update follow status');
+      if (isCurrentlyFollowing) {
+        await unfollowUser(targetUserId);
       } else {
-        // Dispatch event to update profile stats
-        window.dispatchEvent(
-          new CustomEvent('profile-updated', {
-            detail: { type: isCurrentlyFollowing ? 'unfollow' : 'follow' },
-          })
-        );
+        await followUser(targetUserId);
       }
+
+      // Dispatch event to update profile stats
+      window.dispatchEvent(
+        new CustomEvent('profile-updated', {
+          detail: { type: isCurrentlyFollowing ? 'unfollow' : 'follow' },
+        })
+      );
     } catch {
       // Revert optimistic update on network error
       setFollowingStatus((prev) => ({

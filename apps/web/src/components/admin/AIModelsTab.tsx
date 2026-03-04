@@ -1,10 +1,10 @@
 'use client';
 
+import { adminGetAiModels, adminTestAiModel } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import { AlertCircle, Bot, Check, RefreshCw, Zap } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * AI model info structure.
@@ -52,28 +52,14 @@ export function AIModelsTab() {
   );
 
   const fetchData = useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Not authenticated');
+    try {
+      const result = await adminGetAiModels();
+      setData(result.data as unknown as AIModelsData);
       setLoading(false);
-      return;
-    }
-
-    const response = await fetch('/api/admin/ai-models', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
+    } catch {
       toast.error('Failed to load AI models');
       setLoading(false);
-      return;
     }
-
-    const result = await response.json();
-    setData(result.data);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -83,28 +69,15 @@ export function AIModelsTab() {
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Not authenticated');
-      setTesting(false);
-      return;
-    }
-
-    const response = await fetch('/api/admin/ai-models/test', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      setTestResult(result.data);
-      toast.success(`Test successful! Using ${result.data.provider}`);
-    } else {
-      toast.error(result.error || 'Test failed');
-      setTestResult({ error: result.error, details: result.details });
+    try {
+      const result = await adminTestAiModel();
+      const data = result.data as unknown as Record<string, unknown>;
+      setTestResult(data);
+      toast.success(`Test successful! Using ${data.provider}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Test failed';
+      toast.error(message);
+      setTestResult({ error: message });
     }
     setTesting(false);
   };

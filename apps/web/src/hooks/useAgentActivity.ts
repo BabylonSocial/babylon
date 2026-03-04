@@ -5,6 +5,10 @@
  * Provides a unified interface for displaying agent activity in the UI.
  */
 
+import {
+  getAgentActivity as fetchAgentActivity,
+  listAllAgentsActivity as fetchAllAgentsActivity,
+} from '@babylon/api-hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type Channel, useSSEChannel } from './useSSE';
 
@@ -197,25 +201,15 @@ export function useAgentActivity(
     }
   }, [agentId]);
 
-  // Build the API URL
-  const apiUrl = useMemo(() => {
-    const base = agentId
-      ? `/api/agents/${agentId}/activity`
-      : '/api/agents/activity';
-    const params = new URLSearchParams();
-    params.set('limit', String(limit));
-    params.set('type', type);
-    return `${base}?${params.toString()}`;
-  }, [agentId, limit, type]);
-
   // Fetch function
   const fetchActivities = useCallback(async () => {
     setError(null);
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch activity: ${response.statusText}`);
-    }
-    const data: AgentActivityResponse = await response.json();
+    const params = { limit: String(limit), type };
+    const data = (agentId
+      ? await fetchAgentActivity(agentId, params)
+      : await fetchAllAgentsActivity(
+          params
+        )) as unknown as AgentActivityResponse;
 
     // Update seen IDs (cap size to prevent memory leak).
     // Pre-evict to make room for incoming activities, then add all at once.
@@ -236,7 +230,7 @@ export function useAgentActivity(
     setFetchedActivities(data.activities);
     setHasMore(data.pagination?.hasMore ?? false);
     setIsLoading(false);
-  }, [apiUrl]);
+  }, [agentId, limit, type]);
 
   // Initial fetch and polling
   useEffect(() => {

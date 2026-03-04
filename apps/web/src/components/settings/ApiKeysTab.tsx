@@ -1,5 +1,6 @@
 'use client';
 
+import { createApiKey, deleteApiKey, listApiKeys } from '@babylon/api-hooks';
 import { logger } from '@babylon/shared';
 import {
   AlertTriangle,
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
 
 interface ApiKey {
   id: string;
@@ -39,7 +39,6 @@ interface ApiKeyResponse {
  * @returns API Keys tab element
  */
 export function ApiKeysTab() {
-  const { getAccessToken } = useAuth();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -48,36 +47,15 @@ export function ApiKeysTab() {
 
   const fetchKeys = useCallback(async () => {
     setLoading(true);
-    const token = await getAccessToken();
-    if (!token) {
-      logger.error('Not authenticated', undefined, 'ApiKeysTab');
+    try {
+      const data = (await listApiKeys()) as unknown as { keys?: ApiKey[] };
+      setKeys(data.keys || []);
+    } catch {
+      logger.error('Failed to fetch API keys', undefined, 'ApiKeysTab');
       toast.error('Failed to load API keys');
-      setLoading(false);
-      return;
     }
-
-    const response = await fetch('/api/users/api-keys', {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      logger.error(
-        'Failed to fetch API keys',
-        { status: response.status },
-        'ApiKeysTab'
-      );
-      toast.error('Failed to load API keys');
-      setLoading(false);
-      return;
-    }
-
-    const data = await response.json();
-    setKeys(data.keys || []);
     setLoading(false);
-  }, [getAccessToken]);
+  }, []);
 
   useEffect(() => {
     fetchKeys();
@@ -85,41 +63,26 @@ export function ApiKeysTab() {
 
   const handleGenerateKey = async () => {
     setGenerating(true);
-    const token = await getAccessToken();
-    if (!token) {
-      logger.error('Not authenticated', undefined, 'ApiKeysTab');
-      toast.error('Failed to generate API key');
-      setGenerating(false);
-      return;
-    }
-
-    const response = await fetch('/api/users/api-keys', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ name: keyName || undefined }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      const errorMessage = error.error || 'Failed to generate API key';
+    try {
+      // Pass name via RequestInit body since generated function doesn't have a body parameter
+      const data = (await createApiKey({
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: keyName || undefined }),
+      })) as unknown as ApiKeyResponse;
+      setNewKey(data);
+      setKeyName('');
+      await fetchKeys();
+      toast.success('API key generated successfully');
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to generate API key';
       logger.error(
         'Failed to generate API key',
-        { status: response.status, error: errorMessage },
+        { error: errorMessage },
         'ApiKeysTab'
       );
       toast.error(errorMessage);
-      setGenerating(false);
-      return;
     }
-
-    const data: ApiKeyResponse = await response.json();
-    setNewKey(data);
-    setKeyName('');
-    await fetchKeys();
-    toast.success('API key generated successfully');
     setGenerating(false);
   };
 
@@ -132,33 +95,14 @@ export function ApiKeysTab() {
       return;
     }
 
-    const token = await getAccessToken();
-    if (!token) {
-      logger.error('Not authenticated', undefined, 'ApiKeysTab');
+    try {
+      await deleteApiKey(keyId);
+      toast.success('API key revoked successfully');
+      await fetchKeys();
+    } catch {
+      logger.error('Failed to revoke API key', undefined, 'ApiKeysTab');
       toast.error('Failed to revoke API key');
-      return;
     }
-
-    const response = await fetch(`/api/users/api-keys/${keyId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      logger.error(
-        'Failed to revoke API key',
-        { status: response.status },
-        'ApiKeysTab'
-      );
-      toast.error('Failed to revoke API key');
-      return;
-    }
-
-    toast.success('API key revoked successfully');
-    await fetchKeys();
   };
 
   const handleCopyKey = async (key: string) => {

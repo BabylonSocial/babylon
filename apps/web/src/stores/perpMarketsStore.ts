@@ -159,13 +159,3 @@ export function invalidatePerpMarketsCache() {
     void qc.invalidateQueries({ queryKey: getListPerpMarketsQueryKey() });
   }
 }
-
-/**
- * @deprecated Use usePerpMarkets() instead. Kept for backward compatibility
- * with components that import the raw store.
- */
-export const usePerpMarketsStore = {
-  getState: () => ({
-    invalidateCache: invalidatePerpMarketsCache,
-  }),
-};

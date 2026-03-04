@@ -191,25 +191,27 @@ export function LatestNewsPanel() {
 
         if (data.posts && Array.isArray(data.posts) && data.posts.length > 0) {
           // Transform posts to ArticleItem format
-          const articlesData = (data.posts as unknown as Array<Record<string, unknown>>)
+          const articlesData = (
+            data.posts as unknown as Array<Record<string, unknown>>
+          )
             .filter((post) => post.type === 'article')
-            .map(
-              (post) => ({
-                id: post.id,
-                title: post.articleTitle || 'Untitled Article',
-                summary: post.content,
-                authorOrgName: post.authorName || post.authorId,
-                byline: post.byline || undefined,
-                sentiment: post.sentiment || undefined,
-                category: post.category || undefined,
-                publishedAt: post.timestamp,
-                slant: post.slant || undefined,
-                biasScore: post.biasScore !== null ? post.biasScore : undefined,
-              })
-            );
+            .map((post) => ({
+              id: post.id,
+              title: post.articleTitle || 'Untitled Article',
+              summary: post.content,
+              authorOrgName: post.authorName || post.authorId,
+              byline: post.byline || undefined,
+              sentiment: post.sentiment || undefined,
+              category: post.category || undefined,
+              publishedAt: post.timestamp,
+              slant: post.slant || undefined,
+              biasScore: post.biasScore !== null ? post.biasScore : undefined,
+            }));
 
           // Deduplicate articles about the same event
-          const uniqueArticles = deduplicateArticles(articlesData as ArticleItem[]).slice(0, 5);
+          const uniqueArticles = deduplicateArticles(
+            articlesData as ArticleItem[]
+          ).slice(0, 5);
 
           logger.info(
             'Articles processed:',

@@ -90,6 +90,16 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Generate API hooks
+        run: bun run generate:api
+
+      - name: Verify no OpenAPI spec drift
+        run: |
+          git diff --exit-code openapi.json || {
+            echo "::error::OpenAPI spec is out of date. Run 'bun run generate:api' and commit the changes."
+            exit 1
+          }
+
       - name: Clear build caches
         run: |
           echo "🧹 Clearing Turborepo and Bun caches..."

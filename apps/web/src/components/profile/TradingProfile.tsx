@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  getLeaderboard,
+  getUserPositions,
+  getUserProfile,
+} from '@babylon/api-hooks';
 import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import {
@@ -17,7 +22,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { TradesFeed } from '@/components/trades/TradesFeed';
-import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Trading profile component for displaying comprehensive trading statistics and positions.
@@ -147,7 +151,6 @@ export function TradingProfile({
   isOwner = false,
 }: TradingProfileProps) {
   const router = useRouter();
-  const { getAccessToken } = useAuth();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -174,150 +177,130 @@ export function TradingProfile({
     setLoading(true);
     setError(null);
 
-    const token = await getAccessToken();
-    const headers: HeadersInit = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    try {
+      const signal = abortController.signal;
 
-    // Fetch all data in parallel
-    const [profileRes, leaderboardRes, positionsRes, breakdownRes] =
-      await Promise.all([
-        fetch(`/api/users/${encodeURIComponent(userId)}/profile`, {
-          headers,
-          signal: abortController.signal,
-        }),
-        fetch(`/api/leaderboard?page=1&pageSize=100`, {
-          headers,
-          signal: abortController.signal,
-        }),
-        fetch(
-          `/api/markets/positions/${encodeURIComponent(userId)}?status=open`,
-          {
-            headers,
-            signal: abortController.signal,
-          }
-        ),
-        isOwner
-          ? fetch(
-              `/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`,
-              {
-                headers,
-                signal: abortController.signal,
-              }
-            )
-          : Promise.resolve(null),
-      ]);
+      // Fetch all data in parallel
+      // portfolio-breakdown has no generated function yet, use raw fetch
+      const [profileData, leaderboardData, positionsData, breakdownRes] =
+        await Promise.all([
+          getUserProfile(userId, { signal }),
+          getLeaderboard({ limit: '100' }, { signal }),
+          getUserPositions(userId, { status: 'open' }, { signal }),
+          isOwner
+            ? fetch(
+                `/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`,
+                { signal }
+              )
+            : Promise.resolve(null),
+        ]);
 
-    // Check if aborted
-    if (abortController.signal.aborted) {
-      return;
-    }
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        return;
+      }
 
-    // Check responses
-    if (!profileRes.ok) {
-      setError(
-        `Failed to load profile: ${profileRes.status} ${profileRes.statusText}`
+      // Process breakdown (still raw fetch)
+      let breakdownData: PortfolioBreakdownSnapshot | null = null;
+      if (isOwner && breakdownRes) {
+        if (!breakdownRes.ok) {
+          setError(
+            `Failed to load portfolio breakdown: ${breakdownRes.status} ${breakdownRes.statusText}`
+          );
+          setLoading(false);
+          return;
+        }
+        breakdownData =
+          (await breakdownRes.json()) as PortfolioBreakdownSnapshot;
+      }
+
+      // Check if aborted after async operations
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      // Validate profile data
+      const userProfile = (
+        profileData as unknown as { user?: Record<string, unknown> }
+      ).user;
+      if (!userProfile) {
+        setError('User profile not found');
+        setLoading(false);
+        return;
+      }
+
+      // Find user rank
+      const leaderboardJson = leaderboardData as unknown as {
+        pagination?: { totalCount?: number };
+        leaderboard?: { id: string; rank?: number }[];
+      };
+      const totalPlayers = leaderboardJson.pagination?.totalCount || 0;
+      const userInLeaderboard = leaderboardJson.leaderboard?.find(
+        (u) => u.id === userId
       );
-      setLoading(false);
-      return;
-    }
-    if (!leaderboardRes.ok) {
-      setError(`Failed to load leaderboard: ${leaderboardRes.status}`);
-      setLoading(false);
-      return;
-    }
-    if (!positionsRes.ok) {
-      setError(`Failed to load positions: ${positionsRes.status}`);
-      setLoading(false);
-      return;
-    }
-    if (isOwner && breakdownRes && !breakdownRes.ok) {
-      setError(
-        `Failed to load portfolio breakdown: ${breakdownRes.status} ${breakdownRes.statusText}`
-      );
-      setLoading(false);
-      return;
-    }
+      const rank = userInLeaderboard?.rank || 0;
 
-    const [profileData, leaderboardData, positionsData, breakdownData] =
-      await Promise.all([
-        profileRes.json(),
-        leaderboardRes.json(),
-        positionsRes.json() as Promise<ApiPositionsResponse>,
-        isOwner && breakdownRes
-          ? (breakdownRes.json() as Promise<PortfolioBreakdownSnapshot>)
-          : Promise.resolve(null),
-      ]);
-
-    // Check if aborted after async operations
-    if (abortController.signal.aborted) {
-      return;
-    }
-
-    // Validate profile data
-    const userProfile = profileData.user;
-    if (!userProfile) {
-      setError('User profile not found');
-      setLoading(false);
-      return;
-    }
-
-    // Find user rank
-    const totalPlayers = leaderboardData.pagination?.totalCount || 0;
-    const userInLeaderboard = leaderboardData.leaderboard?.find(
-      (u: { id: string }) => u.id === userId
-    );
-    const rank = userInLeaderboard?.rank || 0;
-
-    // Set stats
-    setStats({
-      rank,
-      totalPlayers,
-      balance: toNumber(userProfile.virtualBalance),
-      totalPoints: toNumber(userProfile.totalPoints),
-      lifetimePnL: toNumber(userProfile.lifetimePnL),
-    });
-
-    // Validate and set positions
-    const perpPos = positionsData.perpetuals?.positions || [];
-    const predPos = positionsData.predictions?.positions || [];
-
-    setPerpPositions(perpPos);
-    setPredictionPositions(predPos);
-
-    // Calculate portfolio P&L for owner (canonical Total P/L)
-    if (isOwner) {
-      const breakdown = breakdownData;
-      const totalPnL = breakdown ? toNumber(breakdown.totalPnL) : 0;
-      const originalAmount = breakdown ? toNumber(breakdown.originalAmount) : 0;
-
-      const perpPnL = perpPos.reduce(
-        (sum, p) => sum + toNumber(p.unrealizedPnL),
-        0
-      );
-      const predictionPnL = predPos.reduce(
-        (sum, p) => sum + toNumber(p.unrealizedPnL),
-        0
-      );
-      const roi = originalAmount > 0 ? (totalPnL / originalAmount) * 100 : 0;
-
-      setPortfolioPnL({
-        totalPnL,
-        perpPnL,
-        predictionPnL,
-        totalPositions: perpPos.length + predPos.length,
-        perpPositions: perpPos.length,
-        predictionPositions: predPos.length,
-        roi,
-        breakdown,
+      // Set stats
+      setStats({
+        rank,
+        totalPlayers,
+        balance: toNumber(userProfile.virtualBalance),
+        totalPoints: toNumber(userProfile.totalPoints),
+        lifetimePnL: toNumber(userProfile.lifetimePnL),
       });
-    }
 
-    if (!abortController.signal.aborted) {
+      // Validate and set positions
+      const positionsJson = positionsData as unknown as ApiPositionsResponse;
+      const perpPos = positionsJson.perpetuals?.positions || [];
+      const predPos = positionsJson.predictions?.positions || [];
+
+      setPerpPositions(perpPos);
+      setPredictionPositions(predPos);
+
+      // Calculate portfolio P&L for owner (canonical Total P/L)
+      if (isOwner) {
+        const breakdown = breakdownData;
+        const totalPnL = breakdown ? toNumber(breakdown.totalPnL) : 0;
+        const originalAmount = breakdown
+          ? toNumber(breakdown.originalAmount)
+          : 0;
+
+        const perpPnL = perpPos.reduce(
+          (sum, p) => sum + toNumber(p.unrealizedPnL),
+          0
+        );
+        const predictionPnL = predPos.reduce(
+          (sum, p) => sum + toNumber(p.unrealizedPnL),
+          0
+        );
+        const roi = originalAmount > 0 ? (totalPnL / originalAmount) * 100 : 0;
+
+        setPortfolioPnL({
+          totalPnL,
+          perpPnL,
+          predictionPnL,
+          totalPositions: perpPos.length + predPos.length,
+          perpPositions: perpPos.length,
+          predictionPositions: predPos.length,
+          roi,
+          breakdown,
+        });
+      }
+
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
+    } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      setError(
+        err instanceof Error ? err.message : 'Failed to load trading data'
+      );
       setLoading(false);
     }
-  }, [userId, isOwner, getAccessToken]);
+  }, [userId, isOwner]);
 
   useEffect(() => {
     fetchTradingData();

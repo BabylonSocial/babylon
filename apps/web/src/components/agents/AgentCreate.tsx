@@ -21,7 +21,7 @@ import {
 import { useAgentForm } from '@/app/agents/create/hooks';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { useWalletBalance } from '@/stores/walletBalanceStore';
 
 const TOTAL_PROFILE_PICTURES = 100;
 const TOTAL_BANNERS = 100;

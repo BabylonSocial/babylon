@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { BuyPointsModal } from '@/components/points/BuyPointsModal';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
-import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { useWalletBalance } from '@/stores/walletBalanceStore';
 
 interface Transaction {
   id: string;

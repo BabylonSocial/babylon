@@ -1,5 +1,6 @@
 'use client';
 
+import { adminGetGameStats } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   Activity,
@@ -129,16 +130,15 @@ export function GameControlTab() {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const fetchStats = useCallback(async () => {
-    const response = await fetch('/api/admin/game-stats');
-    if (!response.ok) {
+    try {
+      const data = await adminGetGameStats();
+      setStats(data as unknown as GameStats);
+      setError(null);
+      setLoading(false);
+    } catch {
       setLoading(false);
       setError('Failed to load stats');
-      return;
     }
-    const data = await response.json();
-    setStats(data);
-    setError(null);
-    setLoading(false);
   }, []);
 
   useEffect(() => {

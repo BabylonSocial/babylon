@@ -11,6 +11,7 @@
  */
 'use client';
 
+import { adminGetGrowthStats } from '@babylon/api-hooks';
 import { cn, formatNumber } from '@babylon/shared';
 import {
   Activity,
@@ -161,28 +162,24 @@ export function GrowthMetricsTab() {
     (showRefreshing = false) => {
       const fetchLogic = async () => {
         setError(null);
-        const response = await fetch(
-          `/api/admin/stats/growth?period=${period}&includeTimeSeries=true`
-        );
-        if (!response.ok) {
+        try {
+          const result = await adminGetGrowthStats({
+            period,
+            includeTimeSeries: 'true',
+          });
+          setData(result as unknown as GrowthData);
+          setLoading(false);
+        } catch {
           setData(null);
           setError('Failed to load growth metrics');
           setLoading(false);
-          return;
         }
-        const result = await response.json();
-        setData(result);
-        setLoading(false);
       };
 
       if (showRefreshing) {
         startRefresh(fetchLogic);
       } else {
-        void fetchLogic().catch(() => {
-          setData(null);
-          setError('Failed to load growth metrics');
-          setLoading(false);
-        });
+        void fetchLogic();
       }
     },
     [period]

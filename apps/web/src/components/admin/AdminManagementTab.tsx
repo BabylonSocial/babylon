@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  adminGetAdmins,
+  adminGetUsers,
+  adminPromoteDemote,
+} from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   AlertTriangle,
@@ -76,10 +81,8 @@ export function AdminManagementTab() {
 
   const fetchAdmins = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
-    const response = await fetch('/api/admin/admins');
-    if (!response.ok) throw new Error('Failed to fetch admins');
-    const data = await response.json();
-    setAdmins(data.admins || []);
+    const data = await adminGetAdmins();
+    setAdmins((data as unknown as { admins: AdminUser[] }).admins || []);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -95,45 +98,37 @@ export function AdminManagementTab() {
     }
 
     setLoadingUsers(true);
-    const params = new URLSearchParams({
-      search: query,
-      limit: '10',
-      filter: 'users', // Only real users, not actors
-    });
-    const response = await fetch(`/api/admin/users?${params}`);
-    if (!response.ok) {
+    try {
+      const data = await adminGetUsers({
+        search: query,
+        limit: '10',
+        filter: 'users', // Only real users, not actors
+      });
+
+      // Filter out users who are already admins
+      const adminIds = new Set(admins.map((a) => a.id));
+      const nonAdminUsers = (
+        (data as unknown as { users: AvailableUser[] }).users || []
+      ).filter((u: AvailableUser) => !adminIds.has(u.id) && !u.isActor);
+
+      setAvailableUsers(nonAdminUsers);
+    } catch {
       setAvailableUsers([]);
+    } finally {
       setLoadingUsers(false);
-      return;
     }
-    const data = await response.json();
-
-    // Filter out users who are already admins
-    const adminIds = new Set(admins.map((a) => a.id));
-    const nonAdminUsers = (data.users || []).filter(
-      (u: AvailableUser) => !adminIds.has(u.id) && !u.isActor
-    );
-
-    setAvailableUsers(nonAdminUsers);
-    setLoadingUsers(false);
   };
 
   const handleAddAdmin = async (userId: string) => {
     setProcessing(true);
-    const response = await fetch(`/api/admin/admins/${userId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'promote' }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to add admin');
-    }
-
-    const result = await response.json();
+    const result = await adminPromoteDemote(userId, { action: 'promote' });
+    const user = (
+      result as unknown as {
+        user: { displayName: string | null; username: string | null };
+      }
+    ).user;
     toast.success(
-      `${result.user.displayName || result.user.username || 'User'} is now an admin`
+      `${user.displayName || user.username || 'User'} is now an admin`
     );
     setShowAddModal(false);
     setSearchQuery('');
@@ -146,20 +141,16 @@ export function AdminManagementTab() {
     if (!selectedUser) return;
 
     setProcessing(true);
-    const response = await fetch(`/api/admin/admins/${selectedUser.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'demote' }),
+    const result = await adminPromoteDemote(selectedUser.id, {
+      action: 'demote',
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to remove admin');
-    }
-
-    const result = await response.json();
+    const user = (
+      result as unknown as {
+        user: { displayName: string | null; username: string | null };
+      }
+    ).user;
     toast.success(
-      `${result.user.displayName || result.user.username || 'User'} is no longer an admin`
+      `${user.displayName || user.username || 'User'} is no longer an admin`
     );
     setShowRemoveModal(false);
     setSelectedUser(null);

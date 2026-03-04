@@ -18,6 +18,10 @@
  */
 'use client';
 
+import {
+  adminGetHumanReview,
+  adminHumanReviewAction,
+} from '@babylon/api-hooks';
 import { cn, type JsonValue } from '@babylon/shared';
 import { AlertCircle, DollarSign } from 'lucide-react';
 import { useCallback, useEffect, useState, useTransition } from 'react';
@@ -57,15 +61,15 @@ export function HumanReviewTab() {
   const [showActionModal, setShowActionModal] = useState(false);
 
   const fetchAppeals = useCallback(async () => {
-    const response = await fetch('/api/admin/moderation/human-review');
-    if (!response.ok) {
+    try {
+      const data = await adminGetHumanReview();
+      const dataObj = data as unknown as { appeals: Appeal[] };
+      setAppeals(dataObj.appeals || []);
+      setLoading(false);
+    } catch {
       toast.error('Failed to load appeals');
       setLoading(false);
-      return;
     }
-    const data = await response.json();
-    setAppeals(data.appeals || []);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -77,27 +81,22 @@ export function HumanReviewTab() {
     action: 'approve' | 'deny',
     reasoning: string
   ) => {
-    const response = await fetch(
-      `/api/admin/moderation/human-review/${userId}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, reasoning }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      toast.error(error.message || 'Failed to process appeal');
-      return;
+    try {
+      await adminHumanReviewAction(userId, {
+        action,
+        reasoning,
+      } as unknown as Parameters<typeof adminHumanReviewAction>[1]);
+      toast.success(
+        `Appeal ${action === 'approve' ? 'approved' : 'denied'} successfully`
+      );
+      setShowActionModal(false);
+      setSelectedAppeal(null);
+      fetchAppeals();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to process appeal';
+      toast.error(message);
     }
-
-    toast.success(
-      `Appeal ${action === 'approve' ? 'approved' : 'denied'} successfully`
-    );
-    setShowActionModal(false);
-    setSelectedAppeal(null);
-    fetchAppeals();
   };
 
   const formatDate = (date: Date | null) => {

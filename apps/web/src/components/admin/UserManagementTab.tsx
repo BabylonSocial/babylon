@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  adminAddWhitelist,
+  adminBanUser,
+  adminGetUsers,
+} from '@babylon/api-hooks';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import {
   Ban,
@@ -140,18 +145,18 @@ export function UserManagementTab() {
   const fetchUsers = useCallback(
     (showRefreshing = false) => {
       const fetchLogic = async () => {
-        const params = new URLSearchParams({
+        const params: Record<string, string> = {
           limit: '50',
           filter,
           sortBy,
           sortOrder: 'desc',
-        });
-        if (searchQuery) params.set('search', searchQuery);
+        };
+        if (searchQuery) params.search = searchQuery;
 
-        const response = await fetch(`/api/admin/users?${params}`);
-        if (!response.ok) throw new Error('Failed to fetch users');
-        const data = await response.json();
-        const validation = z.array(UserSchema).safeParse(data.users);
+        const data = await adminGetUsers(params);
+        const validation = z
+          .array(UserSchema)
+          .safeParse((data as unknown as Record<string, unknown>).users);
         if (!validation.success) {
           throw new Error('Invalid user data structure');
         }
@@ -179,21 +184,12 @@ export function UserManagementTab() {
     }
 
     startBanning(async () => {
-      const response = await fetch(`/api/admin/users/${user.id}/ban`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          reason: action === 'ban' ? banReason : undefined,
-          isScammer: action === 'ban' ? isScammer : false,
-          isCSAM: action === 'ban' ? isCSAM : false,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update user');
-      }
+      await adminBanUser(user.id, {
+        action,
+        reason: action === 'ban' ? banReason : undefined,
+        isScammer: action === 'ban' ? isScammer : false,
+        isCSAM: action === 'ban' ? isCSAM : false,
+      } as unknown as Parameters<typeof adminBanUser>[1]);
 
       toast.success(
         action === 'ban'
@@ -212,26 +208,21 @@ export function UserManagementTab() {
   const handleWhitelistUser = async (userId: string) => {
     setWhitelistingUserId(userId);
     try {
-      const res = await fetch('/api/admin/whitelist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, source: 'admin_manual' }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          toast.info('User is already whitelisted');
-        } else {
-          toast.error(data.error ?? 'Failed to whitelist user');
-        }
-        return;
-      }
-
+      await adminAddWhitelist({
+        userId,
+        source: 'admin_manual',
+      } as unknown as Parameters<typeof adminAddWhitelist>[0]);
       toast.success('User whitelisted successfully');
-    } catch {
-      toast.error('Failed to whitelist user');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (
+        message.includes('409') ||
+        message.toLowerCase().includes('already')
+      ) {
+        toast.info('User is already whitelisted');
+      } else {
+        toast.error('Failed to whitelist user');
+      }
     } finally {
       setWhitelistingUserId(null);
     }

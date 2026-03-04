@@ -18,6 +18,7 @@
  */
 'use client';
 
+import { adminGetMarkets, adminMarketAction } from '@babylon/api-hooks';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import {
   AlertTriangle,
@@ -98,18 +99,17 @@ export function MarketOversightTab() {
   const fetchMarkets = useCallback(
     (showRefreshing = false) => {
       const fetchLogic = async () => {
-        const params = new URLSearchParams();
-        if (statusFilter !== 'all') params.set('status', statusFilter);
+        try {
+          const params: Record<string, string> = {};
+          if (statusFilter !== 'all') params.status = statusFilter;
 
-        const response = await fetch(`/api/admin/markets?${params}`);
-        if (!response.ok) {
+          const result = await adminGetMarkets(params);
+          setData(result as unknown as MarketsData);
+          setLoading(false);
+        } catch {
           toast.error('Failed to load market data');
           setLoading(false);
-          return;
         }
-        const result = await response.json();
-        setData(result);
-        setLoading(false);
       };
 
       if (showRefreshing) {
@@ -155,29 +155,24 @@ export function MarketOversightTab() {
           extendDate && { newEndDate: extendDate }),
       };
 
-      const response = await fetch(`/api/admin/markets/${selectedMarket.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      try {
+        await adminMarketAction(selectedMarket.id, body);
 
-      if (!response.ok) {
-        const text = await response.text();
-        const error = text.startsWith('{') ? JSON.parse(text).error : text;
-        toast.error(error || 'Failed to perform action');
-        return;
+        toast.success(
+          actionType === 'resolve'
+            ? `Market resolved as ${resolution ? 'YES' : 'NO'}`
+            : actionType === 'extend'
+              ? 'Market end date extended'
+              : 'Market voided'
+        );
+        setShowActionModal(false);
+        setSelectedMarket(null);
+        fetchMarkets(true);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to perform action';
+        toast.error(message);
       }
-
-      toast.success(
-        actionType === 'resolve'
-          ? `Market resolved as ${resolution ? 'YES' : 'NO'}`
-          : actionType === 'extend'
-            ? 'Market end date extended'
-            : 'Market voided'
-      );
-      setShowActionModal(false);
-      setSelectedMarket(null);
-      fetchMarkets(true);
     });
   };
 

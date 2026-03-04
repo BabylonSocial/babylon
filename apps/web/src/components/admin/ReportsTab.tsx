@@ -20,6 +20,11 @@
  */
 'use client';
 
+import {
+  adminGetReportStats,
+  adminGetReports,
+  adminReportAction,
+} from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import { AlertCircle, CheckCircle, Clock, Flag, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useState, useTransition } from 'react';
@@ -123,21 +128,15 @@ export function ReportsTab() {
     (showRefreshing = false) => {
       const fetchLogic = async () => {
         try {
-          const params = new URLSearchParams({
+          const params: Record<string, string> = {
             limit: '100',
-          });
-          if (statusFilter !== 'all') params.set('status', statusFilter);
-          if (priorityFilter !== 'all') params.set('priority', priorityFilter);
+          };
+          if (statusFilter !== 'all') params.status = statusFilter;
+          if (priorityFilter !== 'all') params.priority = priorityFilter;
 
-          const response = await fetch(`/api/admin/reports?${params}`);
-          if (!response.ok) {
-            console.error('Failed to fetch reports:', response.status);
-            setLoading(false);
-            return;
-          }
-
-          const data = await response.json();
-          setReports(data.reports || []);
+          const data = await adminGetReports(params);
+          const dataObj = data as unknown as { reports: Report[] };
+          setReports(dataObj.reports || []);
           setLoading(false);
         } catch (err) {
           console.error('Error fetching reports:', err);
@@ -157,11 +156,8 @@ export function ReportsTab() {
   const fetchStats = useCallback(() => {
     const fetchLogic = async () => {
       try {
-        const response = await fetch('/api/admin/reports/stats');
-        if (!response.ok) return;
-
-        const data = await response.json();
-        setStats(data);
+        const data = await adminGetReportStats();
+        setStats(data as unknown as ReportStats);
       } catch (err) {
         console.error('Error fetching report stats:', err);
       }
@@ -179,51 +175,45 @@ export function ReportsTab() {
     action: string,
     resolution: string
   ) => {
-    const response = await fetch(`/api/admin/reports/${reportId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, resolution }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      toast.error(error.message || 'Failed to take action');
-      return;
+    try {
+      await adminReportAction(reportId, {
+        action,
+        resolution,
+      } as unknown as Parameters<typeof adminReportAction>[1]);
+      toast.success(`Report ${action} successfully`);
+      setShowActionModal(false);
+      setSelectedReport(null);
+      fetchReports(true);
+      fetchStats();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to take action';
+      toast.error(message);
     }
-
-    toast.success(`Report ${action} successfully`);
-    setShowActionModal(false);
-    setSelectedReport(null);
-    fetchReports(true);
-    fetchStats();
   };
 
   const handleEvaluate = async (reportId: string) => {
     setEvaluatingReportId(reportId);
-    const response = await fetch(`/api/admin/reports/${reportId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'evaluate' }),
-    });
+    try {
+      const data = await adminReportAction(reportId, {
+        action: 'evaluate',
+      } as unknown as Parameters<typeof adminReportAction>[1]);
+      const dataObj = data as unknown as { evaluation?: ReportEvaluation };
+      toast.success('Report evaluated successfully');
 
-    if (!response.ok) {
-      const error = await response.json();
-      toast.error(error.message || 'Failed to evaluate report');
-      setEvaluatingReportId(null);
-      return;
-    }
+      // Refresh reports to show evaluation
+      await fetchReports(true);
 
-    const data = await response.json();
-    toast.success('Report evaluated successfully');
-
-    // Refresh reports to show evaluation
-    await fetchReports(true);
-
-    // Show evaluation modal if we have the report selected
-    const report = reports.find((r) => r.id === reportId);
-    if (report && data.evaluation) {
-      setSelectedReport({ ...report, evaluation: data.evaluation });
-      setShowEvaluationModal(true);
+      // Show evaluation modal if we have the report selected
+      const report = reports.find((r) => r.id === reportId);
+      if (report && dataObj.evaluation) {
+        setSelectedReport({ ...report, evaluation: dataObj.evaluation });
+        setShowEvaluationModal(true);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to evaluate report';
+      toast.error(message);
     }
     setEvaluatingReportId(null);
   };

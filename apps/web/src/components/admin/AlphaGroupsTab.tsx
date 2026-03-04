@@ -11,6 +11,10 @@
 
 'use client';
 
+import {
+  adminGetAlphaGroupConfig,
+  adminGetAlphaGroupStats,
+} from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   Activity,
@@ -179,51 +183,39 @@ export function AlphaGroupsTab() {
     setIsLoading(true);
     setError(null);
 
-    const response = await fetch('/api/admin/alpha-groups/stats', {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const json = await adminGetAlphaGroupStats();
+      const parsed = AlphaGroupStatsSchema.safeParse(json);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      setError(`Failed to fetch stats: ${response.status} - ${errorText}`);
+      if (!parsed.success) {
+        setError(`Invalid response format: ${parsed.error.message}`);
+        setIsLoading(false);
+        return;
+      }
+
+      setStats(parsed.data.data);
       setIsLoading(false);
-      return;
-    }
-
-    const json = await response.json();
-    const parsed = AlphaGroupStatsSchema.safeParse(json);
-
-    if (!parsed.success) {
-      setError(`Invalid response format: ${parsed.error.message}`);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to fetch stats';
+      setError(message);
       setIsLoading(false);
-      return;
     }
-
-    setStats(parsed.data.data);
-    setIsLoading(false);
   }, []);
 
   /**
    * Fetch alpha group configuration.
    */
   const fetchConfig = useCallback(async () => {
-    const response = await fetch('/api/admin/alpha-groups/config', {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const json = await adminGetAlphaGroupConfig();
+      const parsed = AlphaGroupConfigSchema.safeParse(json);
 
-    if (!response.ok) {
-      return;
-    }
-
-    const json = await response.json();
-    const parsed = AlphaGroupConfigSchema.safeParse(json);
-
-    if (parsed.success) {
-      setConfig(parsed.data.data);
+      if (parsed.success) {
+        setConfig(parsed.data.data);
+      }
+    } catch {
+      // Silently fail - config is optional
     }
   }, []);
 

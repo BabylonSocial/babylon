@@ -135,7 +135,9 @@ export function ReportModal({
           evidence: evidence || undefined,
         });
 
-        toast.success('Report submitted successfully. Our team will review it.');
+        toast.success(
+          'Report submitted successfully. Our team will review it.'
+        );
 
         // Reset form
         setCategory('');

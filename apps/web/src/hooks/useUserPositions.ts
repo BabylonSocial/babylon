@@ -1,5 +1,6 @@
 'use client';
 
+import { getUserPositions as fetchUserPositions } from '@babylon/api-hooks';
 import type { PerpPosition, UserPredictionPosition } from '@babylon/shared';
 import { logger } from '@babylon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -148,28 +149,11 @@ export function useUserPositions(
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/markets/positions/${encodeURIComponent(userId)}`,
-        { signal: controller.signal }
-      );
+      const data = await fetchUserPositions(userId, undefined, {
+        signal: controller.signal,
+      });
 
-      // Check if request was aborted before parsing
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          typeof errorData.error === 'string'
-            ? errorData.error
-            : `Failed to fetch positions: ${response.status}`;
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      // Check if request was aborted after parsing
+      // Check if request was aborted after fetching
       if (controller.signal.aborted) {
         return;
       }

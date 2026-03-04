@@ -1,3 +1,4 @@
+import { getPerpMarketHistory } from '@babylon/api-hooks';
 import { logger } from '@babylon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -6,23 +7,9 @@ import {
   type PerpTradeSSE,
   usePerpMarketStream,
 } from '@/hooks/usePerpMarketStream';
-import type { MarketTimeRange } from '@/types/markets';
+import type { MarketTimeRange, PerpHistoryPoint } from '@/types/markets';
 
-/**
- * Represents a single point in perpetual market price history.
- */
-export interface PerpHistoryPoint {
-  /** Timestamp in milliseconds */
-  time: number;
-  /** Price at this point */
-  price: number;
-  /** Price change from previous point */
-  change?: number;
-  /** Percentage change from previous point */
-  changePercent?: number;
-  /** Volume at this point */
-  volume?: number;
-}
+export type { PerpHistoryPoint } from '@/types/markets';
 
 /**
  * Seed data for initializing history when API data is unavailable.
@@ -266,29 +253,14 @@ export function usePerpHistory(
     setError(null);
 
     try {
-      const params = new URLSearchParams({ limit: String(limit) });
-      if (range) {
-        params.set('range', range);
-      }
-      const response = await fetch(
-        `/api/markets/perps/${encodeURIComponent(ticker)}/history?${params.toString()}`
-      );
+      const data = await getPerpMarketHistory(ticker, {
+        limit: String(limit),
+        ...(range ? { range } : {}),
+      });
 
-      let data: unknown = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
+      const historyArray = (data as Record<string, unknown>).history;
 
-      const record = (data ?? {}) as Record<string, unknown>;
-      const historyArray = record.history;
-
-      if (
-        response.ok &&
-        Array.isArray(historyArray) &&
-        historyArray.length > 0
-      ) {
+      if (Array.isArray(historyArray) && historyArray.length > 0) {
         const formatted = formatHistory(
           historyArray as Array<{
             price: number;
@@ -303,13 +275,6 @@ export function usePerpHistory(
           lastAppendedPriceRef.current = formatted[formatted.length - 1]!.price;
         }
       } else {
-        if (!response.ok) {
-          const message =
-            typeof record.error === 'string'
-              ? record.error
-              : `Failed to fetch history: ${response.status}`;
-          setError(message);
-        }
         setHistory(fallbackFromSeed());
       }
     } catch (err) {

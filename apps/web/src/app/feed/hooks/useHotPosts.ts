@@ -1,3 +1,4 @@
+import { getHotFeed } from '@babylon/api-hooks';
 import { type FeedPost, logger } from '@babylon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -35,24 +36,13 @@ export function useHotPosts(
       if (showLoading) setLoading(true);
 
       try {
-        const response = await fetch('/api/feed/hot?limit=50', { signal });
+        const data = await getHotFeed({ limit: '50' }, { signal });
 
         // Check if aborted after fetch
         if (signal?.aborted) return;
 
-        if (response.ok) {
-          const data = await response.json();
-          setPosts((data.posts ?? []) as FeedPost[]);
-          setError(null);
-        } else {
-          const errorText = await response.text().catch(() => 'Unknown error');
-          logger.error(
-            'Failed to fetch hot posts',
-            { status: response.status, errorText },
-            'useHotPosts'
-          );
-          setError(`Failed to fetch posts: ${response.status}`);
-        }
+        setPosts((data.posts ?? []) as unknown as FeedPost[]);
+        setError(null);
       } catch (err) {
         // Ignore abort errors
         if (err instanceof Error && err.name === 'AbortError') {

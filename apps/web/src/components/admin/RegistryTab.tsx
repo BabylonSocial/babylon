@@ -1,5 +1,6 @@
 'use client';
 
+import { adminBanUser } from '@babylon/api-hooks';
 import { cn, getActorProfileUrl, getProfileUrl } from '@babylon/shared';
 import {
   AlertCircle,
@@ -25,7 +26,6 @@ import { FeedbackForm } from '@/components/feedback/FeedbackForm';
 import { Avatar } from '@/components/shared/Avatar';
 import { SearchBar } from '@/components/shared/SearchBar';
 import { Skeleton } from '@/components/shared/Skeleton';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Registry entity schema for validation.
@@ -650,40 +650,32 @@ export function RegistryTab() {
     }
 
     setIsBanning(true);
-    const token = getAuthToken();
-    const response = await fetch(`/api/admin/users/${entity.id}/ban`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
+    try {
+      await adminBanUser(entity.id, {
         action,
         reason: action === 'ban' ? banReason : undefined,
         isScammer: action === 'ban' ? isScammer : false,
         isCSAM: action === 'ban' ? isCSAM : false,
-      }),
-    });
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
+      toast.success(
+        action === 'ban'
+          ? 'User banned successfully'
+          : 'User unbanned successfully'
+      );
+      setShowBanModal(false);
+      setBanReason('');
+      setIsScammer(false);
+      setIsCSAM(false);
+      setSelectedEntity(null);
+      fetchRegistry();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to update user';
+      toast.error(message);
+    } finally {
       setIsBanning(false);
-      toast.error(error.message || 'Failed to update user');
-      return;
     }
-
-    toast.success(
-      action === 'ban'
-        ? 'User banned successfully'
-        : 'User unbanned successfully'
-    );
-    setShowBanModal(false);
-    setBanReason('');
-    setIsScammer(false);
-    setIsCSAM(false);
-    setSelectedEntity(null);
-    fetchRegistry();
-    setIsBanning(false);
   };
 
   const allEntities = data

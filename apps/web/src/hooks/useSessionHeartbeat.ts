@@ -74,8 +74,7 @@ export function useSessionHeartbeat(): void {
       void activityHeartbeat({
         sessionId,
         pageViews,
-        lastPath:
-          typeof window !== 'undefined' ? window.location.pathname : '',
+        lastPath: typeof window !== 'undefined' ? window.location.pathname : '',
       }).catch(() => {});
     };
 

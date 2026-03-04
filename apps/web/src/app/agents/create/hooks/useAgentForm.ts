@@ -1,7 +1,8 @@
 import type { AgentTemplate } from '@babylon/agents/client';
+import type { GenerateFieldBody } from '@babylon/api-hooks';
+import { generateAgentField } from '@babylon/api-hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
 import { createNameMatchRegex, generateAgentName } from '@/utils/nameGenerator';
 
 const STORAGE_KEY = 'babylon_agent_draft';
@@ -50,8 +51,6 @@ const TOTAL_PROFILE_PICTURES = 100;
  * - Profile and agent config state management
  */
 export function useAgentForm(): UseAgentFormResult {
-  const { getAccessToken } = useAuth();
-
   // Generate default agent name on mount
   const [initialName] = useState(() => generateAgentName());
 
@@ -215,22 +214,10 @@ export function useAgentForm(): UseAgentFormResult {
     async (field: string) => {
       setGeneratingField(field);
 
-      const token = await getAccessToken();
-      if (!token) {
-        toast.error('Authentication required');
-        setGeneratingField(null);
-        return;
-      }
-
-      const response = await fetch('/api/agents/generate-field', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      try {
+        const result = await generateAgentField({
           fieldName: field,
-          currentValue: agentData[field as keyof AgentFormData],
+          currentValue: String(agentData[field as keyof AgentFormData] ?? ''),
           context: {
             name: profileData.displayName,
             description: profileData.bio,
@@ -238,36 +225,31 @@ export function useAgentForm(): UseAgentFormResult {
             personality: agentData.personality,
             tradingStrategy: agentData.tradingStrategy,
           },
-        }),
-      });
+        } as unknown as GenerateFieldBody);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        toast.error(errorData.error || 'Failed to generate field');
+        const value = result.value.trim();
+
+        if (field === 'personality') {
+          const personalityLines = value
+            .split('|')
+            .map((s: string) => s.trim())
+            .filter((s: string) => s);
+          updateAgentField('personality', personalityLines.join('\n'));
+        } else {
+          updateAgentField(
+            field as keyof AgentFormData,
+            value.replace(/\n\n+/g, '\n')
+          );
+        }
+
+        toast.success(`Enhanced ${field}!`);
+      } catch {
+        toast.error('Failed to generate field');
+      } finally {
         setGeneratingField(null);
-        return;
       }
-
-      const result = await response.json();
-      const value = (result.value as string).trim();
-
-      if (field === 'personality') {
-        const personalityLines = value
-          .split('|')
-          .map((s: string) => s.trim())
-          .filter((s: string) => s);
-        updateAgentField('personality', personalityLines.join('\n'));
-      } else {
-        updateAgentField(
-          field as keyof AgentFormData,
-          value.replace(/\n\n+/g, '\n')
-        );
-      }
-
-      toast.success(`Enhanced ${field}!`);
-      setGeneratingField(null);
     },
-    [agentData, profileData, getAccessToken, updateAgentField]
+    [agentData, profileData, updateAgentField]
   );
 
   const clearDraft = useCallback(() => {

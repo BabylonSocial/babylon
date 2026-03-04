@@ -1,24 +1,11 @@
+import { getPredictionMarketHistory } from '@babylon/api-hooks';
 import { logger } from '@babylon/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePredictionMarketStream } from '@/hooks/usePredictionMarketStream';
-import type { MarketTimeRange } from '@/types/markets';
+import type { MarketTimeRange, PredictionHistoryPoint } from '@/types/markets';
 
-/**
- * Represents a single point in prediction market price history.
- */
-export interface PredictionHistoryPoint {
-  /** Timestamp in milliseconds */
-  time: number;
-  /** Current YES outcome price (0-1) */
-  yesPrice: number;
-  /** Current NO outcome price (0-1) */
-  noPrice: number;
-  /** Trading volume since last point */
-  volume: number;
-  /** Total liquidity in the market */
-  liquidity: number;
-}
+export type { PredictionHistoryPoint } from '@/types/markets';
 
 /**
  * Seed data for initializing history when API data is unavailable.
@@ -196,29 +183,14 @@ export function usePredictionHistory(
     setError(null);
 
     try {
-      const params = new URLSearchParams({ limit: String(limit) });
-      if (range) {
-        params.set('range', range);
-      }
-      const response = await fetch(
-        `/api/markets/predictions/${encodeURIComponent(marketId)}/history?${params.toString()}`
-      );
+      const data = await getPredictionMarketHistory(marketId, {
+        limit: String(limit),
+        ...(range ? { range } : {}),
+      });
 
-      let data: unknown = null;
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
+      const historyArray = (data as Record<string, unknown>).history;
 
-      const record = (data ?? {}) as Record<string, unknown>;
-      const historyArray = record.history;
-
-      if (
-        response.ok &&
-        Array.isArray(historyArray) &&
-        historyArray.length > 0
-      ) {
+      if (Array.isArray(historyArray) && historyArray.length > 0) {
         setHistory(
           formatHistory(
             historyArray as Array<{
@@ -230,13 +202,6 @@ export function usePredictionHistory(
           )
         );
       } else {
-        if (!response.ok) {
-          setError(
-            typeof record.error === 'string'
-              ? record.error
-              : `Failed to fetch history: ${response.status}`
-          );
-        }
         setHistory(fallbackFromSeed());
       }
     } catch (err) {

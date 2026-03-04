@@ -18,6 +18,7 @@
  */
 'use client';
 
+import { adminContentAction, adminGetContentQueue } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   AlertTriangle,
@@ -119,36 +120,25 @@ export function ContentModerationTab() {
     (showRefreshing = false) => {
       const fetchLogic = async () => {
         setError(null);
-        const params = new URLSearchParams();
-        if (contentType !== 'all') params.set('type', contentType);
+        const params: Record<string, string> = {};
+        if (contentType !== 'all') params.type = contentType;
 
-        let response: Response;
         try {
-          response = await fetch(`/api/admin/content-queue?${params}`);
-        } catch {
-          setError({
-            type: 'network',
-            message: 'Network error. Check your connection.',
-          });
+          const result = await adminGetContentQueue(params);
+          setData(result as unknown as QueueData);
           setLoading(false);
-          return;
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          setError(
-            categorizeError(
-              response.status,
-              errorData.error ?? errorData.message
-            )
-          );
+        } catch (err) {
+          if (err instanceof TypeError) {
+            setError({
+              type: 'network',
+              message: 'Network error. Check your connection.',
+            });
+          } else {
+            const message = err instanceof Error ? err.message : undefined;
+            setError(categorizeError(0, message));
+          }
           setLoading(false);
-          return;
         }
-
-        const result = await response.json();
-        setData(result);
-        setLoading(false);
       };
 
       if (showRefreshing) {
@@ -175,38 +165,28 @@ export function ContentModerationTab() {
     if (!selectedItem) return;
 
     startActioning(async () => {
-      let response: Response;
       try {
-        response = await fetch(`/api/admin/content-queue/${selectedItem.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: actionType,
-            contentType: selectedItem.type,
-            reason: actionReason || undefined,
-          }),
-        });
-      } catch {
-        toast.error('Network error. Check your connection.');
-        return;
-      }
+        await adminContentAction(selectedItem.id, {
+          action: actionType,
+          contentType: selectedItem.type,
+          reason: actionReason || undefined,
+        } as unknown as Parameters<typeof adminContentAction>[1]);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const categorized = categorizeError(
-          response.status,
-          errorData.error ?? errorData.message
+        toast.success(
+          actionType === 'approve' ? 'Content approved' : 'Content hidden'
         );
-        toast.error(categorized.message);
-        return;
+        setShowActionModal(false);
+        setSelectedItem(null);
+        fetchQueue(true);
+      } catch (err) {
+        if (err instanceof TypeError) {
+          toast.error('Network error. Check your connection.');
+        } else {
+          const message = err instanceof Error ? err.message : undefined;
+          const categorized = categorizeError(0, message);
+          toast.error(categorized.message);
+        }
       }
-
-      toast.success(
-        actionType === 'approve' ? 'Content approved' : 'Content hidden'
-      );
-      setShowActionModal(false);
-      setSelectedItem(null);
-      fetchQueue(true);
     });
   };
 

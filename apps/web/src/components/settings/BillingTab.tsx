@@ -18,9 +18,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { BuyPointsModal } from '@/components/points/BuyPointsModal';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { getExplorerName, getExplorerTxUrl } from '@/lib/chain';
 import { useAuthStore } from '@/stores/authStore';
+import { useWalletBalance } from '@/stores/walletBalanceStore';
 
 /** Number of transactions to show in collapsed view */
 const COLLAPSED_COUNT = 5;

@@ -1,5 +1,6 @@
 'use client';
 
+import { disconnectTwitter } from '@babylon/api-hooks';
 import { cn, signInWithFarcaster } from '@babylon/shared';
 import { Check, ExternalLink, Shield, X as XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -74,27 +75,14 @@ export function LinkSocialAccountsModal({
   const handleTwitterDisconnect = async () => {
     if (!user?.id) return;
 
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Please sign in again to unlink X');
-      return;
-    }
-
     setUnlinkingTwitter(true);
     try {
-      const response = await fetch('/api/twitter/disconnect', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = (await response.json().catch(() => null)) as {
+      const data = (await disconnectTwitter()) as unknown as {
         success?: boolean;
         error?: string;
-      } | null;
+      };
 
-      if (!response.ok || !data?.success) {
+      if (!data?.success) {
         toast.error(data?.error || 'Failed to unlink X account');
         return;
       }

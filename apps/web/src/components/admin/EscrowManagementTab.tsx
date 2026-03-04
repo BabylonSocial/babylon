@@ -1,5 +1,6 @@
 'use client';
 
+import { adminListEscrows, adminRefundEscrow } from '@babylon/api-hooks';
 import {
   cn,
   formatCurrency as formatCurrencyShared,
@@ -19,7 +20,6 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Avatar } from '@/components/shared/Avatar';
 import { Skeleton } from '@/components/shared/Skeleton';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Escrow schema for validation.
@@ -99,36 +99,19 @@ export function EscrowManagementTab() {
   const fetchEscrows = useCallback(
     (showRefreshing = false) => {
       const fetchLogic = async () => {
-        const token = getAuthToken();
-        const params = new URLSearchParams({
-          limit: '100',
-        });
-        if (statusFilter !== 'all') {
-          params.set('status', statusFilter);
-        }
-
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await fetch(
-          `/api/admin/moderation-escrow/list?${params}`,
-          {
-            headers,
+        try {
+          const params: Record<string, string> = { limit: '100' };
+          if (statusFilter !== 'all') {
+            params.status = statusFilter;
           }
-        );
-        if (!response.ok) {
+          const data = await adminListEscrows(params);
+          const validated = z.array(EscrowSchema).parse(data.escrows);
+          setEscrows(validated);
+          setLoading(false);
+        } catch {
           toast.error('Failed to fetch escrows');
           setLoading(false);
-          return;
         }
-        const data = await response.json();
-        const validated = z.array(EscrowSchema).parse(data.escrows);
-        setEscrows(validated);
-        setLoading(false);
       };
 
       if (showRefreshing) {
@@ -151,44 +134,31 @@ export function EscrowManagementTab() {
     }
 
     setIsRefunding(true);
-    const token = getAuthToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch('/api/admin/moderation-escrow/refund', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+    try {
+      await adminRefundEscrow({
         escrowId: selectedEscrow.id,
         refundTxHash: refundTxHash.trim(),
         reason: refundReason.trim() || undefined,
-      }),
-    });
+      });
 
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      setIsRefunding(false);
+      toast.success('Escrow refunded successfully');
+      setShowRefundModal(false);
+      setSelectedEscrow(null);
+      setRefundTxHash('');
+      setRefundReason('');
+      fetchEscrows(true);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to refund escrow';
       logger.error(
         'Failed to refund escrow',
-        { error: data.error },
+        { error: message },
         'EscrowManagementTab'
       );
-      toast.error(data.error || 'Failed to refund escrow');
-      return;
+      toast.error(message);
+    } finally {
+      setIsRefunding(false);
     }
-
-    toast.success('Escrow refunded successfully');
-    setShowRefundModal(false);
-    setSelectedEscrow(null);
-    setRefundTxHash('');
-    setRefundReason('');
-    fetchEscrows(true);
-    setIsRefunding(false);
   };
 
   /** Use shared formatCurrency for currency formatting */

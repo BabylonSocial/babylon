@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  listAgents as fetchAgents,
+  getUserBalance as fetchUserBalance,
+  getUserPositions as fetchUserPositions,
+} from '@babylon/api-hooks';
 import { logger } from '@babylon/shared';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -110,12 +115,12 @@ export function useTeamTradingSummary({
   ownerId,
   ownerName,
   enabled,
-  getAccessToken,
 }: {
   ownerId: string | null | undefined;
   ownerName: string;
   enabled: boolean;
-  getAccessToken: () => Promise<string | null>;
+  /** @deprecated No longer needed - orvalFetch handles auth automatically */
+  getAccessToken?: () => Promise<string | null>;
 }): {
   summary: TeamTradingSummary | null;
   loading: boolean;
@@ -146,51 +151,19 @@ export function useTeamTradingSummary({
       setError(null);
 
       try {
-        // Owner balance is public.
-        const [balanceRes, positionsRes, token] = await Promise.all([
-          fetch(`/api/users/${encodeURIComponent(ownerId)}/balance`, {
+        const [balanceJson, positionsJson, agentsJson] = await Promise.all([
+          fetchUserBalance(ownerId, {
             signal: abort.signal,
-          }),
-          fetch(
-            `/api/markets/positions/${encodeURIComponent(ownerId)}?type=all&status=open`,
-            {
-              signal: abort.signal,
-            }
-          ),
-          getAccessToken(),
+          }) as Promise<UserBalanceApiResponse>,
+          fetchUserPositions(
+            ownerId,
+            { type: 'all', status: 'open' },
+            { signal: abort.signal }
+          ) as Promise<PositionsApiResponse>,
+          fetchAgents(undefined, {
+            signal: abort.signal,
+          }) as Promise<AgentsApiResponse>,
         ]);
-
-        if (!token) {
-          throw new Error('Authentication required to load agents');
-        }
-
-        // Agents list requires auth.
-        const agentsPromise = fetch('/api/agents', {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abort.signal,
-        });
-
-        if (!balanceRes.ok) {
-          throw new Error(
-            `Failed to fetch owner balance (${balanceRes.status})`
-          );
-        }
-        if (!positionsRes.ok) {
-          throw new Error(`Failed to fetch positions (${positionsRes.status})`);
-        }
-
-        const balanceJson = (await balanceRes.json()) as UserBalanceApiResponse;
-        const positionsJson =
-          (await positionsRes.json()) as PositionsApiResponse;
-
-        const agentsRes = await agentsPromise;
-        if (!agentsRes.ok) {
-          throw new Error(`Failed to fetch agents (${agentsRes.status})`);
-        }
-        const agentsJson = (await agentsRes.json()) as AgentsApiResponse;
-        if (!agentsJson.success) {
-          throw new Error('Failed to fetch agents');
-        }
 
         if (cancelled) return;
 
@@ -222,7 +195,7 @@ export function useTeamTradingSummary({
       cancelled = true;
       abort.abort();
     };
-  }, [enabled, ownerId, getAccessToken, refreshNonce]);
+  }, [enabled, ownerId, refreshNonce]);
 
   const summary = useMemo<TeamTradingSummary | null>(() => {
     if (!ownerId) return null;

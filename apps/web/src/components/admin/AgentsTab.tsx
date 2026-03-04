@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  adminGetAgents,
+  adminPauseAllAgents,
+  adminResumeAllAgents,
+  adminToggleAgent,
+} from '@babylon/api-hooks';
 import { BABYLON_POINTS_SYMBOL, cn, logger } from '@babylon/shared';
 import {
   Activity,
@@ -18,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Running agent structure for agents tab.
@@ -119,35 +124,19 @@ export function AgentsTab() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const fetchData = useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
-      logger.error('Not authenticated', undefined, 'AgentsTab');
+    try {
+      const result = await adminGetAgents();
+      const resultData = result as unknown as {
+        data: { agents: RunningAgent[]; stats: AgentStats };
+      };
+      setAgents(resultData.data.agents);
+      setStats(resultData.data.stats);
+      setLoading(false);
+    } catch (err) {
+      logger.error('Failed to fetch agents', { error: err }, 'AgentsTab');
       toast.error('Failed to load agents');
       setLoading(false);
-      return;
     }
-
-    const response = await fetch('/api/admin/agents', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      logger.error(
-        'Failed to fetch agents',
-        { status: response.status },
-        'AgentsTab'
-      );
-      toast.error('Failed to load agents');
-      setLoading(false);
-      return;
-    }
-
-    const result = await response.json();
-    setAgents(result.data.agents);
-    setStats(result.data.stats);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -158,28 +147,15 @@ export function AgentsTab() {
   }, [fetchData]);
 
   const handleToggleAgent = async (agentId: string, enable: boolean) => {
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Not authenticated');
-      return;
-    }
-
-    const response = await fetch(`/api/admin/agents/${agentId}/toggle`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ enabled: enable }),
-    });
-
-    if (!response.ok) {
+    try {
+      await adminToggleAgent(agentId, {
+        enabled: enable,
+      } as unknown as Parameters<typeof adminToggleAgent>[1]);
+      toast.success(`Agent ${enable ? 'enabled' : 'paused'}`);
+      await fetchData();
+    } catch {
       toast.error('Failed to toggle agent');
-      return;
     }
-
-    toast.success(`Agent ${enable ? 'enabled' : 'paused'}`);
-    await fetchData();
   };
 
   const handlePauseAll = async () => {
@@ -191,27 +167,14 @@ export function AgentsTab() {
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Not authenticated');
-      return;
-    }
-
-    const response = await fetch('/api/admin/agents/pause-all', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
+    try {
+      const result = await adminPauseAllAgents();
+      const resultData = result as unknown as { data: { paused: number } };
+      toast.success(`Paused ${resultData.data.paused} agents`);
+      await fetchData();
+    } catch {
       toast.error('Failed to pause all agents');
-      return;
     }
-
-    const result = await response.json();
-    toast.success(`Paused ${result.data.paused} agents`);
-    await fetchData();
   };
 
   const handleResumeAll = async () => {
@@ -223,27 +186,14 @@ export function AgentsTab() {
       return;
     }
 
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Not authenticated');
-      return;
-    }
-
-    const response = await fetch('/api/admin/agents/resume-all', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
+    try {
+      const result = await adminResumeAllAgents();
+      const resultData = result as unknown as { data: { resumed: number } };
+      toast.success(`Resumed ${resultData.data.resumed} agents`);
+      await fetchData();
+    } catch {
       toast.error('Failed to resume all agents');
-      return;
     }
-
-    const result = await response.json();
-    toast.success(`Resumed ${result.data.resumed} agents`);
-    await fetchData();
   };
 
   const filteredAgents = agents

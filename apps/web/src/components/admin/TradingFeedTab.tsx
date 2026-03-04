@@ -1,5 +1,6 @@
 'use client';
 
+import { adminCreateTrade, adminGetTrades } from '@babylon/api-hooks';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import { Activity, Plus, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useState, useTransition } from 'react';
@@ -169,15 +170,12 @@ export function TradingFeedTab() {
   }, []);
 
   const fetchAndSetTrades = useCallback(async () => {
-    const url =
-      filter === 'all'
-        ? '/api/admin/trades?limit=50'
-        : `/api/admin/trades?limit=50&type=${filter}`;
+    const params: Record<string, string> = { limit: '50' };
+    if (filter !== 'all') params.type = filter;
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch trades');
-    const data = await response.json();
-    const validation = z.array(TradeSchema).safeParse(data.trades);
+    const data = await adminGetTrades(params);
+    const typedData = data as unknown as { trades: unknown[] };
+    const validation = z.array(TradeSchema).safeParse(typedData.trades);
     if (!validation.success) {
       throw new Error('Invalid trade data structure');
     }
@@ -236,24 +234,20 @@ export function TradingFeedTab() {
       payload.reason = (formData.get('reason') as string) || undefined;
     }
 
-    const response = await fetch('/api/admin/trades', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    try {
+      await adminCreateTrade(payload as Parameters<typeof adminCreateTrade>[0]);
 
-    if (!response.ok) {
-      const errorData = await response.json();
+      // Refresh trades and close form
+      await fetchAndSetTrades();
+      setShowCreateForm(false);
+      e.currentTarget.reset();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to create trade';
+      setCreateError(message);
+    } finally {
       setCreating(false);
-      setCreateError(errorData.error || 'Failed to create trade');
-      return;
     }
-
-    // Refresh trades and close form
-    await fetchAndSetTrades();
-    setShowCreateForm(false);
-    e.currentTarget.reset();
-    setCreating(false);
   };
 
   /** Use shared formatCompactCurrency for currency formatting */
