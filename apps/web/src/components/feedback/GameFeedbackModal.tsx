@@ -6,6 +6,7 @@
 
 'use client';
 
+import { submitGameFeedback, uploadImage } from '@babylon/api-hooks';
 import { cn, parseJsonString } from '@babylon/shared';
 import { Loader2, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -185,14 +186,6 @@ export function GameFeedbackModal({ isOpen, onClose }: GameFeedbackModalProps) {
   ): Promise<string | null> => {
     if (!screenshot) return null;
 
-    const formData = new FormData();
-    formData.append('file', screenshot);
-    formData.append('type', 'post');
-
-    const token = getAuthToken();
-    const headers: HeadersInit = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
     // Create a timeout signal that aborts after SCREENSHOT_UPLOAD_TIMEOUT_MS
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -205,18 +198,10 @@ export function GameFeedbackModal({ isOpen, onClose }: GameFeedbackModalProps) {
       : timeoutController.signal;
 
     try {
-      const response = await fetch('/api/upload/image', {
-        method: 'POST',
-        headers,
-        body: formData,
-        signal: combinedSignal,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload screenshot');
-      }
-
-      const data = await response.json();
+      const data = await uploadImage(
+        { file: screenshot as unknown as string },
+        { signal: combinedSignal }
+      );
       return data.url;
     } finally {
       clearTimeout(timeoutId);
@@ -273,65 +258,21 @@ export function GameFeedbackModal({ isOpen, onClose }: GameFeedbackModalProps) {
           if (uploadedScreenshotUrl) setScreenshotUrl(uploadedScreenshotUrl);
         }
 
-        const token = getAuthToken();
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const response = await fetch('/api/feedback/game-feedback', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
+        // The API expects 'feedbackType' (per GameFeedbackSchema), not 'type'
+        // GameFeedbackBody has [key: string]: unknown so extra fields pass through
+        const data = await submitGameFeedback(
+          {
+            type: feedbackType,
             feedbackType,
             description: description.trim(),
             stepsToReproduce:
               feedbackType === 'bug' ? stepsToReproduce.trim() : undefined,
             screenshotUrl: uploadedScreenshotUrl || screenshotUrl || undefined,
-            rating: feedbackType === 'feature_request' ? rating : undefined,
-          }),
-          signal,
-        });
+            rating: feedbackType === 'feature_request' ? rating : 3,
+          },
+          { signal }
+        );
 
-        if (!response.ok) {
-          // Clean up uploaded screenshot if submission failed
-          if (uploadedScreenshotUrl) {
-            cleanupOrphanedScreenshot(uploadedScreenshotUrl);
-          }
-
-          if (response.status === 429) {
-            const retryAfterHeader = response.headers.get('Retry-After');
-            const retryAfterSeconds = retryAfterHeader
-              ? parseInt(retryAfterHeader, 10)
-              : 60;
-            setRetryAfter(retryAfterSeconds);
-
-            // Use recursive setTimeout with ref check to avoid stale closure
-            const startCountdown = (seconds: number) => {
-              // Stop countdown if modal is closing (use ref to get current value)
-              if (!isOpenRef.current || seconds <= 0) {
-                setRetryAfter(null);
-                return;
-              }
-              setRetryAfter(seconds);
-              timeoutRef.current = setTimeout(() => {
-                startCountdown(seconds - 1);
-              }, 1000);
-            };
-
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            startCountdown(retryAfterSeconds);
-
-            toast.error(
-              `Rate limit exceeded. Please try again in ${retryAfterSeconds} seconds.`
-            );
-            return;
-          }
-
-          // Don't expose raw server error messages to users
-          toast.error('Failed to submit feedback. Please try again.');
-          return;
-        }
-
-        const data = await response.json();
         toast.success(
           data.message || 'Thank you for your feedback! We appreciate it.'
         );
@@ -346,6 +287,33 @@ export function GameFeedbackModal({ isOpen, onClose }: GameFeedbackModalProps) {
 
         // Silently ignore abort errors (user cancelled)
         if (error instanceof Error && error.name === 'AbortError') return;
+
+        const err = error as { status?: number };
+        if (err.status === 429) {
+          const retryAfterSeconds = 60;
+          setRetryAfter(retryAfterSeconds);
+
+          // Use recursive setTimeout with ref check to avoid stale closure
+          const startCountdown = (seconds: number) => {
+            // Stop countdown if modal is closing (use ref to get current value)
+            if (!isOpenRef.current || seconds <= 0) {
+              setRetryAfter(null);
+              return;
+            }
+            setRetryAfter(seconds);
+            timeoutRef.current = setTimeout(() => {
+              startCountdown(seconds - 1);
+            }, 1000);
+          };
+
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          startCountdown(retryAfterSeconds);
+
+          toast.error(
+            `Rate limit exceeded. Please try again in ${retryAfterSeconds} seconds.`
+          );
+          return;
+        }
 
         // Sanitize error messages before displaying to prevent exposing sensitive info
         toast.error(sanitizeErrorMessage(error));

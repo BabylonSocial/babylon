@@ -1,5 +1,6 @@
 'use client';
 
+import { checkFollowStatus, followUser, unfollowUser } from '@babylon/api-hooks';
 import { cn, logger } from '@babylon/shared';
 import { Minus, Plus, UserMinus, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -7,7 +8,6 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocialTracking } from '@/hooks/usePostHog';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Follow button component for following/unfollowing users.
@@ -69,37 +69,25 @@ export function FollowButton({
       return;
     }
 
-    const checkFollowStatus = async () => {
+    const fetchFollowStatus = async () => {
       if (!userId) {
         setIsChecking(false);
         return;
       }
 
-      const token = getAuthToken();
-      if (!token) {
-        setIsChecking(false);
-        return;
-      }
-
-      // Encode userId/username to handle special characters
-      const encodedIdentifier = encodeURIComponent(userId);
-      const response = await fetch(`/api/users/${encodedIdentifier}/follow`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      try {
+        // Encode userId/username to handle special characters
+        const encodedIdentifier = encodeURIComponent(userId);
+        const data = await checkFollowStatus(encodedIdentifier);
         setIsFollowing(data.isFollowing || false);
-      } else {
+      } catch {
         // If check fails, assume not following (don't show error)
         setIsFollowing(false);
       }
       setIsChecking(false);
     };
 
-    checkFollowStatus();
+    fetchFollowStatus();
   }, [authenticated, user, userId]);
 
   const handleFollow = async () => {
@@ -131,12 +119,6 @@ export function FollowButton({
     }
 
     setIsLoading(true);
-    const token = getAuthToken();
-    if (!token) {
-      toast.error('Authentication required');
-      setIsLoading(false);
-      return;
-    }
 
     // Optimistic update
     const newFollowingState = !isFollowing;
@@ -148,28 +130,25 @@ export function FollowButton({
 
     // Encode userId/username to handle special characters
     const encodedIdentifier = encodeURIComponent(userId);
-    const method = newFollowingState ? 'POST' : 'DELETE';
-    const response = await fetch(`/api/users/${encodedIdentifier}/follow`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
 
-    if (response.ok) {
+    try {
+      if (newFollowingState) {
+        await followUser(encodedIdentifier);
+      } else {
+        await unfollowUser(encodedIdentifier);
+      }
       // Success! State was already updated optimistically above
       // Just track the action, don't update state again (causes race condition)
       trackFollow(userId, newFollowingState);
       // Follower count is already updated via onFollowerCountChange callback
-    } else {
+    } catch (error: unknown) {
       // Revert optimistic update on error
       setIsFollowing(!newFollowingState);
       onFollowChange?.(!newFollowingState);
       onFollowerCountChange?.(-delta); // Revert follower count
 
-      // Try to get error message, but don't show generic errors for 404s
-      const errorData = await response.json();
-      if (response.status === 404) {
+      const err = error as Error & { status?: number };
+      if (err.status === 404) {
         // If profile not found, silently fail or show a more helpful message
         logger.warn(
           'Profile not found for follow:',
@@ -178,12 +157,8 @@ export function FollowButton({
         );
         toast.error('Unable to follow this profile');
       } else {
-        // Extract error message properly (handle both string and object formats)
-        const errorMessage =
-          typeof errorData?.error === 'string'
-            ? errorData.error
-            : errorData?.error?.message || 'Failed to update follow status';
-        toast.error(errorMessage);
+        // orvalFetch already extracts the error message from the response
+        toast.error(err.message || 'Failed to update follow status');
       }
     }
     setIsLoading(false);

@@ -411,6 +411,26 @@ const SearchAgentsResponse = z
   })
   .meta({ id: 'SearchAgentsResponse' });
 
+const AgentGoal = z
+  .object({
+    id: z.string(),
+    agentUserId: z.string(),
+    type: z.string().meta({
+      description: 'Goal type: trading | social | learning | reputation | custom',
+    }),
+    name: z.string(),
+    description: z.string(),
+    target: z.unknown().nullable(),
+    priority: z.number(),
+    status: z.string().meta({
+      description: 'Goal status: active | paused | completed | failed',
+    }),
+    progress: z.number(),
+    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
+    updatedAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
+  })
+  .meta({ id: 'AgentGoal' });
+
 const GenerateProfileBody = z
   .object({
     archetype: z
@@ -891,6 +911,259 @@ export const agentPaths: ZodOpenApiPathsObject = {
           content: { 'application/json': { schema: AgentCard } },
         },
         '404': { description: 'Agent not found' },
+      },
+    },
+  },
+
+  '/api/agents/{agentId}/benchmark': {
+    post: {
+      operationId: 'runAgentBenchmark',
+      tags: ['Agents'],
+      summary: 'Run agent benchmark',
+      description:
+        'Run a performance benchmark against the specified agent. Owner only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: agentIdParam },
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                benchmarkPath: z.string().optional(),
+                benchmarkData: z.unknown().optional(),
+                runs: z.number().optional(),
+                outputDir: z.string().optional(),
+              })
+              .meta({ id: 'RunBenchmarkBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Benchmark results',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  runs: z.number(),
+                  results: z.object({
+                    totalPnl: z.number(),
+                    predictionAccuracy: z.number(),
+                    perpWinRate: z.number(),
+                    optimalityScore: z.number(),
+                    actionsExecuted: z.number(),
+                    duration: z.number(),
+                    outputDir: z.string(),
+                    avgPnl: z.number().optional(),
+                    avgAccuracy: z.number().optional(),
+                    avgOptimality: z.number().optional(),
+                    avgActions: z.number().optional(),
+                  }),
+                })
+                .meta({ id: 'BenchmarkResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Agent not found' },
+      },
+    },
+  },
+
+  '/api/agents/{agentId}/goals': {
+    get: {
+      operationId: 'listAgentGoals',
+      tags: ['Agents'],
+      summary: 'List agent goals',
+      description:
+        'Returns all goals for the specified agent. Manager only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: agentIdParam },
+      responses: {
+        '200': {
+          description: 'Agent goals',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  goals: z.array(AgentGoal),
+                })
+                .meta({ id: 'ListAgentGoalsResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Agent not found' },
+      },
+    },
+    post: {
+      operationId: 'createAgentGoal',
+      tags: ['Agents'],
+      summary: 'Create agent goal',
+      description:
+        'Create a new goal for the specified agent. Manager only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: agentIdParam },
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                type: z.enum([
+                  'trading',
+                  'social',
+                  'learning',
+                  'reputation',
+                  'custom',
+                ]),
+                name: z.string(),
+                description: z.string(),
+                target: z.string().optional(),
+                priority: z.number().optional().meta({
+                  description: 'Priority 1-10, default 5',
+                }),
+              })
+              .meta({ id: 'CreateAgentGoalBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Created goal',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  goal: AgentGoal,
+                })
+                .meta({ id: 'CreateAgentGoalResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Agent not found' },
+      },
+    },
+  },
+
+  '/api/agents/{agentId}/goals/{goalId}': {
+    get: {
+      operationId: 'getAgentGoal',
+      tags: ['Agents'],
+      summary: 'Get agent goal',
+      description: 'Returns a specific goal with its action history.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: z.object({
+          agentId: z.string(),
+          goalId: z.string(),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Goal details',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  goal: AgentGoal.extend({
+                    completedAt: z.string().nullable().optional(),
+                    AgentGoalAction: z
+                      .array(
+                        z.object({
+                          id: z.string(),
+                          type: z.string(),
+                          description: z.string(),
+                          result: z.unknown().nullable(),
+                          createdAt: z.string(),
+                        })
+                      )
+                      .optional(),
+                  }),
+                })
+                .meta({ id: 'GetAgentGoalResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Goal not found' },
+      },
+    },
+    put: {
+      operationId: 'updateAgentGoal',
+      tags: ['Agents'],
+      summary: 'Update agent goal',
+      description: 'Update a specific goal for the agent.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: z.object({
+          agentId: z.string(),
+          goalId: z.string(),
+        }),
+      },
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                name: z.string().optional(),
+                description: z.string().optional(),
+                target: z.string().optional(),
+                priority: z.number().optional(),
+                status: z
+                  .enum(['active', 'paused', 'completed', 'failed'])
+                  .optional(),
+              })
+              .meta({ id: 'UpdateAgentGoalBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Updated goal',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                goal: AgentGoal,
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Goal not found' },
+      },
+    },
+    delete: {
+      operationId: 'deleteAgentGoal',
+      tags: ['Agents'],
+      summary: 'Delete agent goal',
+      description: 'Delete a specific goal.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: z.object({
+          agentId: z.string(),
+          goalId: z.string(),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Goal deleted',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                message: z.string(),
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Goal not found' },
       },
     },
   },

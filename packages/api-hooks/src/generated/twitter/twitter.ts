@@ -6,12 +6,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import {
+  useMutation,
   useQuery,
   useSuspenseQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
   UseSuspenseQueryOptions,
@@ -19,11 +23,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DisconnectTwitterResponse,
+  PostTweetBody,
+  PostTweetResponse,
   TwitterAuthStatusResponse
 } from '.././model';
 
 import { orvalFetch } from '../../orval-fetch';
-import type { ErrorType } from '../../orval-fetch';
+import type { ErrorType , BodyType } from '../../orval-fetch';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -146,3 +153,145 @@ export function useGetTwitterAuthStatusSuspense<TData = Awaited<ReturnType<typeo
 
 
 
+/**
+ * Disconnects the authenticated user's linked Twitter account.
+ * @summary Disconnect Twitter account
+ */
+export const getDisconnectTwitterUrl = () => {
+
+
+  
+
+  return `/api/twitter/disconnect`
+}
+
+export const disconnectTwitter = async ( options?: RequestInit): Promise<DisconnectTwitterResponse> => {
+  
+  return orvalFetch<DisconnectTwitterResponse>(getDisconnectTwitterUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+
+
+export const getDisconnectTwitterMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectTwitter>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disconnectTwitter>>, TError,void, TContext> => {
+
+const mutationKey = ['disconnectTwitter'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disconnectTwitter>>, void> = () => {
+          
+
+          return  disconnectTwitter(requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisconnectTwitterMutationResult = NonNullable<Awaited<ReturnType<typeof disconnectTwitter>>>
+    
+    export type DisconnectTwitterMutationError = ErrorType<void>
+
+    /**
+ * @summary Disconnect Twitter account
+ */
+export const useDisconnectTwitter = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disconnectTwitter>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof disconnectTwitter>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDisconnectTwitterMutationOptions(options));
+    }
+    /**
+ * Posts a tweet to the authenticated user's connected Twitter account.
+ * @summary Post a tweet
+ */
+export const getPostTweetUrl = () => {
+
+
+  
+
+  return `/api/twitter/tweet`
+}
+
+export const postTweet = async (postTweetBody: PostTweetBody, options?: RequestInit): Promise<PostTweetResponse> => {
+  
+  return orvalFetch<PostTweetResponse>(getPostTweetUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      postTweetBody,)
+  }
+);}
+  
+
+
+
+export const getPostTweetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postTweet>>, TError,{data: BodyType<PostTweetBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postTweet>>, TError,{data: BodyType<PostTweetBody>}, TContext> => {
+
+const mutationKey = ['postTweet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postTweet>>, {data: BodyType<PostTweetBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postTweet(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostTweetMutationResult = NonNullable<Awaited<ReturnType<typeof postTweet>>>
+    export type PostTweetMutationBody = BodyType<PostTweetBody>
+    export type PostTweetMutationError = ErrorType<void>
+
+    /**
+ * @summary Post a tweet
+ */
+export const usePostTweet = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postTweet>>, TError,{data: BodyType<PostTweetBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postTweet>>,
+        TError,
+        {data: BodyType<PostTweetBody>},
+        TContext
+      > => {
+      return useMutation(getPostTweetMutationOptions(options));
+    }
+    

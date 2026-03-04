@@ -713,6 +713,19 @@ export const miscPaths: ZodOpenApiPathsObject = {
       description:
         'Records a heartbeat to track user activity / online status.',
       security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                sessionId: z.string(),
+                pageViews: z.number(),
+                lastPath: z.string().optional(),
+              })
+              .meta({ id: 'HeartbeatBody' }),
+          },
+        },
+      },
       responses: {
         '200': {
           description: 'Heartbeat acknowledged',
@@ -727,6 +740,280 @@ export const miscPaths: ZodOpenApiPathsObject = {
           },
         },
         '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/twitter/disconnect': {
+    post: {
+      operationId: 'disconnectTwitter',
+      tags: ['Twitter'],
+      summary: 'Disconnect Twitter account',
+      description:
+        'Disconnects the authenticated user\'s linked Twitter account.',
+      security: [{ PrivyAuth: [] }],
+      responses: {
+        '201': {
+          description: 'Twitter disconnected',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                })
+                .meta({ id: 'DisconnectTwitterResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/twitter/tweet': {
+    post: {
+      operationId: 'postTweet',
+      tags: ['Twitter'],
+      summary: 'Post a tweet',
+      description:
+        'Posts a tweet to the authenticated user\'s connected Twitter account.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                text: z.string().meta({ description: 'Tweet text' }),
+                contentType: z
+                  .enum(['market', 'profile', 'referral'])
+                  .optional()
+                  .meta({ description: 'Type of content being shared' }),
+                contentId: z.string().optional(),
+              })
+              .meta({ id: 'PostTweetBody' }),
+          },
+        },
+      },
+      responses: {
+        '201': {
+          description: 'Tweet posted',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  tweet: z.object({
+                    data: z.object({
+                      id: z.string(),
+                      text: z.string(),
+                    }),
+                  }),
+                  tweetUrl: z.string(),
+                })
+                .meta({ id: 'PostTweetResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/points/purchase/create-payment': {
+    post: {
+      operationId: 'createPointsPayment',
+      tags: ['Points'],
+      summary: 'Create a points purchase payment',
+      description: 'Initiates a crypto payment to purchase points.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                amountUSD: z.number(),
+                fromAddress: z.string(),
+              })
+              .meta({ id: 'CreatePointsPaymentBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Payment request created',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  paymentRequest: z.object({
+                    requestId: z.string(),
+                    amount: z.string(),
+                    from: z.string(),
+                    to: z.string(),
+                    expiresAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
+                    pointsAmount: z.number(),
+                    amountUSD: z.number(),
+                  }),
+                })
+                .meta({ id: 'CreatePointsPaymentResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '400': { description: 'Invalid request' },
+      },
+    },
+  },
+
+  '/api/points/purchase/verify-payment': {
+    post: {
+      operationId: 'verifyPointsPayment',
+      tags: ['Points'],
+      summary: 'Verify a points purchase payment',
+      description:
+        'Verifies a crypto payment transaction and awards points.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                requestId: z.string(),
+                txHash: z.string(),
+                fromAddress: z.string(),
+                toAddress: z.string(),
+                amount: z.string(),
+              })
+              .meta({ id: 'VerifyPointsPaymentBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Payment verified and points awarded',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  pointsAwarded: z.number(),
+                  newTotal: z.number(),
+                  txHash: z.string(),
+                })
+                .meta({ id: 'VerifyPointsPaymentResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '400': { description: 'Invalid or expired payment request' },
+      },
+    },
+  },
+
+  '/api/stripe/checkout/session': {
+    post: {
+      operationId: 'createStripeCheckout',
+      tags: ['Points'],
+      summary: 'Create Stripe checkout session',
+      description: 'Creates a Stripe checkout session for purchasing points.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                amountUSD: z.number(),
+              })
+              .meta({ id: 'StripeCheckoutBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Checkout session created',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  sessionId: z.string(),
+                  url: z.string(),
+                })
+                .meta({ id: 'StripeCheckoutResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/auth/whoami': {
+    get: {
+      operationId: 'whoami',
+      tags: ['Auth'],
+      summary: 'Get authenticated user identity',
+      description: 'Returns the user identity for the provided API key.',
+      security: [{ PrivyAuth: [] }],
+      responses: {
+        '200': {
+          description: 'User identity',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  userId: z.string(),
+                  username: z.string().nullable(),
+                })
+                .meta({ id: 'WhoamiResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/auth/siwe/authenticate': {
+    post: {
+      operationId: 'authenticateSiwe',
+      tags: ['Auth'],
+      summary: 'Authenticate with SIWE',
+      description:
+        'Authenticate using Sign-In with Ethereum (SIWE) message and signature.',
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                message: z.string(),
+                signature: z.string(),
+                username: z.string(),
+              })
+              .meta({ id: 'SiweAuthBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Authentication result',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  isNewUser: z.boolean(),
+                  userId: z.string(),
+                  username: z.string(),
+                  walletAddress: z.string(),
+                  apiKey: z.string(),
+                })
+                .meta({ id: 'SiweAuthResponse' }),
+            },
+          },
+        },
+        '400': { description: 'Invalid signature' },
       },
     },
   },

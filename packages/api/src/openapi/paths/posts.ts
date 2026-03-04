@@ -69,6 +69,12 @@ const ListPostsResponse = z
   })
   .meta({ id: 'ListPostsResponse' });
 
+const CreatePostBody = z
+  .object({
+    content: z.string().meta({ description: 'Post content' }),
+  })
+  .meta({ id: 'CreatePostBody' });
+
 export const postPaths: ZodOpenApiPathsObject = {
   '/api/posts': {
     get: {
@@ -108,6 +114,69 @@ export const postPaths: ZodOpenApiPathsObject = {
           description: 'Posts feed',
           content: { 'application/json': { schema: ListPostsResponse } },
         },
+      },
+    },
+    post: {
+      operationId: 'createPost',
+      tags: ['Posts'],
+      summary: 'Create a post',
+      description: 'Create a new post as the authenticated user.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: { 'application/json': { schema: CreatePostBody } },
+      },
+      responses: {
+        '201': {
+          description: 'Created post',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  success: z.literal(true),
+                  post: FeedPost,
+                })
+                .meta({ id: 'CreatePostResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/posts/{id}': {
+    delete: {
+      operationId: 'deletePost',
+      tags: ['Posts'],
+      summary: 'Delete a post',
+      description: 'Delete a post owned by the authenticated user.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: z.object({
+          id: z.string().meta({ description: 'Post ID' }),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Post deleted',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  message: z.string(),
+                  data: z.object({
+                    id: z.string(),
+                    deletedAt: z
+                      .string()
+                      .meta({ description: 'ISO 8601 timestamp' }),
+                  }),
+                })
+                .meta({ id: 'DeletePostResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '404': { description: 'Post not found' },
       },
     },
   },

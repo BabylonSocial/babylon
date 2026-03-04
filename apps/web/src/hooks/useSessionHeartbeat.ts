@@ -7,6 +7,7 @@
  * @module useSessionHeartbeat
  */
 
+import { activityHeartbeat } from '@babylon/api-hooks';
 import { generateUUID } from '@babylon/shared';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
@@ -70,25 +71,12 @@ export function useSessionHeartbeat(): void {
       const pageViews = pageViewsRef.current;
       pageViewsRef.current = 0;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      void fetch('/api/activity/heartbeat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          pageViews,
-          lastPath:
-            typeof window !== 'undefined' ? window.location.pathname : '',
-        }),
-        keepalive: true,
-        signal: controller.signal,
-      })
-        .catch(() => {})
-        .finally(() => {
-          clearTimeout(timeoutId);
-        });
+      void activityHeartbeat({
+        sessionId,
+        pageViews,
+        lastPath:
+          typeof window !== 'undefined' ? window.location.pathname : '',
+      }).catch(() => {});
     };
 
     const resetInterval = (): void => {

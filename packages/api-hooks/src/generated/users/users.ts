@@ -43,12 +43,16 @@ import type {
   GetUserPosts200,
   GetUserPostsParams,
   GetUserProfile200,
+  LinkSocialBody,
+  LinkSocialResponse,
   ListApiKeys200,
   MuteUser200,
   MuteUserBody,
   SearchUsers200,
   SearchUsersParams,
   UnfollowUser200,
+  UpdateProfileBody,
+  UpdateProfileResponse,
   UserBalanceResponse
 } from '.././model';
 
@@ -1422,6 +1426,150 @@ export const useMuteUser = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMuteUserMutationOptions(options));
+    }
+    /**
+ * Update profile fields for the authenticated user. Owner only.
+ * @summary Update user profile
+ */
+export const getUpdateUserProfileUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/users/${userId}/update-profile`
+}
+
+export const updateUserProfile = async (userId: string,
+    updateProfileBody: UpdateProfileBody, options?: RequestInit): Promise<UpdateProfileResponse> => {
+  
+  return orvalFetch<UpdateProfileResponse>(getUpdateUserProfileUrl(userId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateProfileBody,)
+  }
+);}
+  
+
+
+
+export const getUpdateUserProfileMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserProfile>>, TError,{userId: string;data: BodyType<UpdateProfileBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUserProfile>>, TError,{userId: string;data: BodyType<UpdateProfileBody>}, TContext> => {
+
+const mutationKey = ['updateUserProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUserProfile>>, {userId: string;data: BodyType<UpdateProfileBody>}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  updateUserProfile(userId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUserProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateUserProfile>>>
+    export type UpdateUserProfileMutationBody = BodyType<UpdateProfileBody>
+    export type UpdateUserProfileMutationError = ErrorType<void>
+
+    /**
+ * @summary Update user profile
+ */
+export const useUpdateUserProfile = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserProfile>>, TError,{userId: string;data: BodyType<UpdateProfileBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUserProfile>>,
+        TError,
+        {userId: string;data: BodyType<UpdateProfileBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateUserProfileMutationOptions(options));
+    }
+    /**
+ * Link a social platform account (Farcaster, Twitter, or wallet) to the user profile.
+ * @summary Link a social account
+ */
+export const getLinkSocialAccountUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/users/${userId}/link-social`
+}
+
+export const linkSocialAccount = async (userId: string,
+    linkSocialBody: LinkSocialBody, options?: RequestInit): Promise<LinkSocialResponse> => {
+  
+  return orvalFetch<LinkSocialResponse>(getLinkSocialAccountUrl(userId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      linkSocialBody,)
+  }
+);}
+  
+
+
+
+export const getLinkSocialAccountMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkSocialAccount>>, TError,{userId: string;data: BodyType<LinkSocialBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof linkSocialAccount>>, TError,{userId: string;data: BodyType<LinkSocialBody>}, TContext> => {
+
+const mutationKey = ['linkSocialAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof linkSocialAccount>>, {userId: string;data: BodyType<LinkSocialBody>}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  linkSocialAccount(userId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LinkSocialAccountMutationResult = NonNullable<Awaited<ReturnType<typeof linkSocialAccount>>>
+    export type LinkSocialAccountMutationBody = BodyType<LinkSocialBody>
+    export type LinkSocialAccountMutationError = ErrorType<void>
+
+    /**
+ * @summary Link a social account
+ */
+export const useLinkSocialAccount = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkSocialAccount>>, TError,{userId: string;data: BodyType<LinkSocialBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof linkSocialAccount>>,
+        TError,
+        {userId: string;data: BodyType<LinkSocialBody>},
+        TContext
+      > => {
+      return useMutation(getLinkSocialAccountMutationOptions(options));
     }
     /**
  * Check whether the user needs initial profile setup. Owner only.

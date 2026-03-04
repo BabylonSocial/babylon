@@ -661,6 +661,138 @@ export const userPaths: ZodOpenApiPathsObject = {
     },
   },
 
+  '/api/users/{userId}/update-profile': {
+    post: {
+      operationId: 'updateUserProfile',
+      tags: ['Users'],
+      summary: 'Update user profile',
+      description:
+        'Update profile fields for the authenticated user. Owner only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: userIdPath },
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                username: z.string().optional(),
+                displayName: z.string().optional(),
+                bio: z.string().optional(),
+                profileImageUrl: z.string().optional(),
+                coverImageUrl: z.string().optional(),
+                showTwitterPublic: z.boolean().optional(),
+                showFarcasterPublic: z.boolean().optional(),
+                showWalletPublic: z.boolean().optional(),
+                onchainTxHash: z.string().optional(),
+              })
+              .meta({ id: 'UpdateProfileBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Updated profile',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  user: z.object({
+                    id: z.string(),
+                    username: z.string().nullable(),
+                    displayName: z.string().nullable(),
+                    bio: z.string().nullable(),
+                    profileImageUrl: z.string().nullable(),
+                    coverImageUrl: z.string().nullable(),
+                    profileComplete: z.boolean(),
+                    hasUsername: z.boolean(),
+                    hasBio: z.boolean(),
+                    hasProfileImage: z.boolean(),
+                    reputationPoints: z.number(),
+                    referralCount: z.number().optional(),
+                    referralCode: z.string().nullable(),
+                    onChainRegistered: z.boolean(),
+                    nftTokenId: z.string().nullable(),
+                  }),
+                  message: z.string(),
+                  pointsAwarded: z
+                    .array(
+                      z.object({
+                        reason: z.string(),
+                        amount: z.number(),
+                      })
+                    )
+                    .optional(),
+                  onchain: z
+                    .object({
+                      txHash: z.string(),
+                      metadata: z.record(z.string(), z.unknown()),
+                      backendSigned: z.boolean(),
+                    })
+                    .nullable()
+                    .optional(),
+                })
+                .meta({ id: 'UpdateProfileResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Forbidden — owner only' },
+      },
+    },
+  },
+
+  '/api/users/{userId}/link-social': {
+    post: {
+      operationId: 'linkSocialAccount',
+      tags: ['Users'],
+      summary: 'Link a social account',
+      description:
+        'Link a social platform account (Farcaster, Twitter, or wallet) to the user profile.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: userIdPath },
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: z
+              .object({
+                platform: z.enum(['farcaster', 'twitter', 'wallet']),
+                username: z.string().optional(),
+                address: z
+                  .string()
+                  .optional()
+                  .meta({ description: '0x-prefixed wallet address' }),
+              })
+              .meta({ id: 'LinkSocialBody' }),
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Social account linked',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  platform: z.string(),
+                  linked: z.boolean(),
+                  alreadyLinked: z.boolean(),
+                  points: z
+                    .object({
+                      awarded: z.number(),
+                      newTotal: z.number(),
+                    })
+                    .nullable(),
+                })
+                .meta({ id: 'LinkSocialResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Forbidden — owner only' },
+      },
+    },
+  },
+
   '/api/users/{userId}/is-new': {
     get: {
       operationId: 'checkUserIsNew',

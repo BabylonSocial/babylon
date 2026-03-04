@@ -1,5 +1,6 @@
 'use client';
 
+import { getTrendingTopics } from '@babylon/api-hooks';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Skeleton } from '@/components/shared/Skeleton';
@@ -50,16 +51,13 @@ export function TrendingPanel() {
         }
       }
 
-      const response = await fetch('/api/feed/widgets/trending');
-      const data = (await response.json()) as {
-        success: boolean;
-        trending?: TrendingItem[];
-      };
-
-      if (data.success) {
-        const trendingData = data.trending || [];
+      try {
+        const data = await getTrendingTopics();
+        const trendingData = (data.trending as unknown as TrendingItem[]) || [];
         setTrending(trendingData);
         cacheTrending(trendingData); // Cache the data
+      } catch {
+        // Silently handle errors - keep existing data
       }
       setLoading(false);
     },

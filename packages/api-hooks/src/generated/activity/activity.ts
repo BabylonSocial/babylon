@@ -15,11 +15,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  HeartbeatBody,
   HeartbeatResponse
 } from '.././model';
 
 import { orvalFetch } from '../../orval-fetch';
-import type { ErrorType } from '../../orval-fetch';
+import type { ErrorType , BodyType } from '../../orval-fetch';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -38,14 +39,15 @@ export const getActivityHeartbeatUrl = () => {
   return `/api/activity/heartbeat`
 }
 
-export const activityHeartbeat = async ( options?: RequestInit): Promise<HeartbeatResponse> => {
+export const activityHeartbeat = async (heartbeatBody: HeartbeatBody, options?: RequestInit): Promise<HeartbeatResponse> => {
   
   return orvalFetch<HeartbeatResponse>(getActivityHeartbeatUrl(),
   {      
     ...options,
-    method: 'POST'
-    
-    
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      heartbeatBody,)
   }
 );}
   
@@ -53,8 +55,8 @@ export const activityHeartbeat = async ( options?: RequestInit): Promise<Heartbe
 
 
 export const getActivityHeartbeatMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activityHeartbeat>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof activityHeartbeat>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activityHeartbeat>>, TError,{data: BodyType<HeartbeatBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof activityHeartbeat>>, TError,{data: BodyType<HeartbeatBody>}, TContext> => {
 
 const mutationKey = ['activityHeartbeat'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -66,10 +68,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activityHeartbeat>>, void> = () => {
-          
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activityHeartbeat>>, {data: BodyType<HeartbeatBody>}> = (props) => {
+          const {data} = props ?? {};
 
-          return  activityHeartbeat(requestOptions)
+          return  activityHeartbeat(data,requestOptions)
         }
 
 
@@ -80,18 +82,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ActivityHeartbeatMutationResult = NonNullable<Awaited<ReturnType<typeof activityHeartbeat>>>
-    
+    export type ActivityHeartbeatMutationBody = BodyType<HeartbeatBody>
     export type ActivityHeartbeatMutationError = ErrorType<void>
 
     /**
  * @summary Send activity heartbeat
  */
 export const useActivityHeartbeat = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activityHeartbeat>>, TError,void, TContext>, request?: SecondParameter<typeof orvalFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activityHeartbeat>>, TError,{data: BodyType<HeartbeatBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof activityHeartbeat>>,
         TError,
-        void,
+        {data: BodyType<HeartbeatBody>},
         TContext
       > => {
       return useMutation(getActivityHeartbeatMutationOptions(options));

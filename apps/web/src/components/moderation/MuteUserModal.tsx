@@ -29,6 +29,7 @@
  */
 'use client';
 
+import { muteUser } from '@babylon/api-hooks';
 import { VolumeX, X } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
@@ -55,24 +56,20 @@ export function MuteUserModal({
 
   const handleMute = () => {
     startMuting(async () => {
-      const response = await fetch(`/api/users/${targetUserId}/mute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        await muteUser(targetUserId, {
           action: 'mute',
           reason: reason || undefined,
-        }),
-      });
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        toast.error(error.message || 'Failed to mute user');
-        return;
+        toast.success(`Muted ${targetDisplayName}`);
+        onClose();
+        onSuccess?.();
+      } catch (error: unknown) {
+        // orvalFetch already extracts the error message from the response
+        const err = error as Error & { status?: number };
+        toast.error(err.message || 'Failed to mute user');
       }
-
-      toast.success(`Muted ${targetDisplayName}`);
-      onClose();
-      onSuccess?.();
     });
   };
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { listPosts } from '@babylon/api-hooks';
 import { type ArticleItem, logger } from '@babylon/shared';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -174,82 +175,66 @@ export function LatestNewsPanel() {
         }
       }
 
-      // Query posts API with type filter for articles - fetch more for deduplication
-      const response = await fetch('/api/posts?type=article&limit=15');
-
-      if (!response.ok) {
-        logger.error(
-          'Failed to fetch articles:',
-          { status: response.status },
-          'LatestNewsPanel'
-        );
-        setArticles([]);
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-
-      logger.info(
-        'Articles API response:',
-        {
-          hasPosts: !!data.posts,
-          count: data.posts?.length || 0,
-          firstPost: data.posts?.[0],
-        },
-        'LatestNewsPanel'
-      );
-
-      if (data.posts && Array.isArray(data.posts) && data.posts.length > 0) {
-        // Transform posts to ArticleItem format
-        const articlesData: ArticleItem[] = data.posts
-          .filter((post: { type?: string }) => post.type === 'article') // Double-check type
-          .map(
-            (post: {
-              id: string;
-              articleTitle?: string | null;
-              authorId: string;
-              authorName?: string;
-              byline?: string | null;
-              sentiment?: string | null;
-              category?: string | null;
-              timestamp: string;
-              biasScore?: number | null;
-              slant?: string | null;
-              content: string;
-            }) => ({
-              id: post.id,
-              title: post.articleTitle || 'Untitled Article',
-              summary: post.content,
-              authorOrgName: post.authorName || post.authorId,
-              byline: post.byline || undefined,
-              sentiment: post.sentiment || undefined,
-              category: post.category || undefined,
-              publishedAt: post.timestamp,
-              slant: post.slant || undefined,
-              biasScore: post.biasScore !== null ? post.biasScore : undefined,
-            })
-          );
-
-        // Deduplicate articles about the same event
-        const uniqueArticles = deduplicateArticles(articlesData).slice(0, 5);
+      try {
+        // Query posts API with type filter for articles - fetch more for deduplication
+        const data = await listPosts({ type: 'article', limit: '15' });
 
         logger.info(
-          'Articles processed:',
-          { count: uniqueArticles.length, articles: uniqueArticles },
+          'Articles API response:',
+          {
+            hasPosts: !!data.posts,
+            count: data.posts?.length || 0,
+            firstPost: data.posts?.[0],
+          },
           'LatestNewsPanel'
         );
-        setArticles(uniqueArticles);
-        setLatestNews(uniqueArticles); // Cache the data
-      } else {
-        logger.warn(
-          'No articles in response',
-          {
-            hasData: !!data,
-            hasPosts: !!data.posts,
-            isArray: Array.isArray(data.posts),
-            length: data.posts?.length,
-          },
+
+        if (data.posts && Array.isArray(data.posts) && data.posts.length > 0) {
+          // Transform posts to ArticleItem format
+          const articlesData = (data.posts as unknown as Array<Record<string, unknown>>)
+            .filter((post) => post.type === 'article')
+            .map(
+              (post) => ({
+                id: post.id,
+                title: post.articleTitle || 'Untitled Article',
+                summary: post.content,
+                authorOrgName: post.authorName || post.authorId,
+                byline: post.byline || undefined,
+                sentiment: post.sentiment || undefined,
+                category: post.category || undefined,
+                publishedAt: post.timestamp,
+                slant: post.slant || undefined,
+                biasScore: post.biasScore !== null ? post.biasScore : undefined,
+              })
+            );
+
+          // Deduplicate articles about the same event
+          const uniqueArticles = deduplicateArticles(articlesData as ArticleItem[]).slice(0, 5);
+
+          logger.info(
+            'Articles processed:',
+            { count: uniqueArticles.length, articles: uniqueArticles },
+            'LatestNewsPanel'
+          );
+          setArticles(uniqueArticles);
+          setLatestNews(uniqueArticles); // Cache the data
+        } else {
+          logger.warn(
+            'No articles in response',
+            {
+              hasData: !!data,
+              hasPosts: !!data.posts,
+              isArray: Array.isArray(data.posts),
+              length: data.posts?.length,
+            },
+            'LatestNewsPanel'
+          );
+          setArticles([]);
+        }
+      } catch (err) {
+        logger.error(
+          'Failed to fetch articles:',
+          { error: err instanceof Error ? err.message : err },
           'LatestNewsPanel'
         );
         setArticles([]);

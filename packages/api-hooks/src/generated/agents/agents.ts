@@ -27,9 +27,13 @@ import type {
   AgentCard,
   AgentLogsResponse,
   AllAgentsActivityResponse,
+  BenchmarkResponse,
   ChatHistoryResponse,
   ChatSendBody,
   ChatSendResponse,
+  CreateAgentGoalBody,
+  CreateAgentGoalResponse,
+  DeleteAgentGoal200,
   DeleteAgentResponse,
   DiscoverAgentsParams,
   DiscoverAgentsResponse,
@@ -38,20 +42,25 @@ import type {
   GenerateProfileBody,
   GenerateProfileResponse,
   GetAgentActivityParams,
+  GetAgentGoalResponse,
   GetAgentLogsParams,
   GetAgentResponse,
   GetChatHistoryParams,
   GetRecentTradesParams,
+  ListAgentGoalsResponse,
   ListAgentsParams,
   ListAgentsResponse,
   ListAllAgentsActivityParams,
   RecentTradesResponse,
+  RunBenchmarkBody,
   SearchAgentsParams,
   SearchAgentsResponse,
   TradingBalanceActionBody,
   TradingBalanceActionResponse,
   TradingBalanceResponse,
   UpdateAgentBody,
+  UpdateAgentGoal200,
+  UpdateAgentGoalBody,
   UpdateAgentResponse
 } from '.././model';
 
@@ -1851,3 +1860,533 @@ export function useGetAgentCardSuspense<TData = Awaited<ReturnType<typeof getAge
 
 
 
+/**
+ * Run a performance benchmark against the specified agent. Owner only.
+ * @summary Run agent benchmark
+ */
+export const getRunAgentBenchmarkUrl = (agentId: string,) => {
+
+
+  
+
+  return `/api/agents/${agentId}/benchmark`
+}
+
+export const runAgentBenchmark = async (agentId: string,
+    runBenchmarkBody: RunBenchmarkBody, options?: RequestInit): Promise<BenchmarkResponse> => {
+  
+  return orvalFetch<BenchmarkResponse>(getRunAgentBenchmarkUrl(agentId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      runBenchmarkBody,)
+  }
+);}
+  
+
+
+
+export const getRunAgentBenchmarkMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runAgentBenchmark>>, TError,{agentId: string;data: BodyType<RunBenchmarkBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runAgentBenchmark>>, TError,{agentId: string;data: BodyType<RunBenchmarkBody>}, TContext> => {
+
+const mutationKey = ['runAgentBenchmark'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runAgentBenchmark>>, {agentId: string;data: BodyType<RunBenchmarkBody>}> = (props) => {
+          const {agentId,data} = props ?? {};
+
+          return  runAgentBenchmark(agentId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunAgentBenchmarkMutationResult = NonNullable<Awaited<ReturnType<typeof runAgentBenchmark>>>
+    export type RunAgentBenchmarkMutationBody = BodyType<RunBenchmarkBody>
+    export type RunAgentBenchmarkMutationError = ErrorType<void>
+
+    /**
+ * @summary Run agent benchmark
+ */
+export const useRunAgentBenchmark = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runAgentBenchmark>>, TError,{agentId: string;data: BodyType<RunBenchmarkBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runAgentBenchmark>>,
+        TError,
+        {agentId: string;data: BodyType<RunBenchmarkBody>},
+        TContext
+      > => {
+      return useMutation(getRunAgentBenchmarkMutationOptions(options));
+    }
+    /**
+ * Returns all goals for the specified agent. Manager only.
+ * @summary List agent goals
+ */
+export const getListAgentGoalsUrl = (agentId: string,) => {
+
+
+  
+
+  return `/api/agents/${agentId}/goals`
+}
+
+export const listAgentGoals = async (agentId: string, options?: RequestInit): Promise<ListAgentGoalsResponse> => {
+  
+  return orvalFetch<ListAgentGoalsResponse>(getListAgentGoalsUrl(agentId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getListAgentGoalsQueryKey = (agentId: string,) => {
+    return [
+    `/api/agents/${agentId}/goals`
+    ] as const;
+    }
+
+    
+export const getListAgentGoalsQueryOptions = <TData = Awaited<ReturnType<typeof listAgentGoals>>, TError = ErrorType<void>>(agentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAgentGoals>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAgentGoalsQueryKey(agentId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAgentGoals>>> = ({ signal }) => listAgentGoals(agentId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(agentId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAgentGoals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAgentGoalsQueryResult = NonNullable<Awaited<ReturnType<typeof listAgentGoals>>>
+export type ListAgentGoalsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List agent goals
+ */
+
+export function useListAgentGoals<TData = Awaited<ReturnType<typeof listAgentGoals>>, TError = ErrorType<void>>(
+ agentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAgentGoals>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAgentGoalsQueryOptions(agentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getListAgentGoalsSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof listAgentGoals>>, TError = ErrorType<void>>(agentId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof listAgentGoals>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAgentGoalsQueryKey(agentId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAgentGoals>>> = ({ signal }) => listAgentGoals(agentId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof listAgentGoals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAgentGoalsSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof listAgentGoals>>>
+export type ListAgentGoalsSuspenseQueryError = ErrorType<void>
+
+
+/**
+ * @summary List agent goals
+ */
+
+export function useListAgentGoalsSuspense<TData = Awaited<ReturnType<typeof listAgentGoals>>, TError = ErrorType<void>>(
+ agentId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof listAgentGoals>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAgentGoalsSuspenseQueryOptions(agentId,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+/**
+ * Create a new goal for the specified agent. Manager only.
+ * @summary Create agent goal
+ */
+export const getCreateAgentGoalUrl = (agentId: string,) => {
+
+
+  
+
+  return `/api/agents/${agentId}/goals`
+}
+
+export const createAgentGoal = async (agentId: string,
+    createAgentGoalBody: CreateAgentGoalBody, options?: RequestInit): Promise<CreateAgentGoalResponse> => {
+  
+  return orvalFetch<CreateAgentGoalResponse>(getCreateAgentGoalUrl(agentId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createAgentGoalBody,)
+  }
+);}
+  
+
+
+
+export const getCreateAgentGoalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentGoal>>, TError,{agentId: string;data: BodyType<CreateAgentGoalBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAgentGoal>>, TError,{agentId: string;data: BodyType<CreateAgentGoalBody>}, TContext> => {
+
+const mutationKey = ['createAgentGoal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAgentGoal>>, {agentId: string;data: BodyType<CreateAgentGoalBody>}> = (props) => {
+          const {agentId,data} = props ?? {};
+
+          return  createAgentGoal(agentId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAgentGoalMutationResult = NonNullable<Awaited<ReturnType<typeof createAgentGoal>>>
+    export type CreateAgentGoalMutationBody = BodyType<CreateAgentGoalBody>
+    export type CreateAgentGoalMutationError = ErrorType<void>
+
+    /**
+ * @summary Create agent goal
+ */
+export const useCreateAgentGoal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAgentGoal>>, TError,{agentId: string;data: BodyType<CreateAgentGoalBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAgentGoal>>,
+        TError,
+        {agentId: string;data: BodyType<CreateAgentGoalBody>},
+        TContext
+      > => {
+      return useMutation(getCreateAgentGoalMutationOptions(options));
+    }
+    /**
+ * Returns a specific goal with its action history.
+ * @summary Get agent goal
+ */
+export const getGetAgentGoalUrl = (agentId: string,
+    goalId: string,) => {
+
+
+  
+
+  return `/api/agents/${agentId}/goals/${goalId}`
+}
+
+export const getAgentGoal = async (agentId: string,
+    goalId: string, options?: RequestInit): Promise<GetAgentGoalResponse> => {
+  
+  return orvalFetch<GetAgentGoalResponse>(getGetAgentGoalUrl(agentId,goalId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getGetAgentGoalQueryKey = (agentId: string,
+    goalId: string,) => {
+    return [
+    `/api/agents/${agentId}/goals/${goalId}`
+    ] as const;
+    }
+
+    
+export const getGetAgentGoalQueryOptions = <TData = Awaited<ReturnType<typeof getAgentGoal>>, TError = ErrorType<void>>(agentId: string,
+    goalId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAgentGoal>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAgentGoalQueryKey(agentId,goalId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentGoal>>> = ({ signal }) => getAgentGoal(agentId,goalId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(agentId && goalId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAgentGoal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAgentGoalQueryResult = NonNullable<Awaited<ReturnType<typeof getAgentGoal>>>
+export type GetAgentGoalQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get agent goal
+ */
+
+export function useGetAgentGoal<TData = Awaited<ReturnType<typeof getAgentGoal>>, TError = ErrorType<void>>(
+ agentId: string,
+    goalId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAgentGoal>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAgentGoalQueryOptions(agentId,goalId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getGetAgentGoalSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getAgentGoal>>, TError = ErrorType<void>>(agentId: string,
+    goalId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getAgentGoal>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAgentGoalQueryKey(agentId,goalId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAgentGoal>>> = ({ signal }) => getAgentGoal(agentId,goalId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getAgentGoal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAgentGoalSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getAgentGoal>>>
+export type GetAgentGoalSuspenseQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get agent goal
+ */
+
+export function useGetAgentGoalSuspense<TData = Awaited<ReturnType<typeof getAgentGoal>>, TError = ErrorType<void>>(
+ agentId: string,
+    goalId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getAgentGoal>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAgentGoalSuspenseQueryOptions(agentId,goalId,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+/**
+ * Update a specific goal for the agent.
+ * @summary Update agent goal
+ */
+export const getUpdateAgentGoalUrl = (agentId: string,
+    goalId: string,) => {
+
+
+  
+
+  return `/api/agents/${agentId}/goals/${goalId}`
+}
+
+export const updateAgentGoal = async (agentId: string,
+    goalId: string,
+    updateAgentGoalBody: UpdateAgentGoalBody, options?: RequestInit): Promise<UpdateAgentGoal200> => {
+  
+  return orvalFetch<UpdateAgentGoal200>(getUpdateAgentGoalUrl(agentId,goalId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateAgentGoalBody,)
+  }
+);}
+  
+
+
+
+export const getUpdateAgentGoalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAgentGoal>>, TError,{agentId: string;goalId: string;data: BodyType<UpdateAgentGoalBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAgentGoal>>, TError,{agentId: string;goalId: string;data: BodyType<UpdateAgentGoalBody>}, TContext> => {
+
+const mutationKey = ['updateAgentGoal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAgentGoal>>, {agentId: string;goalId: string;data: BodyType<UpdateAgentGoalBody>}> = (props) => {
+          const {agentId,goalId,data} = props ?? {};
+
+          return  updateAgentGoal(agentId,goalId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAgentGoalMutationResult = NonNullable<Awaited<ReturnType<typeof updateAgentGoal>>>
+    export type UpdateAgentGoalMutationBody = BodyType<UpdateAgentGoalBody>
+    export type UpdateAgentGoalMutationError = ErrorType<void>
+
+    /**
+ * @summary Update agent goal
+ */
+export const useUpdateAgentGoal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAgentGoal>>, TError,{agentId: string;goalId: string;data: BodyType<UpdateAgentGoalBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAgentGoal>>,
+        TError,
+        {agentId: string;goalId: string;data: BodyType<UpdateAgentGoalBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateAgentGoalMutationOptions(options));
+    }
+    /**
+ * Delete a specific goal.
+ * @summary Delete agent goal
+ */
+export const getDeleteAgentGoalUrl = (agentId: string,
+    goalId: string,) => {
+
+
+  
+
+  return `/api/agents/${agentId}/goals/${goalId}`
+}
+
+export const deleteAgentGoal = async (agentId: string,
+    goalId: string, options?: RequestInit): Promise<DeleteAgentGoal200> => {
+  
+  return orvalFetch<DeleteAgentGoal200>(getDeleteAgentGoalUrl(agentId,goalId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+  
+
+
+
+export const getDeleteAgentGoalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAgentGoal>>, TError,{agentId: string;goalId: string}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAgentGoal>>, TError,{agentId: string;goalId: string}, TContext> => {
+
+const mutationKey = ['deleteAgentGoal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAgentGoal>>, {agentId: string;goalId: string}> = (props) => {
+          const {agentId,goalId} = props ?? {};
+
+          return  deleteAgentGoal(agentId,goalId,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAgentGoalMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAgentGoal>>>
+    
+    export type DeleteAgentGoalMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete agent goal
+ */
+export const useDeleteAgentGoal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAgentGoal>>, TError,{agentId: string;goalId: string}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAgentGoal>>,
+        TError,
+        {agentId: string;goalId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteAgentGoalMutationOptions(options));
+    }
+    

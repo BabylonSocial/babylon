@@ -23,6 +23,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreatePostBody,
+  CreatePostResponse,
   GetPostResponse,
   LikePost200,
   ListPostsParams,
@@ -166,6 +168,77 @@ export function useListPostsSuspense<TData = Awaited<ReturnType<typeof listPosts
 
 
 /**
+ * Create a new post as the authenticated user.
+ * @summary Create a post
+ */
+export const getCreatePostUrl = () => {
+
+
+  
+
+  return `/api/posts`
+}
+
+export const createPost = async (createPostBody: CreatePostBody, options?: RequestInit): Promise<CreatePostResponse> => {
+  
+  return orvalFetch<CreatePostResponse>(getCreatePostUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createPostBody,)
+  }
+);}
+  
+
+
+
+export const getCreatePostMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<CreatePostBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<CreatePostBody>}, TContext> => {
+
+const mutationKey = ['createPost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPost>>, {data: BodyType<CreatePostBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPost(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePostMutationResult = NonNullable<Awaited<ReturnType<typeof createPost>>>
+    export type CreatePostMutationBody = BodyType<CreatePostBody>
+    export type CreatePostMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a post
+ */
+export const useCreatePost = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<CreatePostBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPost>>,
+        TError,
+        {data: BodyType<CreatePostBody>},
+        TContext
+      > => {
+      return useMutation(getCreatePostMutationOptions(options));
+    }
+    /**
  * Returns a full post with author details, comments, and interaction counts.
  * @summary Get post by ID
  */

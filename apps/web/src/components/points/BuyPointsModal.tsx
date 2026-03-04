@@ -1,7 +1,11 @@
 'use client';
 
+import {
+  createPointsPayment,
+  createStripeCheckout,
+  verifyPointsPayment,
+} from '@babylon/api-hooks';
 import { cn, logger, WALLET_ERROR_MESSAGES } from '@babylon/shared';
-import { usePrivy } from '@privy-io/react-auth';
 import {
   AlertCircle,
   CheckCircle2,
@@ -86,7 +90,6 @@ export function BuyPointsModal({
   onSuccess,
 }: BuyPointsModalProps) {
   const { user, embeddedWalletAddress, embeddedWalletReady } = useAuth();
-  const { getAccessToken } = usePrivy();
   const { sendPointsPayment } = useBuyPointsTx();
   const { ensureFunds } = useWalletFunding();
 
@@ -307,39 +310,7 @@ export function BuyPointsModal({
     setError(null);
 
     try {
-      const token = await getAccessToken();
-
-      if (!token) {
-        logger.error('Authentication required', undefined, 'BuyPointsModal');
-        setError('Authentication required');
-        setStep('error');
-        toast.error('Please sign in to continue');
-        return;
-      }
-
-      const response = await fetch('/api/stripe/checkout/session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ amountUSD: amountNum }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMessage = data.error || 'Failed to create checkout session';
-        logger.error(
-          'Failed to create Stripe checkout',
-          { error: errorMessage },
-          'BuyPointsModal'
-        );
-        setError(errorMessage);
-        setStep('error');
-        toast.error('Failed to start checkout');
-        return;
-      }
+      const data = await createStripeCheckout({ amountUSD: amountNum });
 
       // Redirect to Stripe Checkout
       // Points will be credited via webhook after successful payment
@@ -409,58 +380,15 @@ export function BuyPointsModal({
     setError(null);
 
     try {
-      const token = await getAccessToken();
-
-      // Check if cancelled after getting token
-      if (signal.aborted || !isMountedRef.current) {
-        setLoading(false);
-        return;
-      }
-
-      if (!token) {
-        logger.error('Authentication required', undefined, 'BuyPointsModal');
-        setError('Authentication required');
-        setStep('error');
-        toast.error('Failed to create payment request');
-        setLoading(false);
-        abortControllerRef.current = null;
-        return;
-      }
-
-      // Create payment request with abort signal
-      const response = await fetch('/api/points/purchase/create-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          amountUSD: amountNum,
-          fromAddress: embeddedWalletAddress,
-        }),
-        signal,
-      });
+      // Create payment request with abort signal (auth handled by orvalFetch)
+      const data = await createPointsPayment(
+        { amountUSD: amountNum, fromAddress: embeddedWalletAddress },
+        { signal }
+      );
 
       // Check if cancelled after fetch
       if (signal.aborted || !isMountedRef.current) {
         setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMessage = data.error || 'Failed to create payment request';
-        logger.error(
-          'Failed to create payment',
-          { error: errorMessage },
-          'BuyPointsModal'
-        );
-        setError(errorMessage);
-        setStep('error');
-        toast.error('Failed to create payment request');
-        setLoading(false);
-        abortControllerRef.current = null;
         return;
       }
 
@@ -571,16 +499,6 @@ export function BuyPointsModal({
       return;
     }
 
-    const token = await getAccessToken();
-    if (!token) {
-      logger.error('Authentication required', undefined, 'BuyPointsModal');
-      setError('Authentication required');
-      setStep('error');
-      toast.error('Failed to verify payment');
-      setLoading(false);
-      return;
-    }
-
     // Wait a bit for transaction to be confirmed (with cancellation support)
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(resolve, 3000);
@@ -598,40 +516,20 @@ export function BuyPointsModal({
     }
 
     try {
-      const response = await fetch('/api/points/purchase/verify-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      // Auth handled by orvalFetch
+      const data = await verifyPointsPayment(
+        {
           requestId,
           txHash: transactionHash,
           fromAddress: paymentRequest.from,
           toAddress: paymentRequest.to,
           amount: paymentRequest.amount,
-        }),
-        signal,
-      });
+        },
+        { signal }
+      );
 
       // Check if cancelled after fetch
       if (signal.aborted || !isMountedRef.current) {
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        const errorMessage = data.error || 'Failed to verify payment';
-        logger.error(
-          'Payment verification failed',
-          { error: errorMessage },
-          'BuyPointsModal'
-        );
-        setError(errorMessage);
-        setStep('error');
-        toast.error('Failed to verify payment');
         setLoading(false);
         return;
       }

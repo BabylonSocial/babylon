@@ -1,5 +1,6 @@
 'use client';
 
+import { createPost } from '@babylon/api-hooks';
 import { cn, logger } from '@babylon/shared';
 import { Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -7,7 +8,6 @@ import { toast } from 'sonner';
 import { Avatar } from '@/components/shared/Avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocialTracking } from '@/hooks/usePostHog';
-import { getAuthToken } from '@/lib/auth';
 
 /**
  * Detect if the user is on macOS for keyboard shortcut display
@@ -116,59 +116,35 @@ export function InlineComposer({
 
     setIsSubmitting(true);
 
-    const token = getAuthToken();
-
-    if (!token) {
-      toast.error('Please wait for authentication to complete.');
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      };
+      const data = await createPost({ content: content.trim() });
 
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          content: content.trim(),
-        }),
-      });
+      setContent('');
+      setIsFocused(false);
+      toast.success('Post created!');
 
-      if (response.ok) {
-        const data = await response.json();
-        setContent('');
-        setIsFocused(false);
-        toast.success('Post created!');
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
 
-        // Reset textarea height
-        if (textareaRef.current) {
-          textareaRef.current.style.height = 'auto';
-        }
-
-        if (isValidPostResponse(data.post)) {
-          trackPostCreated(data.post.id, data.post.content.length);
-          onPostCreated?.(data.post);
-        } else if (data.post) {
-          logger.error(
-            'Malformed post response from API',
-            { post: data.post },
-            'InlineComposer'
-          );
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
-          errorData?.error || 'Failed to create post. Please try again.';
-        logger.error('Failed to create post:', errorData, 'InlineComposer');
-        toast.error(errorMessage);
+      if (isValidPostResponse(data.post)) {
+        trackPostCreated(data.post.id, data.post.content.length);
+        onPostCreated?.(data.post);
+      } else if (data.post) {
+        logger.error(
+          'Malformed post response from API',
+          { post: data.post },
+          'InlineComposer'
+        );
       }
     } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Failed to create post. Please try again.';
       logger.error('Error creating post:', { error: err }, 'InlineComposer');
-      toast.error('Network error. Please check your connection and try again.');
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

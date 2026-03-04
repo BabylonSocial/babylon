@@ -32,6 +32,7 @@
  */
 'use client';
 
+import { createReport } from '@babylon/api-hooks';
 import { AlertCircle, Flag, X } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
@@ -124,34 +125,30 @@ export function ReportModal({
     }
 
     startReporting(async () => {
-      const response = await fetch('/api/moderation/reports', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        await createReport({
           reportType: postId ? 'post' : 'user',
           reportedUserId: postId ? undefined : targetUserId,
           reportedPostId: postId,
           category,
           reason,
           evidence: evidence || undefined,
-        }),
-      });
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        toast.error(error.message || 'Failed to submit report');
-        return;
+        toast.success('Report submitted successfully. Our team will review it.');
+
+        // Reset form
+        setCategory('');
+        setReason('');
+        setEvidence('');
+
+        onClose();
+        onSuccess?.();
+      } catch (error: unknown) {
+        // orvalFetch already extracts the error message from the response
+        const err = error as Error & { status?: number };
+        toast.error(err.message || 'Failed to submit report');
       }
-
-      toast.success('Report submitted successfully. Our team will review it.');
-
-      // Reset form
-      setCategory('');
-      setReason('');
-      setEvidence('');
-
-      onClose();
-      onSuccess?.();
     });
   };
 

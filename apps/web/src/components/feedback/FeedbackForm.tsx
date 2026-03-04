@@ -30,11 +30,11 @@
  */
 'use client';
 
+import { submitFeedback } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import { Loader2, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 import { ScoreSlider } from './ScoreSlider';
 import { StarRatingInput } from './StarRating';
 
@@ -79,48 +79,37 @@ export function FeedbackForm({
 
     setSubmitting(true);
 
-    const token = getAuthToken();
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch('/api/feedback/submit', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
+    try {
+      // Extra fields (interactionType, metadata) are not in the generated type
+      // but are accepted by the API endpoint
+      const data = await submitFeedback({
         toUserId,
         score,
-        comment: comment.trim() || null,
+        comment: comment.trim() || undefined,
         category,
         interactionType,
         metadata: {
           gameId: gameId || undefined,
           tradeId: tradeId || undefined,
         },
-      }),
-    });
+      } as Parameters<typeof submitFeedback>[0]);
 
-    if (!response.ok) {
-      const error = await response.json();
+      toast.success(data.message || 'Feedback submitted successfully!');
+
+      // Reset form
+      setScore(70);
+      setComment('');
+
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error: unknown) {
+      // orvalFetch already extracts the error message from the response
+      const err = error as Error & { status?: number };
+      throw new Error(err.message || 'Failed to submit feedback');
+    } finally {
       setSubmitting(false);
-      throw new Error(error.error || 'Failed to submit feedback');
     }
-
-    const data = await response.json();
-
-    toast.success(data.message || 'Feedback submitted successfully!');
-
-    // Reset form
-    setScore(70);
-    setComment('');
-
-    if (onSuccess) {
-      onSuccess();
-    }
-    setSubmitting(false);
   };
 
   return (

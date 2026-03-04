@@ -15,8 +15,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreatePointsPaymentBody,
+  CreatePointsPaymentResponse,
+  StripeCheckoutBody,
+  StripeCheckoutResponse,
   TransferPointsBody,
-  TransferPointsResponse
+  TransferPointsResponse,
+  VerifyPointsPaymentBody,
+  VerifyPointsPaymentResponse
 } from '.././model';
 
 import { orvalFetch } from '../../orval-fetch';
@@ -97,5 +103,218 @@ export const useTransferPoints = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getTransferPointsMutationOptions(options));
+    }
+    /**
+ * Initiates a crypto payment to purchase points.
+ * @summary Create a points purchase payment
+ */
+export const getCreatePointsPaymentUrl = () => {
+
+
+  
+
+  return `/api/points/purchase/create-payment`
+}
+
+export const createPointsPayment = async (createPointsPaymentBody: CreatePointsPaymentBody, options?: RequestInit): Promise<CreatePointsPaymentResponse> => {
+  
+  return orvalFetch<CreatePointsPaymentResponse>(getCreatePointsPaymentUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createPointsPaymentBody,)
+  }
+);}
+  
+
+
+
+export const getCreatePointsPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPointsPayment>>, TError,{data: BodyType<CreatePointsPaymentBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPointsPayment>>, TError,{data: BodyType<CreatePointsPaymentBody>}, TContext> => {
+
+const mutationKey = ['createPointsPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPointsPayment>>, {data: BodyType<CreatePointsPaymentBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPointsPayment(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePointsPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof createPointsPayment>>>
+    export type CreatePointsPaymentMutationBody = BodyType<CreatePointsPaymentBody>
+    export type CreatePointsPaymentMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a points purchase payment
+ */
+export const useCreatePointsPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPointsPayment>>, TError,{data: BodyType<CreatePointsPaymentBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPointsPayment>>,
+        TError,
+        {data: BodyType<CreatePointsPaymentBody>},
+        TContext
+      > => {
+      return useMutation(getCreatePointsPaymentMutationOptions(options));
+    }
+    /**
+ * Verifies a crypto payment transaction and awards points.
+ * @summary Verify a points purchase payment
+ */
+export const getVerifyPointsPaymentUrl = () => {
+
+
+  
+
+  return `/api/points/purchase/verify-payment`
+}
+
+export const verifyPointsPayment = async (verifyPointsPaymentBody: VerifyPointsPaymentBody, options?: RequestInit): Promise<VerifyPointsPaymentResponse> => {
+  
+  return orvalFetch<VerifyPointsPaymentResponse>(getVerifyPointsPaymentUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      verifyPointsPaymentBody,)
+  }
+);}
+  
+
+
+
+export const getVerifyPointsPaymentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyPointsPayment>>, TError,{data: BodyType<VerifyPointsPaymentBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyPointsPayment>>, TError,{data: BodyType<VerifyPointsPaymentBody>}, TContext> => {
+
+const mutationKey = ['verifyPointsPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyPointsPayment>>, {data: BodyType<VerifyPointsPaymentBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyPointsPayment(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyPointsPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof verifyPointsPayment>>>
+    export type VerifyPointsPaymentMutationBody = BodyType<VerifyPointsPaymentBody>
+    export type VerifyPointsPaymentMutationError = ErrorType<void>
+
+    /**
+ * @summary Verify a points purchase payment
+ */
+export const useVerifyPointsPayment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyPointsPayment>>, TError,{data: BodyType<VerifyPointsPaymentBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyPointsPayment>>,
+        TError,
+        {data: BodyType<VerifyPointsPaymentBody>},
+        TContext
+      > => {
+      return useMutation(getVerifyPointsPaymentMutationOptions(options));
+    }
+    /**
+ * Creates a Stripe checkout session for purchasing points.
+ * @summary Create Stripe checkout session
+ */
+export const getCreateStripeCheckoutUrl = () => {
+
+
+  
+
+  return `/api/stripe/checkout/session`
+}
+
+export const createStripeCheckout = async (stripeCheckoutBody: StripeCheckoutBody, options?: RequestInit): Promise<StripeCheckoutResponse> => {
+  
+  return orvalFetch<StripeCheckoutResponse>(getCreateStripeCheckoutUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      stripeCheckoutBody,)
+  }
+);}
+  
+
+
+
+export const getCreateStripeCheckoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStripeCheckout>>, TError,{data: BodyType<StripeCheckoutBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStripeCheckout>>, TError,{data: BodyType<StripeCheckoutBody>}, TContext> => {
+
+const mutationKey = ['createStripeCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStripeCheckout>>, {data: BodyType<StripeCheckoutBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStripeCheckout(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStripeCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createStripeCheckout>>>
+    export type CreateStripeCheckoutMutationBody = BodyType<StripeCheckoutBody>
+    export type CreateStripeCheckoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Create Stripe checkout session
+ */
+export const useCreateStripeCheckout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStripeCheckout>>, TError,{data: BodyType<StripeCheckoutBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStripeCheckout>>,
+        TError,
+        {data: BodyType<StripeCheckoutBody>},
+        TContext
+      > => {
+      return useMutation(getCreateStripeCheckoutMutationOptions(options));
     }
     

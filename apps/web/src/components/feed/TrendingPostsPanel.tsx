@@ -1,5 +1,6 @@
 'use client';
 
+import { getTrendingPosts } from '@babylon/api-hooks';
 import { getProfileUrl } from '@babylon/shared';
 import { formatDistanceToNow } from 'date-fns';
 import { Heart, MessageCircle, Share2, TrendingUp } from 'lucide-react';
@@ -46,18 +47,19 @@ export function TrendingPostsPanel() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchTrendingPosts = async () => {
-      const response = await fetch('/api/feed/widgets/trending-posts');
-      const data = await response.json();
-      if (data.success) {
-        setPosts(data.posts || []);
+    const fetchTrendingPostsData = async () => {
+      try {
+        const data = await getTrendingPosts();
+        setPosts((data.posts as unknown as TrendingPost[]) || []);
+      } catch {
+        // Silently handle errors - keep existing data
       }
       setLoading(false);
     };
 
-    fetchTrendingPosts();
+    fetchTrendingPostsData();
     // Refresh every 30 seconds
-    const interval = setInterval(fetchTrendingPosts, 30000);
+    const interval = setInterval(fetchTrendingPostsData, 30000);
     return () => clearInterval(interval);
   }, []);
 
