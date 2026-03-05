@@ -27,7 +27,8 @@
       "!**/drizzle/migrations",
       "!packages/training/book/mermaid-init.js",
       "!packages/training/book/mermaid.min.js",
-      "!packages/api-hooks/src/generated"
+      "!packages/api-hooks/src/generated",
+      "!openapi.json"
     ]
   },
   "formatter": {
