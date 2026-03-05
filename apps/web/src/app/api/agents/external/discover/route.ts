@@ -12,11 +12,24 @@
 import type { AgentRegistration, TrustLevel } from '@babylon/agents';
 import { AgentStatus, AgentType, agentRegistry } from '@babylon/agents';
 import { checkRateLimitAsync, RATE_LIMIT_CONFIGS } from '@babylon/api';
-import { ExternalAgentDiscoverBody } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+
+// Uses nativeEnum from @babylon/agents, so kept inline rather than in shared schemas
+const ExternalAgentDiscoverBody = z.object({
+  types: z.array(z.nativeEnum(AgentType)).optional(),
+  statuses: z.array(z.nativeEnum(AgentStatus)).optional(),
+  minTrustLevel: z.coerce.number().min(0).max(4).optional(),
+  requiredCapabilities: z.array(z.string()).optional(),
+  requiredSkills: z.array(z.string()).optional(),
+  requiredDomains: z.array(z.string()).optional(),
+  matchMode: z.enum(['all', 'any']).optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
 
 // Discovery filter type
 interface DiscoveryFilter {

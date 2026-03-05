@@ -35,6 +35,8 @@
       "@babylon/a2a": ["../a2a/src/index.ts"],
       "@babylon/a2a/*": ["../a2a/src/*"],
       "@babylon/mcp": ["../mcp/src/index.ts"],
+      "@babylon/api-hooks": ["../api-hooks/src/index.ts"],
+      "@babylon/api-hooks/*": ["../api-hooks/src/*"],
       "@babylon/contracts": ["../contracts/src/index.ts"],
       "@babylon/contracts/*": ["../contracts/src/*"],
       "@babylon/training": ["../training/src/index.ts"],

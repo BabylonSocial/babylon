@@ -67,8 +67,9 @@ describe('Game Guide - Slide Content', () => {
   test('last slide should be the CTA slide', () => {
     const lastSlide = GAME_GUIDE_SLIDES[GAME_GUIDE_SLIDES.length - 1]!;
     expect(lastSlide.title).toContain('Trade');
-    expect(lastSlide.ctas).toBeDefined();
-    expect(lastSlide.ctas!.length).toBeGreaterThanOrEqual(1);
+    const ctas = 'ctas' in lastSlide ? lastSlide.ctas : undefined;
+    expect(ctas).toBeDefined();
+    expect(ctas!.length).toBeGreaterThanOrEqual(1);
   });
 });
 

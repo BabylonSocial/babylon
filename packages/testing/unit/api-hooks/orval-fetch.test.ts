@@ -42,6 +42,7 @@ afterEach(() => {
 // Dynamic import to get a fresh module for each describe block
 async function importOrvalFetch() {
   // Clear module cache for fresh import
+  // @ts-expect-error -- .ts extension required for bun runtime import
   const mod = await import('../../../../packages/api-hooks/src/orval-fetch.ts');
   return mod.orvalFetch as <T>(url: string, options: RequestInit) => Promise<T>;
 }

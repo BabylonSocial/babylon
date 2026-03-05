@@ -57,8 +57,8 @@ describe('agents API', () => {
     const { getListAgentsQueryKey } = await import(
       '../../../../packages/api-hooks/src/generated/agents/agents'
     );
-    const key = getListAgentsQueryKey({ autonomousTrading: true });
-    expect(key).toEqual(['/api/agents', { autonomousTrading: true }]);
+    const key = getListAgentsQueryKey({ autonomousTrading: 'true' });
+    expect(key).toEqual(['/api/agents', { autonomousTrading: 'true' }]);
   });
 
   test('listAgents calls correct endpoint', async () => {
