@@ -48,6 +48,8 @@ import type {
   ListApiKeys200,
   MuteUser200,
   MuteUserBody,
+  PointsHistoryResponse,
+  PortfolioBreakdownResponse,
   SearchUsers200,
   SearchUsersParams,
   UnfollowUser200,
@@ -171,6 +173,122 @@ export function useGetUserBalanceSuspense<TData = Awaited<ReturnType<typeof getU
  ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetUserBalanceSuspenseQueryOptions(userId,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+/**
+ * Returns the user's points transaction history including reputation points and purchase transactions. Owner only.
+ * @summary Get user points history
+ */
+export const getGetUserPointsHistoryUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/users/${userId}/points-history`
+}
+
+export const getUserPointsHistory = async (userId: string, options?: RequestInit): Promise<PointsHistoryResponse> => {
+  
+  return orvalFetch<PointsHistoryResponse>(getGetUserPointsHistoryUrl(userId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getGetUserPointsHistoryQueryKey = (userId: string,) => {
+    return [
+    `/api/users/${userId}/points-history`
+    ] as const;
+    }
+
+    
+export const getGetUserPointsHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getUserPointsHistory>>, TError = ErrorType<void>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserPointsHistory>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserPointsHistoryQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPointsHistory>>> = ({ signal }) => getUserPointsHistory(userId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserPointsHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUserPointsHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getUserPointsHistory>>>
+export type GetUserPointsHistoryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get user points history
+ */
+
+export function useGetUserPointsHistory<TData = Awaited<ReturnType<typeof getUserPointsHistory>>, TError = ErrorType<void>>(
+ userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserPointsHistory>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUserPointsHistoryQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getGetUserPointsHistorySuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getUserPointsHistory>>, TError = ErrorType<void>>(userId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getUserPointsHistory>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserPointsHistoryQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPointsHistory>>> = ({ signal }) => getUserPointsHistory(userId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getUserPointsHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUserPointsHistorySuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getUserPointsHistory>>>
+export type GetUserPointsHistorySuspenseQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get user points history
+ */
+
+export function useGetUserPointsHistorySuspense<TData = Awaited<ReturnType<typeof getUserPointsHistory>>, TError = ErrorType<void>>(
+ userId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getUserPointsHistory>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUserPointsHistorySuspenseQueryOptions(userId,options)
 
   const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2200,4 +2318,119 @@ export const useDeleteAccount = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteAccountMutationOptions(options));
     }
+    /**
+ * Returns a detailed breakdown of user assets including wallet, agents, positions, and P&L.
+ * @summary Get portfolio breakdown for a user
+ */
+export const getGetUserPortfolioBreakdownUrl = (userId: string,) => {
+
+
+  
+
+  return `/api/users/${userId}/portfolio-breakdown`
+}
+
+export const getUserPortfolioBreakdown = async (userId: string, options?: RequestInit): Promise<PortfolioBreakdownResponse> => {
+  
+  return orvalFetch<PortfolioBreakdownResponse>(getGetUserPortfolioBreakdownUrl(userId),
+  {      
+    ...options,
+    method: 'GET'
     
+    
+  }
+);}
+  
+
+
+
+
+export const getGetUserPortfolioBreakdownQueryKey = (userId: string,) => {
+    return [
+    `/api/users/${userId}/portfolio-breakdown`
+    ] as const;
+    }
+
+    
+export const getGetUserPortfolioBreakdownQueryOptions = <TData = Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError = ErrorType<unknown>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserPortfolioBreakdownQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>> = ({ signal }) => getUserPortfolioBreakdown(userId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUserPortfolioBreakdownQueryResult = NonNullable<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>>
+export type GetUserPortfolioBreakdownQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get portfolio breakdown for a user
+ */
+
+export function useGetUserPortfolioBreakdown<TData = Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError = ErrorType<unknown>>(
+ userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUserPortfolioBreakdownQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getGetUserPortfolioBreakdownSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError = ErrorType<unknown>>(userId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserPortfolioBreakdownQueryKey(userId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>> = ({ signal }) => getUserPortfolioBreakdown(userId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUserPortfolioBreakdownSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>>
+export type GetUserPortfolioBreakdownSuspenseQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get portfolio breakdown for a user
+ */
+
+export function useGetUserPortfolioBreakdownSuspense<TData = Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError = ErrorType<unknown>>(
+ userId: string, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getUserPortfolioBreakdown>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUserPortfolioBreakdownSuspenseQueryOptions(userId,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+

@@ -17,6 +17,7 @@ import {
   verifySiweMessage,
   withErrorHandling,
 } from '@babylon/api';
+import { SiweAuthSchema } from '@babylon/api/schemas';
 import {
   db,
   eq,
@@ -26,21 +27,14 @@ import {
   users,
   withTransaction,
 } from '@babylon/db';
-import { logger, UsernameSchema } from '@babylon/shared';
+import { logger } from '@babylon/shared';
 import { type NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const AuthSchema = z.object({
-  message: z.string().min(1, 'Message is required'),
-  signature: z.string().min(1, 'Signature is required'),
-  username: UsernameSchema, // Always required - used for registration, ignored for login
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await request.json();
 
   // Validate request body
-  const parseResult = AuthSchema.safeParse(body);
+  const parseResult = SiweAuthSchema.safeParse(body);
   if (!parseResult.success) {
     const firstError = parseResult.error.issues[0];
     return NextResponse.json(

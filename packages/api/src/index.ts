@@ -265,6 +265,8 @@ export {
   type UploadOptions,
   type UploadResult,
 } from './storage/s3-client';
+// OpenAPI Schemas (shared Zod schemas for request/response validation)
+export * as schemas from './schemas';
 // Swagger
 export * from './swagger';
 // Types

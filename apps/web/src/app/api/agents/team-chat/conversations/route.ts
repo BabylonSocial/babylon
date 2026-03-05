@@ -10,10 +10,10 @@
 
 import { teamChatService } from '@babylon/agents';
 import { authenticateUser, withErrorHandling } from '@babylon/api';
+import { CreateConversationBody } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 
 // =============================================================================
 // GET: List conversations
@@ -44,9 +44,6 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
 // POST: Create new conversation
 // =============================================================================
 
-const createConversationSchema = z.object({
-  title: z.string().max(100).optional(),
-});
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
   const user = await authenticateUser(req);
@@ -58,7 +55,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     body = {};
   }
 
-  const parseResult = createConversationSchema.safeParse(body);
+  const parseResult = CreateConversationBody.safeParse(body);
   if (!parseResult.success) {
     return NextResponse.json(
       { success: false, error: 'Invalid request body' },

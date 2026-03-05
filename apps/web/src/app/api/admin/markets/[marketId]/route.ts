@@ -39,8 +39,8 @@ import {
   WalletService,
 } from '@babylon/engine';
 import { logger } from '@babylon/shared';
+import { AdminMarketActionBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
 /**
  * Build PredictionMarketService for admin operations
@@ -85,12 +85,7 @@ const buildCancelService = (marketId: string) =>
     },
   });
 
-const MarketActionSchema = z.object({
-  action: z.enum(['resolve', 'extend', 'void']),
-  resolution: z.boolean().optional(), // true for YES, false for NO
-  newEndDate: z.string().optional(),
-  reason: z.string().optional(),
-});
+const MarketActionSchema = AdminMarketActionBody;
 
 export const GET = withErrorHandling(
   async (

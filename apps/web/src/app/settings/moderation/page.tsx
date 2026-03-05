@@ -6,109 +6,69 @@
 
 'use client';
 
+import { getListBlocksQueryKey, getListMutesQueryKey, useBlockUser, useListBlocks, useListMutes, useMuteUser } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import { Ban, Trash2, UserX, VolumeX } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/shared/Avatar';
 import { PageContainer } from '@/components/shared/PageContainer';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
 
-interface BlockedUser {
-  id: string;
-  createdAt: string;
-  reason: string | null;
-  blocked: {
-    id: string;
-    username: string | null;
-    displayName: string | null;
-    profileImageUrl: string | null;
-  };
-}
-
-interface MutedUser {
-  id: string;
-  createdAt: string;
-  reason: string | null;
-  muted: {
-    id: string;
-    username: string | null;
-    displayName: string | null;
-    profileImageUrl: string | null;
-  };
-}
-
 type Tab = 'blocked' | 'muted';
 
 export default function ModerationSettingsPage() {
   const { authenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('blocked');
-  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
-  const [mutedUsers, setMutedUsers] = useState<MutedUser[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchBlockedUsers = useCallback(async () => {
-    const response = await fetch('/api/moderation/blocks');
-    if (!response.ok) {
-      toast.error('Failed to load blocked users');
-      setLoading(false);
-      return;
-    }
+  const {
+    data: blocksData,
+    isLoading: blocksLoading,
+    refetch: refetchBlocks,
+  } = useListBlocks(undefined, {
+    query: { queryKey: getListBlocksQueryKey(), enabled: authenticated },
+  });
 
-    const data = await response.json();
-    setBlockedUsers(data.blocks || []);
-    setLoading(false);
-  }, []);
+  const {
+    data: mutesData,
+    isLoading: mutesLoading,
+    refetch: refetchMutes,
+  } = useListMutes(undefined, {
+    query: { queryKey: getListMutesQueryKey(), enabled: authenticated },
+  });
 
-  const fetchMutedUsers = useCallback(async () => {
-    const response = await fetch('/api/moderation/mutes');
-    if (!response.ok) {
-      toast.error('Failed to load muted users');
-      return;
-    }
+  const blockedUsers = blocksData?.blocks ?? [];
+  const mutedUsers = mutesData?.mutes ?? [];
+  const loading = blocksLoading || mutesLoading;
 
-    const data = await response.json();
-    setMutedUsers(data.mutes || []);
-  }, []);
-
-  useEffect(() => {
-    if (authenticated) {
-      fetchBlockedUsers();
-      fetchMutedUsers();
-    }
-  }, [authenticated, fetchBlockedUsers, fetchMutedUsers]);
+  const blockUserMutation = useBlockUser();
+  const muteUserMutation = useMuteUser();
 
   const handleUnblock = async (userId: string, displayName: string) => {
-    const response = await fetch(`/api/users/${userId}/block`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'unblock' }),
-    });
-
-    if (!response.ok) {
+    try {
+      await blockUserMutation.mutateAsync({
+        userId,
+        data: { action: 'unblock' },
+      });
+      toast.success(`Unblocked ${displayName}`);
+      refetchBlocks();
+    } catch {
       toast.error('Failed to unblock user');
-      return;
     }
-
-    toast.success(`Unblocked ${displayName}`);
-    fetchBlockedUsers();
   };
 
   const handleUnmute = async (userId: string, displayName: string) => {
-    const response = await fetch(`/api/users/${userId}/mute`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'unmute' }),
-    });
-
-    if (!response.ok) {
+    try {
+      await muteUserMutation.mutateAsync({
+        userId,
+        data: { action: 'unmute' },
+      });
+      toast.success(`Unmuted ${displayName}`);
+      refetchMutes();
+    } catch {
       toast.error('Failed to unmute user');
-      return;
     }
-
-    toast.success(`Unmuted ${displayName}`);
-    fetchMutedUsers();
   };
 
   const formatDate = (date: string) => {
@@ -193,6 +153,7 @@ export default function ModerationSettingsPage() {
                 ) : (
                   blockedUsers.map((block) => {
                     const user = block.blocked;
+                    if (!user) return null;
                     const displayName =
                       user.displayName || user.username || 'User';
 
@@ -212,11 +173,6 @@ export default function ModerationSettingsPage() {
                           {user.username && (
                             <div className="text-muted-foreground text-sm">
                               @{user.username}
-                            </div>
-                          )}
-                          {block.reason && (
-                            <div className="mt-1 text-muted-foreground text-xs">
-                              Reason: {block.reason}
                             </div>
                           )}
                           <div className="mt-1 text-muted-foreground text-xs">
@@ -252,6 +208,7 @@ export default function ModerationSettingsPage() {
                 ) : (
                   mutedUsers.map((mute) => {
                     const user = mute.muted;
+                    if (!user) return null;
                     const displayName =
                       user.displayName || user.username || 'User';
 
@@ -271,11 +228,6 @@ export default function ModerationSettingsPage() {
                           {user.username && (
                             <div className="text-muted-foreground text-sm">
                               @{user.username}
-                            </div>
-                          )}
-                          {mute.reason && (
-                            <div className="mt-1 text-muted-foreground text-xs">
-                              Reason: {mute.reason}
                             </div>
                           )}
                           <div className="mt-1 text-muted-foreground text-xs">

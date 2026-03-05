@@ -23,13 +23,19 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BiasConfigBody,
+  BiasTuneBody,
   BuyPredictionShares200,
+  BuyPredictionSharesOnChain200,
   ClosePerpPosition200,
+  ConfigureMarketBias201,
   GetActiveMarketBiases200,
   GetPerpMarketHistory200,
   GetPerpMarketHistoryParams,
   GetPerpTradeFeed200,
   GetPerpTradeFeedParams,
+  GetPerpTuning200,
+  GetPerpTuningParams,
   GetPredictionMarket200,
   GetPredictionMarketHistory200,
   GetPredictionMarketHistoryParams,
@@ -39,12 +45,16 @@ import type {
   GetUserPositionsParams,
   ListPerpMarkets200,
   ListPredictionMarkets200,
+  OnChainBuyBody,
   OpenPerpPosition200,
   PerpCloseBody,
   PerpOpenBody,
+  PerpTuningBody,
   PredictionBuyBody,
   PredictionSellBody,
-  SellPredictionShares200
+  SellPredictionShares200,
+  TuneMarketBias200,
+  UpdatePerpTuning201
 } from '.././model';
 
 import { orvalFetch } from '../../orval-fetch';
@@ -1341,6 +1351,414 @@ export function useGetUserPositionsSuspense<TData = Awaited<ReturnType<typeof ge
 
 
 /**
+ * Verify and record an on-chain share purchase for a prediction market.
+ * @summary Buy prediction shares on-chain (legacy)
+ */
+export const getBuyPredictionSharesOnChainUrl = (id: string,) => {
+
+
+  
+
+  return `/api/markets/predictions/${id}/buy-onchain`
+}
+
+export const buyPredictionSharesOnChain = async (id: string,
+    onChainBuyBody: OnChainBuyBody, options?: RequestInit): Promise<BuyPredictionSharesOnChain200> => {
+  
+  return orvalFetch<BuyPredictionSharesOnChain200>(getBuyPredictionSharesOnChainUrl(id),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      onChainBuyBody,)
+  }
+);}
+  
+
+
+
+export const getBuyPredictionSharesOnChainMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buyPredictionSharesOnChain>>, TError,{id: string;data: BodyType<OnChainBuyBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof buyPredictionSharesOnChain>>, TError,{id: string;data: BodyType<OnChainBuyBody>}, TContext> => {
+
+const mutationKey = ['buyPredictionSharesOnChain'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof buyPredictionSharesOnChain>>, {id: string;data: BodyType<OnChainBuyBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  buyPredictionSharesOnChain(id,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BuyPredictionSharesOnChainMutationResult = NonNullable<Awaited<ReturnType<typeof buyPredictionSharesOnChain>>>
+    export type BuyPredictionSharesOnChainMutationBody = BodyType<OnChainBuyBody>
+    export type BuyPredictionSharesOnChainMutationError = ErrorType<void>
+
+    /**
+ * @summary Buy prediction shares on-chain (legacy)
+ */
+export const useBuyPredictionSharesOnChain = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof buyPredictionSharesOnChain>>, TError,{id: string;data: BodyType<OnChainBuyBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof buyPredictionSharesOnChain>>,
+        TError,
+        {id: string;data: BodyType<OnChainBuyBody>},
+        TContext
+      > => {
+      return useMutation(getBuyPredictionSharesOnChainMutationOptions(options));
+    }
+    /**
+ * Returns AI agent prompt tuning parameters for perpetual futures trading.
+ * @summary Get perp tuning parameters
+ */
+export const getGetPerpTuningUrl = (params?: GetPerpTuningParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/markets/perps/tune?${stringifiedParams}` : `/api/markets/perps/tune`
+}
+
+export const getPerpTuning = async (params?: GetPerpTuningParams, options?: RequestInit): Promise<GetPerpTuning200> => {
+  
+  return orvalFetch<GetPerpTuning200>(getGetPerpTuningUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getGetPerpTuningQueryKey = (params?: GetPerpTuningParams,) => {
+    return [
+    `/api/markets/perps/tune`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+    
+export const getGetPerpTuningQueryOptions = <TData = Awaited<ReturnType<typeof getPerpTuning>>, TError = ErrorType<void>>(params?: GetPerpTuningParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPerpTuning>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPerpTuningQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPerpTuning>>> = ({ signal }) => getPerpTuning(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPerpTuning>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPerpTuningQueryResult = NonNullable<Awaited<ReturnType<typeof getPerpTuning>>>
+export type GetPerpTuningQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get perp tuning parameters
+ */
+
+export function useGetPerpTuning<TData = Awaited<ReturnType<typeof getPerpTuning>>, TError = ErrorType<void>>(
+ params?: GetPerpTuningParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPerpTuning>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPerpTuningQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getGetPerpTuningSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getPerpTuning>>, TError = ErrorType<void>>(params?: GetPerpTuningParams, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPerpTuning>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPerpTuningQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPerpTuning>>> = ({ signal }) => getPerpTuning(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPerpTuning>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPerpTuningSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getPerpTuning>>>
+export type GetPerpTuningSuspenseQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get perp tuning parameters
+ */
+
+export function useGetPerpTuningSuspense<TData = Awaited<ReturnType<typeof getPerpTuning>>, TError = ErrorType<void>>(
+ params?: GetPerpTuningParams, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getPerpTuning>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPerpTuningSuspenseQueryOptions(params,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+/**
+ * Update AI agent prompt tuning parameters for perpetual futures trading.
+ * @summary Update perp tuning parameters
+ */
+export const getUpdatePerpTuningUrl = () => {
+
+
+  
+
+  return `/api/markets/perps/tune`
+}
+
+export const updatePerpTuning = async (perpTuningBody: PerpTuningBody, options?: RequestInit): Promise<UpdatePerpTuning201> => {
+  
+  return orvalFetch<UpdatePerpTuning201>(getUpdatePerpTuningUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      perpTuningBody,)
+  }
+);}
+  
+
+
+
+export const getUpdatePerpTuningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePerpTuning>>, TError,{data: BodyType<PerpTuningBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePerpTuning>>, TError,{data: BodyType<PerpTuningBody>}, TContext> => {
+
+const mutationKey = ['updatePerpTuning'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePerpTuning>>, {data: BodyType<PerpTuningBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updatePerpTuning(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePerpTuningMutationResult = NonNullable<Awaited<ReturnType<typeof updatePerpTuning>>>
+    export type UpdatePerpTuningMutationBody = BodyType<PerpTuningBody>
+    export type UpdatePerpTuningMutationError = ErrorType<void>
+
+    /**
+ * @summary Update perp tuning parameters
+ */
+export const useUpdatePerpTuning = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePerpTuning>>, TError,{data: BodyType<PerpTuningBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePerpTuning>>,
+        TError,
+        {data: BodyType<PerpTuningBody>},
+        TContext
+      > => {
+      return useMutation(getUpdatePerpTuningMutationOptions(options));
+    }
+    /**
+ * Set, remove, or bulk-set market biases for entities.
+ * @summary Configure market biases
+ */
+export const getConfigureMarketBiasUrl = () => {
+
+
+  
+
+  return `/api/markets/bias/configure`
+}
+
+export const configureMarketBias = async (biasConfigBody: BiasConfigBody, options?: RequestInit): Promise<ConfigureMarketBias201> => {
+  
+  return orvalFetch<ConfigureMarketBias201>(getConfigureMarketBiasUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      biasConfigBody,)
+  }
+);}
+  
+
+
+
+export const getConfigureMarketBiasMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof configureMarketBias>>, TError,{data: BodyType<BiasConfigBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof configureMarketBias>>, TError,{data: BodyType<BiasConfigBody>}, TContext> => {
+
+const mutationKey = ['configureMarketBias'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof configureMarketBias>>, {data: BodyType<BiasConfigBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  configureMarketBias(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfigureMarketBiasMutationResult = NonNullable<Awaited<ReturnType<typeof configureMarketBias>>>
+    export type ConfigureMarketBiasMutationBody = BodyType<BiasConfigBody>
+    export type ConfigureMarketBiasMutationError = ErrorType<void>
+
+    /**
+ * @summary Configure market biases
+ */
+export const useConfigureMarketBias = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof configureMarketBias>>, TError,{data: BodyType<BiasConfigBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof configureMarketBias>>,
+        TError,
+        {data: BodyType<BiasConfigBody>},
+        TContext
+      > => {
+      return useMutation(getConfigureMarketBiasMutationOptions(options));
+    }
+    /**
+ * Adjust strength of an existing market bias. Setting strength to 0 deactivates it.
+ * @summary Tune market bias strength
+ */
+export const getTuneMarketBiasUrl = () => {
+
+
+  
+
+  return `/api/markets/bias/tune`
+}
+
+export const tuneMarketBias = async (biasTuneBody: BiasTuneBody, options?: RequestInit): Promise<TuneMarketBias200> => {
+  
+  return orvalFetch<TuneMarketBias200>(getTuneMarketBiasUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      biasTuneBody,)
+  }
+);}
+  
+
+
+
+export const getTuneMarketBiasMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tuneMarketBias>>, TError,{data: BodyType<BiasTuneBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof tuneMarketBias>>, TError,{data: BodyType<BiasTuneBody>}, TContext> => {
+
+const mutationKey = ['tuneMarketBias'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tuneMarketBias>>, {data: BodyType<BiasTuneBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  tuneMarketBias(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TuneMarketBiasMutationResult = NonNullable<Awaited<ReturnType<typeof tuneMarketBias>>>
+    export type TuneMarketBiasMutationBody = BodyType<BiasTuneBody>
+    export type TuneMarketBiasMutationError = ErrorType<void>
+
+    /**
+ * @summary Tune market bias strength
+ */
+export const useTuneMarketBias = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tuneMarketBias>>, TError,{data: BodyType<BiasTuneBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof tuneMarketBias>>,
+        TError,
+        {data: BodyType<BiasTuneBody>},
+        TContext
+      > => {
+      return useMutation(getTuneMarketBiasMutationOptions(options));
+    }
+    /**
  * Returns currently active market biases that influence NPC trading behavior.
  * @summary Active market biases
  */

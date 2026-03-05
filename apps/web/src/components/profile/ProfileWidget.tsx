@@ -1,6 +1,10 @@
 'use client';
 
-import { getUserPositions, getUserProfile } from '@babylon/api-hooks';
+import {
+  getUserPortfolioBreakdown,
+  getUserPositions,
+  getUserProfile,
+} from '@babylon/api-hooks';
 import type { PortfolioBreakdownSnapshot } from '@babylon/engine/client';
 import type {
   PerpPositionFromAPI,
@@ -58,9 +62,8 @@ async function fetchProfileWidgetData(userId: string): Promise<{
   statsData: UserProfileStats | null;
   needsOnboarding?: boolean;
 }> {
-  // portfolio-breakdown has no generated function yet, use raw fetch
   const [breakdownRes, positionsData, profileData] = await Promise.allSettled([
-    fetch(`/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`),
+    getUserPortfolioBreakdown(userId),
     getUserPositions(userId),
     getUserProfile(userId),
   ]);
@@ -79,9 +82,9 @@ async function fetchProfileWidgetData(userId: string): Promise<{
   let perpsData: PerpPositionFromAPI[] = [];
   let statsData: UserProfileStats | null = null;
 
-  // Process breakdown (still raw fetch)
-  if (breakdownRes.status === 'fulfilled' && breakdownRes.value.ok) {
-    const breakdownJson = (await breakdownRes.value.json()) as Record<
+  // Process breakdown
+  if (breakdownRes.status === 'fulfilled') {
+    const breakdownJson = breakdownRes.value as unknown as Record<
       string,
       unknown
     >;

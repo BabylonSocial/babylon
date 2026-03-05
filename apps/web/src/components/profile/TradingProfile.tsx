@@ -2,6 +2,7 @@
 
 import {
   getLeaderboard,
+  getUserPortfolioBreakdown,
   getUserPositions,
   getUserProfile,
 } from '@babylon/api-hooks';
@@ -181,17 +182,13 @@ export function TradingProfile({
       const signal = abortController.signal;
 
       // Fetch all data in parallel
-      // portfolio-breakdown has no generated function yet, use raw fetch
       const [profileData, leaderboardData, positionsData, breakdownRes] =
         await Promise.all([
           getUserProfile(userId, { signal }),
           getLeaderboard({ limit: '100' }, { signal }),
           getUserPositions(userId, { status: 'open' }, { signal }),
           isOwner
-            ? fetch(
-                `/api/users/${encodeURIComponent(userId)}/portfolio-breakdown`,
-                { signal }
-              )
+            ? getUserPortfolioBreakdown(userId, { signal })
             : Promise.resolve(null),
         ]);
 
@@ -200,18 +197,11 @@ export function TradingProfile({
         return;
       }
 
-      // Process breakdown (still raw fetch)
+      // Process breakdown
       let breakdownData: PortfolioBreakdownSnapshot | null = null;
       if (isOwner && breakdownRes) {
-        if (!breakdownRes.ok) {
-          setError(
-            `Failed to load portfolio breakdown: ${breakdownRes.status} ${breakdownRes.statusText}`
-          );
-          setLoading(false);
-          return;
-        }
         breakdownData =
-          (await breakdownRes.json()) as PortfolioBreakdownSnapshot;
+          breakdownRes as unknown as PortfolioBreakdownSnapshot;
       }
 
       // Check if aborted after async operations

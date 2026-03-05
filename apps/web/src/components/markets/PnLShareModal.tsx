@@ -1,12 +1,12 @@
 'use client';
 
+import { usePostTweet } from '@babylon/api-hooks';
 import {
   BABYLON_POINTS_SYMBOL,
   getReferralUrl,
   logger,
   trackExternalShare,
 } from '@babylon/shared';
-import { usePrivy } from '@privy-io/react-auth';
 import { Download, LogOut, Twitter, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -112,7 +112,7 @@ export function PnLShareModal({
   category = 'perps',
   user,
 }: PnLShareModalProps) {
-  const { getAccessToken } = usePrivy();
+  const postTweetMutation = usePostTweet();
   const [isDownloading, setIsDownloading] = useState(false);
   const [sharing, setSharing] = useState<'twitter' | 'farcaster' | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -266,36 +266,16 @@ export function PnLShareModal({
 
     setIsPostingToTwitter(true);
 
-    const token = await getAccessToken();
-    if (!token) {
-      toast.error('Authentication required. Please log in.');
-      setIsPostingToTwitter(false);
-      return;
-    }
-
     toast.info('Posting to X...');
 
     try {
-      const tweetResponse = await fetch('/api/twitter/tweet', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const tweetData = await postTweetMutation.mutateAsync({
+        data: {
           text: tweetText,
           contentType: 'market',
           contentId,
-        }),
+        },
       });
-
-      if (!tweetResponse.ok) {
-        const errorData = (await tweetResponse.json()) as { error?: string };
-        toast.error(errorData.error ?? 'Failed to post tweet');
-        return;
-      }
-
-      const tweetData = (await tweetResponse.json()) as { tweetUrl: string };
 
       toast.success('Successfully shared to X!');
 

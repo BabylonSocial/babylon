@@ -19,6 +19,7 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { AddMemberSchema } from '@babylon/api/schemas';
 import {
   and,
   asUser,
@@ -31,11 +32,6 @@ import {
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const AddMemberSchema = z.object({
-  userId: z.string(),
-});
 
 /**
  * POST /api/groups/[groupId]/members

@@ -1,341 +1,29 @@
 import { z } from 'zod';
 import type { ZodOpenApiPathsObject } from 'zod-openapi';
 
-// ---------------------------------------------------------------------------
-// Reusable schemas
-// ---------------------------------------------------------------------------
-
-const UserPositionSnapshot = z
-  .object({
-    id: z.string(),
-    marketId: z.string(),
-    side: z.enum(['YES', 'NO']),
-    shares: z.number(),
-    avgPrice: z.number(),
-    currentPrice: z.number(),
-    currentProbability: z.number(),
-    currentValue: z.number(),
-    costBasis: z.number(),
-    unrealizedPnL: z.number(),
-    maxPayout: z.number(),
-    resolved: z.boolean(),
-    resolution: z.boolean().nullable(),
-  })
-  .meta({ id: 'UserPositionSnapshot' });
-
-const PredictionMarket = z
-  .object({
-    id: z.string(),
-    text: z.string().meta({ description: 'Question text' }),
-    question: z
-      .string()
-      .meta({ description: 'Question text (backward compat)' }),
-    status: z.enum(['active', 'resolved', 'cancelled']),
-    resolution: z.boolean().nullable(),
-    resolved: z.boolean(),
-    resolutionDate: z
-      .string()
-      .nullable()
-      .meta({ description: 'ISO 8601 timestamp' }),
-    endDate: z.string().nullable().meta({ description: 'ISO 8601 timestamp' }),
-    createdDate: z
-      .string()
-      .nullable()
-      .meta({ description: 'ISO 8601 timestamp' }),
-    yesShares: z.number(),
-    noShares: z.number(),
-    yesProbability: z.number(),
-    noProbability: z.number(),
-    userPosition: UserPositionSnapshot.nullable(),
-    userPositions: z.array(UserPositionSnapshot),
-    oracleCommitTxHash: z.string().nullable(),
-    oracleRevealTxHash: z.string().nullable(),
-    resolutionProofUrl: z.string().nullable(),
-    resolutionDescription: z.string().nullable(),
-  })
-  .meta({ id: 'PredictionMarket' });
-
-const PredictionMarketDetail = PredictionMarket.extend({
-  liquidity: z.number(),
-  tradeCount: z.number(),
-}).meta({ id: 'PredictionMarketDetail' });
-
-const PredictionPricePoint = z
-  .object({
-    id: z.string(),
-    yesPrice: z.number(),
-    noPrice: z.number(),
-    yesShares: z.number(),
-    noShares: z.number(),
-    liquidity: z.number(),
-    eventType: z.enum(['trade', 'resolution']),
-    source: z.enum(['user_trade', 'npc_trade', 'system']),
-    timestamp: z.string().meta({ description: 'ISO 8601 timestamp' }),
-  })
-  .meta({ id: 'PredictionPricePoint' });
-
-const PerpPricePoint = z
-  .object({
-    id: z.string().optional(),
-    price: z.number(),
-    change: z.number(),
-    changePercent: z.number(),
-    timestamp: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    openPrice: z.number(),
-    highPrice: z.number(),
-    lowPrice: z.number(),
-    volume: z.number(),
-  })
-  .meta({ id: 'PerpPricePoint' });
-
-const TradeUser = z
-  .object({
-    id: z.string(),
-    username: z.string().nullable(),
-    displayName: z.string().nullable(),
-    profileImageUrl: z.string().nullable(),
-    isActor: z.boolean(),
-  })
-  .meta({ id: 'TradeUser' });
-
-const PredictionTrade = z
-  .object({
-    id: z.string(),
-    type: z.enum(['balance', 'npc']),
-    user: TradeUser.nullable(),
-    transactionType: z.string().optional(),
-    amount: z.number().optional(),
-    marketId: z.string().optional(),
-    marketType: z.string().optional(),
-    ticker: z.string().optional(),
-    action: z.string().optional(),
-    side: z.string().nullable().optional(),
-    price: z.number().optional(),
-    sentiment: z.number().nullable().optional(),
-    reason: z.string().nullable().optional(),
-    timestamp: z.string().meta({ description: 'ISO 8601 timestamp' }),
-  })
-  .meta({ id: 'PredictionTrade' });
-
-const PerpTrade = z
-  .object({
-    id: z.string(),
-    type: z.enum(['perp', 'npc', 'balance']),
-    user: TradeUser.nullable(),
-    side: z.enum(['long', 'short']).optional(),
-    size: z.number().optional(),
-    leverage: z.number().optional(),
-    entryPrice: z.number().optional(),
-    currentPrice: z.number().optional(),
-    unrealizedPnL: z.number().optional(),
-    liquidationPrice: z.number().optional(),
-    timestamp: z
-      .string()
-      .optional()
-      .meta({ description: 'ISO 8601 timestamp' }),
-    closedAt: z.string().nullable().optional(),
-    ticker: z.string().optional(),
-    marketType: z.string().optional(),
-    action: z.string().optional(),
-    amount: z.number().optional(),
-    price: z.number().optional(),
-    sentiment: z.number().nullable().optional(),
-    reason: z.string().nullable().optional(),
-    transactionType: z.string().optional(),
-    description: z.string().optional(),
-    relatedId: z.string().optional(),
-  })
-  .meta({ id: 'PerpTrade' });
-
-const FundingRate = z
-  .object({
-    ticker: z.string(),
-    rate: z.number(),
-    nextFundingTime: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    predictedRate: z.number(),
-  })
-  .meta({ id: 'FundingRate' });
-
-const PerpMarket = z
-  .object({
-    ticker: z.string(),
-    organizationId: z.string(),
-    name: z.string().optional(),
-    currentPrice: z.number(),
-    price24hAgo: z.number().optional(),
-    change24h: z.number(),
-    changePercent24h: z.number(),
-    high24h: z.number(),
-    low24h: z.number(),
-    volume24h: z.number(),
-    openInterest: z.number(),
-    fundingRate: FundingRate,
-    maxLeverage: z.number(),
-    minOrderSize: z.number(),
-    markPrice: z.number().optional(),
-    indexPrice: z.number().optional(),
-  })
-  .meta({ id: 'PerpMarket' });
-
-const MarketState = z
-  .object({
-    yesPrice: z.number(),
-    noPrice: z.number(),
-    yesShares: z.number(),
-    noShares: z.number(),
-    priceImpact: z.number(),
-    liquidity: z.number(),
-  })
-  .meta({ id: 'PredictionMarketState' });
-
-const FeeBreakdown = z
-  .object({
-    amount: z.number(),
-    referrerPaid: z.number(),
-  })
-  .meta({ id: 'FeeBreakdown' });
-
-const PerpTradeResult = z
-  .object({
-    positionId: z.string(),
-    ticker: z.string(),
-    side: z.enum(['long', 'short']),
-    size: z.number(),
-    leverage: z.number(),
-    entryPrice: z.number(),
-    exitPrice: z.number().optional(),
-    liquidationPrice: z.number(),
-    marginPaid: z.number().optional(),
-    realizedPnL: z.number().optional(),
-    feePaid: z.number(),
-    balance: z.number().optional(),
-    remainingSize: z.number().optional(),
-    fullyClosed: z.boolean().optional(),
-    isRebalance: z.boolean().optional(),
-    rebalanceType: z.enum(['add', 'reduce', 'close', 'flip']).optional(),
-    previousSize: z.number().optional(),
-    previousEntryPrice: z.number().optional(),
-  })
-  .meta({ id: 'PerpTradeResult' });
-
-const PerpPosition = z
-  .object({
-    id: z.string(),
-    ticker: z.string(),
-    side: z.enum(['long', 'short']),
-    entryPrice: z.number(),
-    currentPrice: z.number(),
-    size: z.number(),
-    leverage: z.number(),
-    unrealizedPnL: z.number(),
-    unrealizedPnLPercent: z.number(),
-    liquidationPrice: z.number(),
-    fundingPaid: z.number(),
-    openedAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    isAgentPosition: z.boolean(),
-    agentId: z.string().nullable(),
-    agentName: z.string().nullable(),
-  })
-  .meta({ id: 'PerpPosition' });
-
-const PredictionPosition = z
-  .object({
-    id: z.string(),
-    marketId: z.string(),
-    question: z.string(),
-    side: z.enum(['YES', 'NO']),
-    shares: z.number(),
-    avgPrice: z.number(),
-    currentPrice: z.number(),
-    currentProbability: z.number(),
-    currentValue: z.number(),
-    costBasis: z.number(),
-    unrealizedPnL: z.number(),
-    resolved: z.boolean(),
-    resolution: z.boolean().nullable(),
-    status: z.string(),
-    isAgentPosition: z.boolean(),
-    agentId: z.string().nullable(),
-    agentName: z.string().nullable(),
-  })
-  .meta({ id: 'PredictionPosition' });
-
-const Bias = z
-  .object({
-    entityId: z.string(),
-    entityName: z.string(),
-    direction: z.enum(['up', 'down']),
-    strength: z.number(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    expiresAt: z
-      .string()
-      .nullable()
-      .meta({ description: 'ISO 8601 timestamp' }),
-    decayRate: z.number(),
-    adjustment: z.number(),
-  })
-  .meta({ id: 'Bias' });
-
-// ---------------------------------------------------------------------------
-// Request body schemas
-// ---------------------------------------------------------------------------
-
-const PredictionBuyBody = z
-  .object({
-    side: z.enum(['yes', 'no']),
-    amount: z.number().positive().meta({ description: 'Purchase amount in ƀ' }),
-  })
-  .meta({ id: 'PredictionBuyBody' });
-
-const PredictionSellBody = z
-  .object({
-    shares: z
-      .number()
-      .positive()
-      .meta({ description: 'Number of shares to sell' }),
-    positionId: z
-      .string()
-      .optional()
-      .meta({ description: 'Specific position to sell from' }),
-  })
-  .meta({ id: 'PredictionSellBody' });
-
-const PerpOpenBody = z
-  .object({
-    ticker: z.string().meta({ description: 'Market ticker symbol' }),
-    side: z.enum(['long', 'short']),
-    size: z.number().positive().meta({ description: 'Position size' }),
-    leverage: z
-      .number()
-      .int()
-      .min(1)
-      .max(100)
-      .meta({ description: 'Leverage multiplier (1-100)' }),
-    maxSlippage: z
-      .number()
-      .min(0)
-      .max(1)
-      .optional()
-      .meta({ description: 'Max slippage tolerance (0-1)' }),
-  })
-  .meta({ id: 'PerpOpenBody' });
-
-const PerpCloseBody = z
-  .object({
-    percentage: z
-      .number()
-      .min(0)
-      .max(1)
-      .optional()
-      .meta({ description: 'Partial close fraction (0-1)' }),
-    slippage: z
-      .number()
-      .min(0)
-      .max(0.1)
-      .optional()
-      .meta({ description: 'Max slippage tolerance' }),
-  })
-  .meta({ id: 'PerpCloseBody' });
+import {
+  PredictionMarket,
+  PredictionMarketDetail,
+  PredictionPricePoint,
+  PerpPricePoint,
+  PredictionTrade,
+  PerpTrade,
+  PerpMarket,
+  MarketState,
+  FeeBreakdown,
+  PerpTradeResult,
+  PerpPosition,
+  PredictionPosition,
+  Bias,
+  PredictionBuyBody,
+  PredictionSellBody,
+  PerpOpenBody,
+  PerpCloseBody,
+  OnChainBuyBody,
+  PerpTuningBody,
+  BiasConfigBody,
+  BiasTuneBody,
+} from '../../schemas/markets';
 
 // ---------------------------------------------------------------------------
 // Path definitions
@@ -814,6 +502,171 @@ export const marketPaths: ZodOpenApiPathsObject = {
   // -----------------------------------------------------------------------
   // Bias (public)
   // -----------------------------------------------------------------------
+  '/api/markets/predictions/{id}/buy-onchain': {
+    post: {
+      operationId: 'buyPredictionSharesOnChain',
+      tags: ['Markets'],
+      summary: 'Buy prediction shares on-chain (legacy)',
+      description:
+        'Verify and record an on-chain share purchase for a prediction market.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: z.object({
+          id: z.string().meta({ description: 'Prediction market ID' }),
+        }),
+      },
+      requestBody: {
+        content: {
+          'application/json': { schema: OnChainBuyBody },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'On-chain buy verified',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                verified: z.literal(true),
+                position: z.object({
+                  marketId: z.string(),
+                  side: z.string(),
+                  shares: z.number(),
+                  txHash: z.string(),
+                  blockNumber: z.string(),
+                  explorerUrl: z.string(),
+                }),
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/markets/perps/tune': {
+    get: {
+      operationId: 'getPerpTuning',
+      tags: ['Markets'],
+      summary: 'Get perp tuning parameters',
+      description:
+        'Returns AI agent prompt tuning parameters for perpetual futures trading.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        query: z.object({
+          ticker: z.string().optional(),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Tuning parameters',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                parameters: z.unknown(),
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+    post: {
+      operationId: 'updatePerpTuning',
+      tags: ['Markets'],
+      summary: 'Update perp tuning parameters',
+      description:
+        'Update AI agent prompt tuning parameters for perpetual futures trading.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': { schema: PerpTuningBody },
+        },
+      },
+      responses: {
+        '201': {
+          description: 'Tuning parameters updated',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                message: z.string(),
+                parameters: z.unknown(),
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/markets/bias/configure': {
+    post: {
+      operationId: 'configureMarketBias',
+      tags: ['Markets'],
+      summary: 'Configure market biases',
+      description:
+        'Set, remove, or bulk-set market biases for entities.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': { schema: BiasConfigBody },
+        },
+      },
+      responses: {
+        '201': {
+          description: 'Bias configured',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                message: z.string(),
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/markets/bias/tune': {
+    post: {
+      operationId: 'tuneMarketBias',
+      tags: ['Markets'],
+      summary: 'Tune market bias strength',
+      description:
+        'Adjust strength of an existing market bias. Setting strength to 0 deactivates it.',
+      security: [{ PrivyAuth: [] }],
+      requestBody: {
+        content: {
+          'application/json': { schema: BiasTuneBody },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Bias tuned',
+          content: {
+            'application/json': {
+              schema: z.object({
+                success: z.literal(true),
+                message: z.string(),
+                bias: z.object({
+                  entityId: z.string(),
+                  strength: z.number(),
+                }),
+              }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
   '/api/markets/bias/active': {
     get: {
       operationId: 'getActiveMarketBiases',

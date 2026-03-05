@@ -1,6 +1,6 @@
 'use client';
 
-import { adminGetFees, adminGetStats } from '@babylon/api-hooks';
+import { adminGetFees, adminGetStats, getTokenStats } from '@babylon/api-hooks';
 import { cn, formatCompactCurrency } from '@babylon/shared';
 import {
   Activity,
@@ -220,12 +220,14 @@ export function StatsTab() {
   }, []);
 
   const fetchTokenStats = useCallback(async () => {
-    const response = await fetch('/api/stats/tokens?period=day&limit=50');
-    if (!response.ok) return; // Fail silently for token stats
-    const data = await response.json();
-    const validation = TokenStatsSchema.safeParse(data);
-    if (validation.success) {
-      setTokenStats(validation.data);
+    try {
+      const data = await getTokenStats({ period: 'day', limit: '50' });
+      const validation = TokenStatsSchema.safeParse(data);
+      if (validation.success) {
+        setTokenStats(validation.data);
+      }
+    } catch {
+      // Fail silently for token stats
     }
   }, []);
 

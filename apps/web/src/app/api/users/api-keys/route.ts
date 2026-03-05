@@ -13,14 +13,10 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { CreateApiKeyBody } from '@babylon/api/schemas';
 import { asUser, generateSnowflakeId, userApiKeys } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const CreateApiKeySchema = z.object({
-  name: z.string().optional(),
-});
 
 /**
  * GET /api/users/api-keys - List user's API keys
@@ -67,7 +63,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const authUser = await authenticate(request);
 
   const body = await request.json();
-  const validated = CreateApiKeySchema.parse(body);
+  const validated = CreateApiKeyBody.parse(body);
 
   // Generate API key
   const apiKey = generateApiKey();

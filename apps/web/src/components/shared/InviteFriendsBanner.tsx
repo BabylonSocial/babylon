@@ -1,10 +1,10 @@
 'use client';
 
+import { useUpdateUserProfile } from '@babylon/api-hooks';
 import { getReferralUrl } from '@babylon/shared';
 import { Check, Copy, ExternalLink, Trophy, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getAuthToken } from '@/lib/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -29,13 +29,11 @@ interface InviteFriendsBannerProps {
 export function InviteFriendsBanner({ onDismiss }: InviteFriendsBannerProps) {
   const { user, setUser } = useAuthStore();
   const [copiedReferral, setCopiedReferral] = useState(false);
+  const { mutateAsync: updateProfile } = useUpdateUserProfile();
 
   useEffect(() => {
     const trackBannerView = async () => {
       if (!user?.id) return;
-
-      const token = getAuthToken();
-      if (!token) return;
 
       // Track banner view in local storage
       const viewKey = `banner_view_${user.id}`;
@@ -47,24 +45,21 @@ export function InviteFriendsBanner({ onDismiss }: InviteFriendsBannerProps) {
 
       // Update server if more than 1 day since last tracked
       if (!lastView || now - parseInt(lastView) > 86400000) {
-        await fetch(
-          `/api/users/${encodeURIComponent(user.id)}/update-profile`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+        try {
+          await updateProfile({
+            userId: user.id,
+            data: {
               bannerLastShown: new Date().toISOString(),
-            }),
-          }
-        );
+            } as Record<string, unknown>,
+          });
+        } catch {
+          // Silently handle tracking errors
+        }
       }
     };
 
     trackBannerView();
-  }, [user]);
+  }, [user, updateProfile]);
 
   const handleCopyReferral = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -91,17 +86,12 @@ export function InviteFriendsBanner({ onDismiss }: InviteFriendsBannerProps) {
     );
 
     // Update server
-    const token = getAuthToken();
-    if (token) {
-      await fetch(`/api/users/${encodeURIComponent(user.id)}/update-profile`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+    try {
+      await updateProfile({
+        userId: user.id,
+        data: {
           bannerDismissCount: dismissCount + 1,
-        }),
+        } as Record<string, unknown>,
       });
 
       // Update local user state
@@ -111,6 +101,8 @@ export function InviteFriendsBanner({ onDismiss }: InviteFriendsBannerProps) {
           bannerDismissCount: dismissCount + 1,
         });
       }
+    } catch {
+      // Silently handle - local storage already tracks dismissal
     }
 
     // Call parent dismiss handler

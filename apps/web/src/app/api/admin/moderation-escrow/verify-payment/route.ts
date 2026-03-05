@@ -25,9 +25,9 @@ import { X402Manager } from '@babylon/a2a';
 import { requireAdmin } from '@babylon/api';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminVerifyEscrowPaymentBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 
 // Initialize x402 manager
 const x402Manager = new X402Manager({
@@ -35,13 +35,7 @@ const x402Manager = new X402Manager({
   paymentTimeout: 15 * 60 * 1000, // 15 minutes
 });
 
-const VerifyEscrowPaymentSchema = z.object({
-  escrowId: z.string().min(1, 'Escrow ID is required'),
-  txHash: z.string().min(1, 'Transaction hash is required'),
-  fromAddress: z.string().min(1, 'From address is required'),
-  toAddress: z.string().min(1, 'To address is required'),
-  amount: z.string().min(1, 'Amount is required'),
-});
+const VerifyEscrowPaymentSchema = AdminVerifyEscrowPaymentBody;
 
 export async function POST(req: NextRequest) {
   const adminUser = await requireAdmin(req);

@@ -28,13 +28,9 @@ import {
   WaitlistService,
   withErrorHandling,
 } from '@babylon/api';
+import { WaitlistMarkSchema } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const MarkSchema = z.object({
-  referralCode: z.string().optional(),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   // Authenticate user - use authenticated user's ID, not from request body
@@ -48,7 +44,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   });
 
   const body = (await request.json()) as { referralCode?: string };
-  const { referralCode } = MarkSchema.parse(body);
+  const { referralCode } = WaitlistMarkSchema.parse(body);
 
   logger.info(
     'Waitlist mark request',

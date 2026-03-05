@@ -1,6 +1,9 @@
 'use client';
 
-import { logger } from '@babylon/shared';
+import {
+  getGetUserProfileQueryKey,
+  useGetUserProfile,
+} from '@babylon/api-hooks';
 import {
   Calendar,
   FileText,
@@ -14,7 +17,6 @@ import {
   X,
 } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface UserProfile {
@@ -53,55 +55,25 @@ export function PlayerStatsModal({
   onClose,
   userId,
 }: PlayerStatsModalProps) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Only fetch when modal is open and userId is provided
+  const {
+    data: profileData,
+    isLoading: loading,
+    error: queryError,
+  } = useGetUserProfile(userId || '', {
+    query: {
+      queryKey: getGetUserProfileQueryKey(userId || ''),
+      enabled: isOpen && !!userId,
+    },
+  });
 
-  useEffect(() => {
-    if (!isOpen || !userId) {
-      setProfile(null);
-      setError(null);
-      return;
-    }
-
-    const fetchProfile = async () => {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/users/${userId}/profile`);
-
-      if (!response.ok) {
-        const errorMessage = 'Failed to fetch profile';
-        setError(errorMessage);
-        logger.error(
-          'Failed to fetch user profile',
-          { userId, status: response.status },
-          'PlayerStatsModal'
-        );
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!data.user) {
-        const errorMessage = 'User not found';
-        setError(errorMessage);
-        logger.error(
-          'User not found in profile response',
-          { userId },
-          'PlayerStatsModal'
-        );
-        setLoading(false);
-        return;
-      }
-
-      setProfile(data.user);
-      setLoading(false);
-    };
-
-    fetchProfile();
-  }, [isOpen, userId]);
+  const profile = (profileData?.user as UserProfile | null) ?? null;
+  const error =
+    queryError
+      ? 'Failed to fetch profile'
+      : isOpen && !loading && profileData && !profileData.user
+        ? 'User not found'
+        : null;
 
   if (!isOpen) return null;
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDeleteAgent, useUpdateAgent } from '@babylon/api-hooks';
 import { cn, GROQ_MODELS } from '@babylon/shared';
 import {
   Camera,
@@ -81,6 +82,8 @@ export function AgentSettingsSidebar({
 }: AgentSettingsSidebarProps) {
   const router = useRouter();
   const { getAccessToken } = useAuth();
+  const { mutateAsync: updateAgentMutation } = useUpdateAgent();
+  const { mutateAsync: deleteAgentMutation } = useDeleteAgent();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<SectionKey>>(
@@ -186,13 +189,9 @@ export function AgentSettingsSidebar({
         updatedData.profileImageUrl = uploadData.url;
       }
 
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await updateAgentMutation({
+        agentId: agent.id,
+        data: {
           ...updatedData,
           bio: updatedData.personality.trim()
             ? [updatedData.personality.trim()]
@@ -200,15 +199,8 @@ export function AgentSettingsSidebar({
           system: updatedData.tradingStrategy.trim()
             ? `${updatedData.system}\n\nTrading Strategy: ${updatedData.tradingStrategy}`
             : updatedData.system,
-        }),
+        },
       });
-
-      if (!res.ok) {
-        const error = (await res.json()) as { error?: string };
-        toast.error(error.error || 'Failed to update agent');
-        setSaving(false);
-        return;
-      }
 
       toast.success('Agent updated');
       setProfileImage({ file: null, preview: null });
@@ -230,27 +222,11 @@ export function AgentSettingsSidebar({
     }
 
     setDeleting(true);
-    const token = await getAccessToken();
-
-    if (!token) {
-      toast.error('Authentication required');
-      setDeleting(false);
-      return;
-    }
 
     try {
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        toast.success('Agent deleted');
-        router.push('/agents');
-      } else {
-        const error = await res.json();
-        toast.error(error.error || 'Failed to delete agent');
-      }
+      await deleteAgentMutation({ agentId: agent.id });
+      toast.success('Agent deleted');
+      router.push('/agents');
     } catch {
       toast.error('Failed to delete agent');
     } finally {

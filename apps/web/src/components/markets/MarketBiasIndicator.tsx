@@ -27,32 +27,9 @@
  */
 'use client';
 
+import { getGetActiveMarketBiasesQueryKey, useGetActiveMarketBiases } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import { Activity, Clock, TrendingDown, TrendingUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
-
-/**
- * Bias adjustment structure for market bias indicator.
- */
-interface BiasAdjustment {
-  entityId: string;
-  entityName: string;
-  direction: 'up' | 'down';
-  strength: number;
-  priceAdjustment: number;
-  sentimentAdjustment: number;
-  expiresAt: string | null;
-  decayRate: number;
-}
-
-/**
- * Bias data structure from API.
- */
-interface BiasData {
-  success: boolean;
-  biases: BiasAdjustment[];
-  count: number;
-}
 
 interface MarketBiasIndicatorProps {
   className?: string;
@@ -63,27 +40,12 @@ export function MarketBiasIndicator({
   className = '',
   maxDisplay = 10,
 }: MarketBiasIndicatorProps) {
-  const [data, setData] = useState<BiasData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchBiases = async () => {
-      setLoading(true);
-      const response = await fetch('/api/markets/bias/active');
-      const result = await response.json();
-
-      if (result.success) {
-        setData(result);
-      }
-      setLoading(false);
-    };
-
-    fetchBiases();
-
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchBiases, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const { data, isLoading: loading } = useGetActiveMarketBiases({
+    query: {
+      queryKey: getGetActiveMarketBiasesQueryKey(),
+      refetchInterval: 30000,
+    },
+  });
 
   if (loading) {
     return (
@@ -180,38 +142,21 @@ export function MarketBiasIndicator({
                   </div>
                 </div>
 
-                {/* Price Adjustment */}
+                {/* Adjustment */}
                 <div className="text-right">
                   <div
                     className="font-bold text-sm"
                     style={{
                       color:
-                        bias.priceAdjustment >= 0
+                        bias.adjustment >= 0
                           ? 'rgb(34, 197, 94)'
                           : 'rgb(239, 68, 68)',
                     }}
                   >
-                    {bias.priceAdjustment >= 0 ? '+' : ''}
-                    {(bias.priceAdjustment * 100).toFixed(1)}%
+                    {bias.adjustment >= 0 ? '+' : ''}
+                    {(bias.adjustment * 100).toFixed(1)}%
                   </div>
-                  <div className="text-muted-foreground text-xs">Price</div>
-                </div>
-
-                {/* Sentiment */}
-                <div className="hidden text-right md:block">
-                  <div
-                    className="font-medium text-sm"
-                    style={{
-                      color:
-                        bias.sentimentAdjustment >= 0
-                          ? 'rgb(34, 197, 94)'
-                          : 'rgb(239, 68, 68)',
-                    }}
-                  >
-                    {bias.sentimentAdjustment >= 0 ? '+' : ''}
-                    {(bias.sentimentAdjustment * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-muted-foreground text-xs">Sentiment</div>
+                  <div className="text-muted-foreground text-xs">Adjustment</div>
                 </div>
               </div>
             </div>

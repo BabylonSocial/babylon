@@ -1,5 +1,6 @@
 'use client';
 
+import { useGetPostById } from '@babylon/api-hooks';
 import { ArrowLeft, Newspaper } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -36,43 +37,47 @@ export default function ArticlePage({ params }: ArticlePageProps) {
   const { id: articleId } = use(params);
   const router = useRouter();
 
+  const { data: postResponse, isLoading, error: queryError } = useGetPostById(articleId);
+
   const [article, setArticle] = useState<ArticlePost | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadArticle = async () => {
-      setIsLoading(true);
-      setError(null);
+    if (!postResponse) {
+      setArticle(null);
+      return;
+    }
 
-      // Fetch from posts API since articles are posts with type='article'
-      const response = await fetch(`/api/posts/${articleId}`);
+    // Access the raw response data which may have extra fields beyond the generated type
+    const rawData = postResponse as unknown as Record<string, unknown>;
+    const articleData = (rawData.data || rawData.post || rawData) as Record<string, unknown>;
 
-      if (!response.ok) {
-        const result = await response.json().catch(() => ({}));
-        const errorMsg = result.error?.message || 'Failed to load article';
-        setError(errorMsg);
-        setIsLoading(false);
-        return;
-      }
+    // Verify it's actually an article
+    if (articleData.type !== 'article') {
+      router.replace(`/post/${articleId}`);
+      return;
+    }
 
-      const result = await response.json();
-      const articleData = result.data || result;
+    setArticle({
+      id: articleData.id as string,
+      type: articleData.type as string,
+      content: articleData.content as string,
+      fullContent: (articleData.fullContent as string) || null,
+      articleTitle: (articleData.articleTitle as string) || null,
+      byline: (articleData.byline as string) || null,
+      biasScore: articleData.biasScore !== undefined ? (articleData.biasScore as number) : null,
+      sentiment: (articleData.sentiment as string) || null,
+      slant: (articleData.slant as string) || null,
+      category: (articleData.category as string) || null,
+      imageUrl: (articleData.imageUrl as string) || null,
+      authorId: articleData.authorId as string,
+      authorName: (articleData.authorName as string) || (articleData.author as Record<string, unknown>)?.displayName as string || '',
+      authorUsername: (articleData.authorUsername as string) || (articleData.author as Record<string, unknown>)?.username as string || null,
+      authorProfileImageUrl: (articleData.authorProfileImageUrl as string) || (articleData.author as Record<string, unknown>)?.profileImageUrl as string || null,
+      timestamp: (articleData.timestamp || articleData.createdAt) as string,
+    });
+  }, [postResponse, articleId, router]);
 
-      // Verify it's actually an article
-      if (articleData.type !== 'article') {
-        // Redirect to regular post page if not an article
-        router.replace(`/post/${articleId}`);
-        setIsLoading(false);
-        return;
-      }
-
-      setArticle(articleData);
-      setIsLoading(false);
-    };
-
-    loadArticle();
-  }, [articleId, router]);
+  const error = queryError ? 'Failed to load article' : null;
 
   if (isLoading) {
     return (

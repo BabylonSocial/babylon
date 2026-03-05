@@ -14,21 +14,12 @@ import {
   requireUserByIdentifier,
   withErrorHandling,
 } from '@babylon/api';
+import { AgentToGameFeedbackSchema } from '@babylon/api/schemas';
 import type { JsonObject } from '@babylon/db';
 import { db } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const AgentToGameFeedbackSchema = z.object({
-  agentId: z.string().min(1, 'agentId is required'),
-  gameId: z.string().min(1, 'gameId is required'),
-  score: z.number().min(0).max(100),
-  comment: z.string().max(5000).optional(),
-  tags: z.array(z.string().min(1)).max(10).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   requireCronAuth(request, { jobName: 'AgentToGameFeedback' });

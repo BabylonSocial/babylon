@@ -37,6 +37,7 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { ShareRequestBody } from '@babylon/api/schemas';
 import { and, db, desc, eq, shareActions } from '@babylon/db';
 import {
   generateSnowflakeId,
@@ -44,14 +45,6 @@ import {
   UserIdParamSchema,
 } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const ShareRequestSchema = z.object({
-  platform: z.enum(['twitter', 'farcaster', 'link', 'telegram', 'discord']),
-  contentType: z.enum(['post', 'profile', 'market', 'referral', 'leaderboard']),
-  contentId: z.string().optional(), // Allow any string (user IDs can be Privy DIDs or Snowflake IDs)
-  url: z.string().url().optional(),
-});
 
 /**
  * GET /api/users/[userId]/share
@@ -147,7 +140,7 @@ export const POST = withErrorHandling(
     // Parse and validate request body
     const body = await request.json();
     const { platform, contentType, contentId, url } =
-      ShareRequestSchema.parse(body);
+      ShareRequestBody.parse(body);
 
     // Create share action record (points will be awarded after verification)
     const shareActionId = await generateSnowflakeId();

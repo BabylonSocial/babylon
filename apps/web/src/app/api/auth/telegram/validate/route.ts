@@ -25,18 +25,14 @@
  */
 
 import { withErrorHandling } from '@babylon/api';
+import { TelegramValidateRequestSchema } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 
 /** Maximum age of initData before it's considered stale (5 minutes). */
 const MAX_AUTH_AGE_SECONDS = 300;
-
-const RequestSchema = z.object({
-  initData: z.string().min(1, 'initData is required'),
-});
 
 interface TelegramUser {
   id: number;
@@ -180,7 +176,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const parsed = RequestSchema.safeParse(body);
+  const parsed = TelegramValidateRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Missing or invalid initData' },

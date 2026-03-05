@@ -41,6 +41,7 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { SignupBody } from '@babylon/api/schemas';
 import {
   and,
   balanceTransactions,
@@ -61,13 +62,11 @@ import {
   checkForAdminEmail,
   generateSnowflakeId,
   logger,
-  OnboardingProfileSchema,
   POINTS,
   type PrivyUserWithEmails,
 } from '@babylon/shared';
 import type { User as PrivyUser } from '@privy-io/server-auth';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { trackServerEvent } from '@/lib/posthog/server';
 
 interface SignupRequestBody {
@@ -85,15 +84,6 @@ interface SignupRequestBody {
 
 type PrivyIdentityUser = PrivyUser & PrivyUserWithEmails;
 
-const SignupSchema = OnboardingProfileSchema.extend({
-  identityToken: z
-    .string()
-    .min(1)
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
-  isWaitlist: z.boolean().optional().default(false),
-});
-
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const authUser = await authenticate(request);
   const privyId = authUser.privyId ?? authUser.userId;
@@ -102,7 +92,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     | SignupRequestBody
     | Record<string, JsonValue>;
 
-  const parsedBody = SignupSchema.parse(body);
+  const parsedBody = SignupBody.parse(body);
   const {
     identityToken,
     referralCode: rawReferralCode,

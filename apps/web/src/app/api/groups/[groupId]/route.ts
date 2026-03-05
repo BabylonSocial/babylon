@@ -18,15 +18,10 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { UpdateGroupSchema } from '@babylon/api/schemas';
 import { asUser } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const UpdateGroupSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional(),
-});
 
 /**
  * GET /api/groups/[groupId]

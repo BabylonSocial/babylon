@@ -32,6 +32,7 @@ import {
   requireUserByIdentifier,
   withErrorHandling,
 } from '@babylon/api';
+import { UserToAgentFeedbackSchema } from '@babylon/api/schemas';
 import type { JsonValue } from '@babylon/db';
 import { db } from '@babylon/db';
 import { updateFeedbackMetrics } from '@babylon/engine';
@@ -39,16 +40,6 @@ import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-
-const UserToAgentFeedbackSchema = z.object({
-  agentId: z.string().min(1, 'agentId is required'),
-  score: z.number().min(0).max(100),
-  rating: z.number().int().min(1).max(5).optional(),
-  comment: z.string().max(5000).optional(),
-  category: z.string().min(1).optional(),
-  interactionType: z.string().min(1).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
 
 const UserToAgentFeedbackQuerySchema = z.object({
   agentId: z.string().min(1, 'agentId is required'),

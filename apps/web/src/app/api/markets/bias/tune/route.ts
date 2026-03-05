@@ -25,23 +25,17 @@
  */
 
 import { requireAdmin, withErrorHandling } from '@babylon/api';
+import { BiasTuneBody } from '@babylon/api/schemas';
 import { biasEngine } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const TuneBiasSchema = z.object({
-  entityId: z.string().min(1, 'entityId is required'),
-  strength: z.number().min(0).max(1),
-  decayRate: z.number().min(0).max(1).optional(),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   await requireAdmin(request);
 
   const json = await request.json();
-  const parsed = TuneBiasSchema.parse(json);
+  const parsed = BiasTuneBody.parse(json);
 
   const body = parsed;
 

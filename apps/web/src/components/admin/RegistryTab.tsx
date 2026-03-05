@@ -1,6 +1,6 @@
 'use client';
 
-import { adminBanUser } from '@babylon/api-hooks';
+import { adminBanUser, getRegistryAll } from '@babylon/api-hooks';
 import { cn, getActorProfileUrl, getProfileUrl } from '@babylon/shared';
 import {
   AlertCircle,
@@ -142,34 +142,25 @@ export function RegistryTab() {
   const [isCSAM, setIsCSAM] = useState(false);
   const [isBanning, setIsBanning] = useState(false);
 
-  const fetchRegistry = useCallback(() => {
+  const fetchRegistry = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (onChainOnly) params.set('onChainOnly', 'true');
-
-    fetch(`/api/registry/all?${params}`)
-      .then((response) => {
-        if (!response.ok) {
-          return response.json().then((errorData) => {
-            throw new Error(errorData.error || 'Failed to fetch registry data');
-          });
-        }
-        return response.json();
-      })
-      .then((result) => {
-        // The API returns data directly, not wrapped in { success, data }
-        const validated = RegistryDataSchema.parse(result);
-        setData(validated);
-      })
-      .catch((err: Error) => {
-        setError(err.message || 'Failed to fetch registry data');
-      })
-      .finally(() => {
-        setLoading(false);
+    try {
+      const result = await getRegistryAll({
+        ...(search ? { search } : {}),
+        ...(onChainOnly ? { onChainOnly: 'true' } : {}),
       });
+      // The API returns data directly, not wrapped in { success, data }
+      const validated = RegistryDataSchema.parse(result);
+      setData(validated);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to fetch registry data';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }, [search, onChainOnly]);
 
   useEffect(() => {

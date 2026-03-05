@@ -1,5 +1,6 @@
 'use client';
 
+import { listTrades } from '@babylon/api-hooks';
 import { Activity, AlertCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FeedSkeleton } from '@/components/shared/Skeleton';
@@ -63,74 +64,61 @@ export function TradesFeed({ userId, containerRef }: TradesFeedProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch trades from API
+  // Fetch trades from API using generated client (auth handled automatically)
   const fetchTrades = useCallback(
     async (requestOffset: number, append = false) => {
       setError(null);
-      const params = new URLSearchParams({
-        limit: PAGE_SIZE.toString(),
-        offset: requestOffset.toString(),
-      });
 
-      if (userId) {
-        params.append('userId', userId);
-      }
-
-      const response = await fetch(`/api/trades?${params.toString()}`);
-      if (!response.ok) {
-        setError(`Failed to load trades: ${response.status}`);
-        setLoading(false);
-        setLoadingMore(false);
-        return;
-      }
-
-      const data = await response.json();
-      const newTrades = data.trades || [];
-
-      if (append) {
-        setTrades((prev) => {
-          // Deduplicate trades by ID
-          const existingIds = new Set(prev.map((t) => t.id));
-          const uniqueNewTrades = newTrades.filter(
-            (t: Trade) => !existingIds.has(t.id)
-          );
-          return [...prev, ...uniqueNewTrades];
+      try {
+        const data = await listTrades({
+          limit: PAGE_SIZE.toString(),
+          offset: requestOffset.toString(),
+          ...(userId ? { userId } : {}),
         });
-        setLoadingMore(false);
-      } else {
-        setTrades(newTrades);
-        setLoading(false);
-      }
+        const newTrades = (data.trades || []) as unknown as Trade[];
 
-      setHasMore(data.hasMore || false);
-      setOffset(requestOffset + newTrades.length);
+        if (append) {
+          setTrades((prev) => {
+            const existingIds = new Set(prev.map((t) => t.id));
+            const uniqueNewTrades = newTrades.filter(
+              (t: Trade) => !existingIds.has(t.id)
+            );
+            return [...prev, ...uniqueNewTrades];
+          });
+          setLoadingMore(false);
+        } else {
+          setTrades(newTrades);
+          setLoading(false);
+        }
+
+        setHasMore(data.hasMore || false);
+        setOffset(requestOffset + newTrades.length);
+      } catch {
+        setError('Failed to load trades');
+        setLoading(false);
+        setLoadingMore(false);
+      }
     },
     [userId]
   );
 
   // Refresh trades (used by polling and pull-to-refresh)
   const refreshTrades = useCallback(async () => {
-    // Silent refresh - don't show loading state
-    const params = new URLSearchParams({
-      limit: PAGE_SIZE.toString(),
-      offset: '0',
-    });
+    try {
+      const data = await listTrades({
+        limit: PAGE_SIZE.toString(),
+        offset: '0',
+        ...(userId ? { userId } : {}),
+      });
+      const newTrades = (data.trades || []) as unknown as Trade[];
 
-    if (userId) {
-      params.append('userId', userId);
-    }
-
-    const response = await fetch(`/api/trades?${params.toString()}`);
-    if (!response.ok) return;
-
-    const data = await response.json();
-    const newTrades = data.trades || [];
-
-    // Only update if we have new trades
-    if (newTrades.length > 0) {
-      setTrades(newTrades);
-      setHasMore(data.hasMore || false);
-      setOffset(newTrades.length);
+      if (newTrades.length > 0) {
+        setTrades(newTrades);
+        setHasMore(data.hasMore || false);
+        setOffset(newTrades.length);
+      }
+    } catch {
+      // Silent refresh - ignore errors
     }
   }, [userId]);
 

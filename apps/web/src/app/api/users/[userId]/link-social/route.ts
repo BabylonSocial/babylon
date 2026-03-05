@@ -31,20 +31,11 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { LinkSocialBody } from '@babylon/api/schemas';
 import { and, db, eq, ne, users } from '@babylon/db';
 import { logger, UserIdParamSchema } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 import { trackServerEvent } from '@/lib/posthog/server';
-
-const LinkSocialRequestSchema = z.object({
-  platform: z.enum(['farcaster', 'twitter', 'wallet']),
-  username: z.string().optional(),
-  address: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/)
-    .optional(),
-});
 
 /**
  * POST /api/users/[userId]/link-social
@@ -78,7 +69,7 @@ export const POST = withErrorHandling(
 
     // Parse and validate request body
     const body = await request.json();
-    const { platform, username, address } = LinkSocialRequestSchema.parse(body);
+    const { platform, username, address } = LinkSocialBody.parse(body);
 
     // Get current user state
     const [user] = await db

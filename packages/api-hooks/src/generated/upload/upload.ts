@@ -15,6 +15,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DeleteImageBody,
+  DeleteImageResponse,
   UploadImageBody,
   UploadImageResponse
 } from '.././model';
@@ -99,5 +101,76 @@ export const useUploadImage = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUploadImageMutationOptions(options));
+    }
+    /**
+ * Deletes a previously uploaded image by URL.
+ * @summary Delete an uploaded image
+ */
+export const getDeleteImageUrl = () => {
+
+
+  
+
+  return `/api/upload/image`
+}
+
+export const deleteImage = async (deleteImageBody: DeleteImageBody, options?: RequestInit): Promise<DeleteImageResponse> => {
+  
+  return orvalFetch<DeleteImageResponse>(getDeleteImageUrl(),
+  {      
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deleteImageBody,)
+  }
+);}
+  
+
+
+
+export const getDeleteImageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteImage>>, TError,{data: BodyType<DeleteImageBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteImage>>, TError,{data: BodyType<DeleteImageBody>}, TContext> => {
+
+const mutationKey = ['deleteImage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteImage>>, {data: BodyType<DeleteImageBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteImage(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteImageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteImage>>>
+    export type DeleteImageMutationBody = BodyType<DeleteImageBody>
+    export type DeleteImageMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete an uploaded image
+ */
+export const useDeleteImage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteImage>>, TError,{data: BodyType<DeleteImageBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteImage>>,
+        TError,
+        {data: BodyType<DeleteImageBody>},
+        TContext
+      > => {
+      return useMutation(getDeleteImageMutationOptions(options));
     }
     

@@ -1,5 +1,6 @@
 'use client';
 
+import { useDeleteAgent, useUpdateAgent } from '@babylon/api-hooks';
 import { Camera, Save, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
@@ -68,6 +69,8 @@ interface AgentSettingsProps {
 export function AgentSettings({ agent, onUpdate }: AgentSettingsProps) {
   const router = useRouter();
   const { getAccessToken } = useAuth();
+  const { mutateAsync: updateAgentMutation } = useUpdateAgent();
+  const { mutateAsync: deleteAgentMutation } = useDeleteAgent();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [profileImage, setProfileImage] = useState<{
@@ -188,13 +191,9 @@ export function AgentSettings({ agent, onUpdate }: AgentSettingsProps) {
         updatedData.profileImageUrl = uploadData.url;
       }
 
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await updateAgentMutation({
+        agentId: agent.id,
+        data: {
           ...updatedData,
           bio: updatedData.personality.trim()
             ? [updatedData.personality.trim()]
@@ -202,15 +201,8 @@ export function AgentSettings({ agent, onUpdate }: AgentSettingsProps) {
           system: updatedData.tradingStrategy.trim()
             ? `${updatedData.system}\n\nTrading Strategy: ${updatedData.tradingStrategy}`
             : updatedData.system,
-        }),
+        },
       });
-
-      if (!res.ok) {
-        const error = (await res.json()) as { error?: string };
-        toast.error(error.error || 'Failed to update agent');
-        setSaving(false);
-        return;
-      }
 
       toast.success('Agent updated successfully');
       setProfileImage({ file: null, preview: null }); // Reset image state
@@ -232,34 +224,16 @@ export function AgentSettings({ agent, onUpdate }: AgentSettingsProps) {
     }
 
     setDeleting(true);
-    const token = await getAccessToken();
 
-    if (!token) {
-      toast.error('Authentication required');
-      setDeleting(false);
-      return;
-    }
-
-    const res = await fetch(`/api/agents/${agent.id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }).catch(() => {
-      toast.error('Failed to delete agent');
-      setDeleting(false);
-      throw new Error('Failed to delete agent');
-    });
-
-    if (res.ok) {
+    try {
+      await deleteAgentMutation({ agentId: agent.id });
       toast.success('Agent deleted successfully');
       router.push('/agents');
-    } else {
-      const error = await res.json();
-      toast.error(error.error || 'Failed to delete agent');
+    } catch {
+      toast.error('Failed to delete agent');
+    } finally {
+      setDeleting(false);
     }
-
-    setDeleting(false);
   };
 
   return (

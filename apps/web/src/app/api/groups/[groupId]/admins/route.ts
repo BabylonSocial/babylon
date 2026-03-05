@@ -12,14 +12,10 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { PromoteAdminSchema } from '@babylon/api/schemas';
 import { asUser } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const PromoteAdminSchema = z.object({
-  userId: z.string(),
-});
 
 /**
  * POST /api/groups/[groupId]/admins

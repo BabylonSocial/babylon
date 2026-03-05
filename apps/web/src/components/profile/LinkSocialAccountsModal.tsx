@@ -1,11 +1,10 @@
 'use client';
 
-import { disconnectTwitter } from '@babylon/api-hooks';
+import { disconnectTwitter, farcasterCallback } from '@babylon/api-hooks';
 import { cn, signInWithFarcaster } from '@babylon/shared';
 import { Check, ExternalLink, Shield, X as XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -112,14 +111,10 @@ export function LinkSocialAccountsModal({
     });
 
     // Send authentication data to backend for verification and linking
-    const token = getAuthToken();
-    const response = await fetch('/api/auth/farcaster/callback', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
+    let data: { success?: boolean; error?: string; pointsAwarded?: number; newTotal?: number };
+    let statusCode = 200;
+    try {
+      data = (await farcasterCallback({
         message: result.message,
         signature: result.signature,
         fid: result.fid,
@@ -127,12 +122,14 @@ export function LinkSocialAccountsModal({
         displayName: result.displayName,
         pfpUrl: result.pfpUrl,
         state: result.state,
-      }),
-    });
+      })) as unknown as typeof data;
+    } catch (e) {
+      const err = e as { status?: number; message?: string };
+      statusCode = err.status ?? 500;
+      data = { success: false, error: err.message ?? 'Failed to link Farcaster account' };
+    }
 
-    const data = await response.json();
-
-    if (response.ok && data.success) {
+    if (data.success) {
       setUser({
         ...user,
         hasFarcaster: true,
@@ -143,7 +140,7 @@ export function LinkSocialAccountsModal({
       // Dispatch event to notify other components (like UserMenu) to refresh
       window.dispatchEvent(new CustomEvent('rewards-updated'));
 
-      if (data.pointsAwarded > 0) {
+      if (data.pointsAwarded && data.pointsAwarded > 0) {
         toast.success(
           `Farcaster linked! +${data.pointsAwarded} points awarded`
         );
@@ -154,7 +151,7 @@ export function LinkSocialAccountsModal({
       onClose();
     } else {
       const errorMessage = data.error || 'Failed to link Farcaster account';
-      if (response.status === 409) {
+      if (statusCode === 409) {
         toast.error(
           errorMessage.includes('already linked')
             ? errorMessage

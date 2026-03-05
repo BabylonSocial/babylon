@@ -30,19 +30,10 @@ import {
   sql,
 } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
+import { AdminCreateNftCollectionGroupBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
-const CreateNftCollectionGroupSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  contractAddress: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid contract address format')
-    .transform((addr) => addr.toLowerCase()),
-  chainId: z.number().int().positive(),
-  tokenId: z.number().int().min(0).nullable().optional(),
-});
+const CreateNftCollectionGroupSchema = AdminCreateNftCollectionGroupBody;
 
 /**
  * GET /api/admin/groups/nft-collection

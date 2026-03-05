@@ -32,13 +32,10 @@ import type { JsonValue } from '@babylon/db';
 import { db } from '@babylon/db';
 import { WalletService } from '@babylon/engine';
 import { logger } from '@babylon/shared';
+import { AdminHumanReviewActionBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
-const HumanReviewActionSchema = z.object({
-  action: z.enum(['approve', 'deny']),
-  reasoning: z.string().min(10).max(2000),
-});
+const HumanReviewActionSchema = AdminHumanReviewActionBody;
 
 export const POST = withErrorHandling(
   async (

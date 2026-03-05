@@ -20,12 +20,12 @@ import {
   checkRateLimitAsync,
   RATE_LIMIT_CONFIGS,
 } from '@babylon/api';
+import { TeamChatMessageBody } from '@babylon/api/schemas';
 import { db, generateSnowflakeId, messages } from '@babylon/db';
 import { COORDINATOR_SENDER_ID, logger } from '@babylon/shared';
 import { generateText } from 'ai';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 
 // =============================================================================
 // Title Generation
@@ -127,17 +127,6 @@ Title:`;
 // Request Validation
 // =============================================================================
 
-/** Request body schema for team chat messages */
-const messageSchema = z.object({
-  content: z
-    .string()
-    .min(1, 'Message content is required')
-    .max(4000, 'Message too long. Maximum 4000 characters allowed.'),
-  // Target IDs for message routing in team chat
-  // - Array of agent IDs when @mentioning agents
-  // - Empty array or undefined = coordinator (no @mentions)
-  targetIds: z.array(z.string()).optional(),
-});
 
 export async function POST(req: NextRequest) {
   const user = await authenticateUser(req);
@@ -168,7 +157,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const parseResult = messageSchema.safeParse(body);
+  const parseResult = TeamChatMessageBody.safeParse(body);
 
   if (!parseResult.success) {
     const firstError = parseResult.error.issues[0];

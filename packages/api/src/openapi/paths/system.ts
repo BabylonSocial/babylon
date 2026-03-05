@@ -1,25 +1,5 @@
-import { z } from 'zod';
 import type { ZodOpenApiPathsObject } from 'zod-openapi';
-
-const HealthCheckResponse = z
-  .object({
-    status: z.literal('ok'),
-    timestamp: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    env: z.string().optional().meta({ description: 'NODE_ENV value' }),
-  })
-  .meta({ id: 'HealthCheckResponse' });
-
-const SystemStatsResponse = z
-  .object({
-    success: z.literal(true),
-    stats: z
-      .record(z.string(), z.unknown())
-      .meta({ description: 'Game engine statistics' }),
-    engineStatus: z
-      .record(z.string(), z.unknown())
-      .meta({ description: 'Game engine status' }),
-  })
-  .meta({ id: 'SystemStatsResponse' });
+import { HealthCheckResponse, SystemStatsResponse } from '../../schemas/system';
 
 export const systemPaths: ZodOpenApiPathsObject = {
   '/api/health': {

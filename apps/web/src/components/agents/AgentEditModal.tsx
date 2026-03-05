@@ -1,5 +1,6 @@
 'use client';
 
+import { useDeleteAgent, useUpdateAgent } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   ChevronLeft,
@@ -26,7 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useAuth } from '@/hooks/useAuth';
 import { uploadImage, validateImageFile } from '@/utils/upload-image';
 
 const TOTAL_PROFILE_PICTURES = 100;
@@ -78,7 +78,8 @@ export function AgentEditModal({
   onUpdate,
 }: AgentEditModalProps) {
   const router = useRouter();
-  const { getAccessToken } = useAuth();
+  const { mutateAsync: updateAgentMutation } = useUpdateAgent();
+  const { mutateAsync: deleteAgentMutation } = useDeleteAgent();
 
   const [currentStep, setCurrentStep] = useState<Step>(Step.Profile);
   const [saving, setSaving] = useState(false);
@@ -239,12 +240,6 @@ export function AgentEditModal({
     }
 
     setSaving(true);
-    const token = await getAccessToken();
-    if (!token) {
-      toast.error('Authentication required');
-      setSaving(false);
-      return;
-    }
 
     try {
       // Upload pending images using shared utility
@@ -274,13 +269,9 @@ export function AgentEditModal({
         }
       }
 
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await updateAgentMutation({
+        agentId: agent.id,
+        data: {
           name: profileData.name,
           description: profileData.description,
           profileImageUrl: finalProfileImageUrl,
@@ -296,19 +287,9 @@ export function AgentEditModal({
           modelTier: settingsData.modelTier,
           autonomousEnabled: settingsData.autonomousEnabled,
           autonomousPosting: settingsData.autonomousPosting,
-          autonomousCommenting: settingsData.autonomousCommenting,
-          autonomousDMs: settingsData.autonomousDMs,
-          autonomousGroupChats: settingsData.autonomousGroupChats,
           a2aEnabled: settingsData.a2aEnabled,
-        }),
+        } as Record<string, unknown>,
       });
-
-      if (!res.ok) {
-        const error = (await res.json()) as { error?: string };
-        toast.error(error.error || 'Failed to update agent');
-        setSaving(false);
-        return;
-      }
 
       toast.success('Agent updated');
       onUpdate();
@@ -324,28 +305,12 @@ export function AgentEditModal({
   const handleDeleteConfirmed = async () => {
     setShowDeleteConfirm(false);
     setDeleting(true);
-    const token = await getAccessToken();
-
-    if (!token) {
-      toast.error('Authentication required');
-      setDeleting(false);
-      return;
-    }
 
     try {
-      const res = await fetch(`/api/agents/${agent.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        toast.success('Agent deleted');
-        onClose();
-        router.push('/agents');
-      } else {
-        const error = await res.json().catch(() => ({}) as { error?: string });
-        toast.error(error.error || 'Failed to delete agent');
-      }
+      await deleteAgentMutation({ agentId: agent.id });
+      toast.success('Agent deleted');
+      onClose();
+      router.push('/agents');
     } catch {
       toast.error('Failed to delete agent');
     } finally {

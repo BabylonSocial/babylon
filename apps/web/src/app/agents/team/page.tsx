@@ -50,6 +50,7 @@ function isPnlTagData(data: unknown): data is PnlTagData {
   return 'balance' in d && typeof d.balance === 'number';
 }
 
+import { getAgent } from '@babylon/api-hooks';
 import { MessageCircle, PanelRight, Plus, Users, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -493,33 +494,17 @@ export default function TeamChatPage() {
     async (agentId: string) => {
       setEditingAgentId(agentId);
 
-      // Fetch agent details for the edit modal
-      const token = await getAccessToken();
-      if (!token) {
-        toast.error('Authentication required');
-        setEditingAgentId(null);
-        return;
-      }
-
       try {
-        const res = await fetch(`/api/agents/${agentId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          toast.error('Failed to fetch agent details');
-          setEditingAgentId(null);
-          return;
-        }
-
-        const data = await res.json();
-        setEditingAgentData(data.agent);
+        const data = await getAgent(agentId);
+        setEditingAgentData(
+          data.agent as unknown as NonNullable<typeof editingAgentData>
+        );
       } catch {
         toast.error('Failed to fetch agent details');
         setEditingAgentId(null);
       }
     },
-    [getAccessToken]
+    []
   );
 
   // Close a right sidebar tab - auto-closes sidebar when last tab is closed

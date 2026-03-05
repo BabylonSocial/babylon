@@ -34,14 +34,10 @@ import {
 } from '@babylon/api';
 import { db } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
+import { AdminTestDmMessagesBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
-const TestDMMessagesSchema = z.object({
-  senderId: z.string().min(1),
-  recipientId: z.string().min(1),
-  messageCount: z.number().min(1).max(200).default(100),
-});
+const TestDMMessagesSchema = AdminTestDmMessagesBody;
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   // Require admin authentication

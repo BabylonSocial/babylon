@@ -10,21 +10,15 @@
  */
 
 import { agentRegistry } from '@babylon/agents';
+import { ExternalAgentConnectBody } from '@babylon/api/schemas';
 import { db } from '@babylon/db';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-// Validation schema for connection request
-const ConnectSchema = z.object({
-  externalId: z.string().min(1),
-  apiKey: z.string().regex(/^bab_(live|test)_[a-f0-9]{64}$/),
-});
 
 export async function POST(req: NextRequest) {
   // Parse and validate request body
   const body = await req.json();
-  const { externalId, apiKey } = ConnectSchema.parse(body);
+  const { externalId, apiKey } = ExternalAgentConnectBody.parse(body);
 
   // Find the external agent connection
   const connection = await db.externalAgentConnection.findUnique({

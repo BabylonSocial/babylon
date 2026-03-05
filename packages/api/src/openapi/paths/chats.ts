@@ -1,81 +1,13 @@
 import { z } from 'zod';
 import type { ZodOpenApiPathsObject } from 'zod-openapi';
-
-const ChatParticipant = z
-  .object({
-    id: z.string(),
-    displayName: z.string(),
-    username: z.string().nullable(),
-    profileImageUrl: z.string().nullable(),
-  })
-  .meta({ id: 'ChatParticipant' });
-
-const ChatMessage = z
-  .object({
-    id: z.string(),
-    chatId: z.string(),
-    senderId: z.string(),
-    content: z.string(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    updatedAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    sender: z
-      .object({
-        id: z.string(),
-        displayName: z.string(),
-        username: z.string().nullable(),
-        profileImageUrl: z.string().nullable(),
-      })
-      .optional(),
-  })
-  .meta({ id: 'ChatMessage' });
-
-const Chat = z
-  .object({
-    id: z.string(),
-    name: z.string().nullable(),
-    isGroup: z.boolean(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    updatedAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    lastMessage: ChatMessage.nullable().optional(),
-    unreadCount: z.number().optional(),
-  })
-  .meta({ id: 'Chat' });
-
-const DMChat = z
-  .object({
-    id: z.string(),
-    name: z.string().nullable(),
-    isGroup: z.literal(false),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    updatedAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    lastMessage: ChatMessage.nullable().optional(),
-    unreadCount: z.number().optional(),
-    otherUser: z
-      .object({
-        id: z.string(),
-        displayName: z.string(),
-        username: z.string().nullable(),
-        profileImageUrl: z.string().nullable(),
-      })
-      .optional(),
-  })
-  .meta({ id: 'DMChat' });
-
-const MessageQuality = z
-  .object({
-    score: z.number().optional(),
-    flags: z.array(z.string()).optional(),
-  })
-  .passthrough()
-  .meta({ id: 'MessageQuality' });
-
-const Pagination = z
-  .object({
-    cursor: z.string().nullable(),
-    hasMore: z.boolean(),
-    total: z.number().optional(),
-  })
-  .meta({ id: 'ChatPagination' });
+import {
+  Chat,
+  ChatChannelMessage as ChatMessage,
+  ChatPagination as Pagination,
+  ChatParticipant,
+  DMChat,
+  MessageQuality,
+} from '../../schemas/chats';
 
 export const chatPaths: ZodOpenApiPathsObject = {
   '/api/chats': {

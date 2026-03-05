@@ -22,8 +22,8 @@ import {
   TIER_CONFIG,
 } from '@babylon/engine';
 import { logger } from '@babylon/shared';
+import { AdminAlphaGroupConfigUpdateBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
 /**
  * Configuration value descriptions for documentation.
@@ -181,31 +181,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
 /**
  * Schema for PATCH request body validation.
  */
-const ConfigUpdateSchema = z.object({
-  inviteProbabilityMultiplier: z.number().min(0).max(10).optional(),
-  maxInvitesPerTick: z.number().int().min(1).max(100).optional(),
-  topUsersToConsider: z.number().int().min(1).max(100).optional(),
-  minReplies: z.number().int().min(0).max(100).optional(),
-  minLikes: z.number().int().min(0).max(100).optional(),
-  minTotalInteractions: z.number().int().min(0).max(500).optional(),
-  minQualityScore: z.number().min(0).max(1).optional(),
-  maxInteractionsPerDay: z.number().int().min(1).max(1000).optional(),
-  tradeWeight: z.number().min(0).max(100).optional(),
-  profitableTradeBonus: z.number().min(0).max(100).optional(),
-  includeTradingActivity: z.boolean().optional(),
-  fastTrackEnabled: z.boolean().optional(),
-  fastTrackMinTrades: z.number().int().min(1).max(1000).optional(),
-  fastTrackMinPnL: z.number().min(0).optional(),
-  fastTrackMinWinRate: z.number().min(0).max(1).optional(),
-  inviteDecayEnabled: z.boolean().optional(),
-  inviteDecayBaseHours: z.number().int().min(1).max(720).optional(),
-  inviteDecayMaxHours: z.number().int().min(1).max(8760).optional(),
-  inviteDecayMaxDeclines: z.number().int().min(1).max(100).optional(),
-  inviteDecayResetDays: z.number().int().min(1).max(365).optional(),
-  inviteCooldownHours: z.number().int().min(0).max(168).optional(),
-  perNpcCustomizationEnabled: z.boolean().optional(),
-  grandfatheringEnabled: z.boolean().optional(),
-});
+const ConfigUpdateSchema = AdminAlphaGroupConfigUpdateBody;
 
 /**
  * PATCH /api/admin/alpha-groups/config

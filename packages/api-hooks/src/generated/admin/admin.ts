@@ -157,7 +157,13 @@ import type {
   AdminWhitelistGetResponse,
   AdminWorldFactAction200,
   AdminWorldFactActionBody,
-  AdminWorldFactsGetResponse
+  AdminWorldFactsGetResponse,
+  GameControlBody,
+  GameControlResponse,
+  GetRegistryAllParams,
+  GetTokenStatsParams,
+  RegistryAllResponse,
+  TokenStatsResponse
 } from '.././model';
 
 import { orvalFetch } from '../../orval-fetch';
@@ -8597,4 +8603,320 @@ export const useAdminGroupInvite = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAdminGroupInviteMutationOptions(options));
     }
+    /**
+ * Returns token usage summary, breakdowns by model and prompt type.
+ * @summary Get LLM token usage statistics
+ */
+export const getGetTokenStatsUrl = (params?: GetTokenStatsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
     
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/stats/tokens?${stringifiedParams}` : `/api/stats/tokens`
+}
+
+export const getTokenStats = async (params?: GetTokenStatsParams, options?: RequestInit): Promise<TokenStatsResponse> => {
+  
+  return orvalFetch<TokenStatsResponse>(getGetTokenStatsUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getGetTokenStatsQueryKey = (params?: GetTokenStatsParams,) => {
+    return [
+    `/api/stats/tokens`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+    
+export const getGetTokenStatsQueryOptions = <TData = Awaited<ReturnType<typeof getTokenStats>>, TError = ErrorType<unknown>>(params?: GetTokenStatsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTokenStats>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTokenStatsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTokenStats>>> = ({ signal }) => getTokenStats(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTokenStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTokenStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getTokenStats>>>
+export type GetTokenStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get LLM token usage statistics
+ */
+
+export function useGetTokenStats<TData = Awaited<ReturnType<typeof getTokenStats>>, TError = ErrorType<unknown>>(
+ params?: GetTokenStatsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTokenStats>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTokenStatsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getGetTokenStatsSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getTokenStats>>, TError = ErrorType<unknown>>(params?: GetTokenStatsParams, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getTokenStats>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTokenStatsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTokenStats>>> = ({ signal }) => getTokenStats(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getTokenStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTokenStatsSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getTokenStats>>>
+export type GetTokenStatsSuspenseQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get LLM token usage statistics
+ */
+
+export function useGetTokenStatsSuspense<TData = Awaited<ReturnType<typeof getTokenStats>>, TError = ErrorType<unknown>>(
+ params?: GetTokenStatsParams, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getTokenStats>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTokenStatsSuspenseQueryOptions(params,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+/**
+ * Controls game state. Admin-only endpoint.
+ * @summary Start or pause the game simulation
+ */
+export const getControlGameUrl = () => {
+
+
+  
+
+  return `/api/game/control`
+}
+
+export const controlGame = async (gameControlBody: GameControlBody, options?: RequestInit): Promise<GameControlResponse> => {
+  
+  return orvalFetch<GameControlResponse>(getControlGameUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      gameControlBody,)
+  }
+);}
+  
+
+
+
+export const getControlGameMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controlGame>>, TError,{data: BodyType<GameControlBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof controlGame>>, TError,{data: BodyType<GameControlBody>}, TContext> => {
+
+const mutationKey = ['controlGame'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof controlGame>>, {data: BodyType<GameControlBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  controlGame(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ControlGameMutationResult = NonNullable<Awaited<ReturnType<typeof controlGame>>>
+    export type ControlGameMutationBody = BodyType<GameControlBody>
+    export type ControlGameMutationError = ErrorType<void>
+
+    /**
+ * @summary Start or pause the game simulation
+ */
+export const useControlGame = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controlGame>>, TError,{data: BodyType<GameControlBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof controlGame>>,
+        TError,
+        {data: BodyType<GameControlBody>},
+        TContext
+      > => {
+      return useMutation(getControlGameMutationOptions(options));
+    }
+    /**
+ * Returns all registered entities (users, actors, agents, apps) with filtering.
+ * @summary Get all registry entities
+ */
+export const getGetRegistryAllUrl = (params?: GetRegistryAllParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/registry/all?${stringifiedParams}` : `/api/registry/all`
+}
+
+export const getRegistryAll = async (params?: GetRegistryAllParams, options?: RequestInit): Promise<RegistryAllResponse> => {
+  
+  return orvalFetch<RegistryAllResponse>(getGetRegistryAllUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+  
+
+
+
+
+export const getGetRegistryAllQueryKey = (params?: GetRegistryAllParams,) => {
+    return [
+    `/api/registry/all`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+    
+export const getGetRegistryAllQueryOptions = <TData = Awaited<ReturnType<typeof getRegistryAll>>, TError = ErrorType<unknown>>(params?: GetRegistryAllParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRegistryAll>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRegistryAllQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRegistryAll>>> = ({ signal }) => getRegistryAll(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRegistryAll>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRegistryAllQueryResult = NonNullable<Awaited<ReturnType<typeof getRegistryAll>>>
+export type GetRegistryAllQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get all registry entities
+ */
+
+export function useGetRegistryAll<TData = Awaited<ReturnType<typeof getRegistryAll>>, TError = ErrorType<unknown>>(
+ params?: GetRegistryAllParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRegistryAll>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRegistryAllQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+export const getGetRegistryAllSuspenseQueryOptions = <TData = Awaited<ReturnType<typeof getRegistryAll>>, TError = ErrorType<unknown>>(params?: GetRegistryAllParams, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getRegistryAll>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRegistryAllQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRegistryAll>>> = ({ signal }) => getRegistryAll(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseSuspenseQueryOptions<Awaited<ReturnType<typeof getRegistryAll>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRegistryAllSuspenseQueryResult = NonNullable<Awaited<ReturnType<typeof getRegistryAll>>>
+export type GetRegistryAllSuspenseQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get all registry entities
+ */
+
+export function useGetRegistryAllSuspense<TData = Awaited<ReturnType<typeof getRegistryAll>>, TError = ErrorType<unknown>>(
+ params?: GetRegistryAllParams, options?: { query?:UseSuspenseQueryOptions<Awaited<ReturnType<typeof getRegistryAll>>, TError, TData>, request?: SecondParameter<typeof orvalFetch>}
+  
+ ):  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRegistryAllSuspenseQueryOptions(params,options)
+
+  const query = useSuspenseQuery(queryOptions) as  UseSuspenseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+

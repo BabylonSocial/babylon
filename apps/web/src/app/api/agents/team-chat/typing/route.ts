@@ -16,15 +16,10 @@ import {
   checkRateLimitAsync,
   RATE_LIMIT_CONFIGS,
 } from '@babylon/api';
+import { TeamChatTypingBody } from '@babylon/api/schemas';
 import { db, eq, users } from '@babylon/db';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-/** Request body schema for typing indicator */
-const typingSchema = z.object({
-  isTyping: z.boolean(),
-});
 
 export async function POST(req: NextRequest) {
   const user = await authenticateUser(req);
@@ -55,7 +50,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const parseResult = typingSchema.safeParse(body);
+  const parseResult = TeamChatTypingBody.safeParse(body);
   if (!parseResult.success) {
     const firstError = parseResult.error.issues[0];
     return NextResponse.json(

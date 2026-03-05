@@ -29,53 +29,16 @@
  */
 
 import { requireAdmin, withErrorHandling } from '@babylon/api';
+import { BiasConfigBody } from '@babylon/api/schemas';
 import { biasEngine } from '@babylon/engine';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const SetBiasSchema = z.object({
-  action: z.literal('set'),
-  entityId: z.string().min(1),
-  entityName: z.string().min(1),
-  direction: z.enum(['up', 'down']),
-  strength: z.number().min(0).max(1).optional(),
-  durationHours: z.number().optional(),
-  decayRate: z.number().min(0).max(1).optional(),
-});
-
-const RemoveBiasSchema = z.object({
-  action: z.literal('remove'),
-  entityId: z.string().min(1),
-});
-
-const BulkSetBiasSchema = z.object({
-  action: z.literal('bulk-set'),
-  biases: z
-    .array(
-      z.object({
-        entityId: z.string().min(1),
-        entityName: z.string().min(1),
-        direction: z.enum(['up', 'down']),
-        strength: z.number().min(0).max(1).optional(),
-        durationHours: z.number().optional(),
-        decayRate: z.number().min(0).max(1).optional(),
-      })
-    )
-    .min(1),
-});
-
-const BiasConfigSchema = z.discriminatedUnion('action', [
-  SetBiasSchema,
-  RemoveBiasSchema,
-  BulkSetBiasSchema,
-]);
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   await requireAdmin(request);
 
   const json = await request.json();
-  const parsed = BiasConfigSchema.parse(json);
+  const parsed = BiasConfigBody.parse(json);
 
   const body = parsed;
 

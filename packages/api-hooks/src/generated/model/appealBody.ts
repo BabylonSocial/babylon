@@ -7,6 +7,10 @@
  */
 
 export interface AppealBody {
+  /**
+   * @minLength 10
+   * @maxLength 2000
+   */
   reason: string;
   stakeTxHash?: string;
 }

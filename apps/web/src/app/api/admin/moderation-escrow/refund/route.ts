@@ -25,15 +25,11 @@
 import { requireAdmin } from '@babylon/api';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminRefundEscrowBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 
-const RefundEscrowSchema = z.object({
-  escrowId: z.string().min(1, 'Escrow ID is required'),
-  refundTxHash: z.string().min(1, 'Refund transaction hash is required'),
-  reason: z.string().optional(),
-});
+const RefundEscrowSchema = AdminRefundEscrowBody;
 
 export async function POST(req: NextRequest) {
   const _adminUser = await requireAdmin(req);

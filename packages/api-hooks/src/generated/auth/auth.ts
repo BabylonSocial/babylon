@@ -23,6 +23,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  FarcasterCallbackBody,
+  FarcasterCallbackResponse,
   SiweAuthBody,
   SiweAuthResponse,
   WhoamiResponse
@@ -222,5 +224,76 @@ export const useAuthenticateSiwe = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAuthenticateSiweMutationOptions(options));
+    }
+    /**
+ * Verifies SIWF signature and links Farcaster account to the user.
+ * @summary Link Farcaster account
+ */
+export const getFarcasterCallbackUrl = () => {
+
+
+  
+
+  return `/api/auth/farcaster/callback`
+}
+
+export const farcasterCallback = async (farcasterCallbackBody: FarcasterCallbackBody, options?: RequestInit): Promise<FarcasterCallbackResponse> => {
+  
+  return orvalFetch<FarcasterCallbackResponse>(getFarcasterCallbackUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      farcasterCallbackBody,)
+  }
+);}
+  
+
+
+
+export const getFarcasterCallbackMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof farcasterCallback>>, TError,{data: BodyType<FarcasterCallbackBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof farcasterCallback>>, TError,{data: BodyType<FarcasterCallbackBody>}, TContext> => {
+
+const mutationKey = ['farcasterCallback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof farcasterCallback>>, {data: BodyType<FarcasterCallbackBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  farcasterCallback(data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FarcasterCallbackMutationResult = NonNullable<Awaited<ReturnType<typeof farcasterCallback>>>
+    export type FarcasterCallbackMutationBody = BodyType<FarcasterCallbackBody>
+    export type FarcasterCallbackMutationError = ErrorType<void>
+
+    /**
+ * @summary Link Farcaster account
+ */
+export const useFarcasterCallback = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof farcasterCallback>>, TError,{data: BodyType<FarcasterCallbackBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof farcasterCallback>>,
+        TError,
+        {data: BodyType<FarcasterCallbackBody>},
+        TContext
+      > => {
+      return useMutation(getFarcasterCallbackMutationOptions(options));
     }
     

@@ -19,8 +19,8 @@ import {
 } from '@babylon/api';
 import { comments, db, eq, posts, reports, withTransaction } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminModerateContentBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
 /**
  * Moderation action types:
@@ -31,11 +31,7 @@ import { z } from 'zod';
  * soft deletes. If hard delete is needed in the future, it should be a
  * separate, more privileged action with additional safeguards.
  */
-const ModerateRequestSchema = z.object({
-  action: z.enum(['approve', 'hide']),
-  contentType: z.enum(['post', 'comment']),
-  reason: z.string().max(500).optional(), // Max 500 chars for reason
-});
+const ModerateRequestSchema = AdminModerateContentBody;
 
 /**
  * Get real client IP address from x-forwarded-for header

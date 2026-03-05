@@ -1,5 +1,6 @@
 'use client';
 
+import { useGetPostById } from '@babylon/api-hooks';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -45,7 +46,8 @@ export default function PostPage({ params }: PostPageProps) {
     }
   };
 
-  const [post, setPost] = useState<{
+  // Extended post type that includes fields the API returns beyond the generated schema
+  type ExtendedPostData = {
     id: string;
     type?: string;
     content: string;
@@ -66,7 +68,6 @@ export default function PostPage({ params }: PostPageProps) {
     shareCount: number;
     isLiked: boolean;
     isShared: boolean;
-    // Repost metadata (new clean structure)
     isRepost?: boolean;
     isQuote?: boolean;
     quoteComment?: string | null;
@@ -80,85 +81,80 @@ export default function PostPage({ params }: PostPageProps) {
       authorProfileImageUrl: string | null;
       timestamp: string;
     } | null;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  };
+
+  const { data: postResponse, isLoading, error: queryError } = useGetPostById(postId);
+
+  // Transform the API response into the expected shape
+  const [post, setPost] = useState<ExtendedPostData | null>(null);
 
   useEffect(() => {
-    const loadPost = async () => {
-      setIsLoading(true);
-      setError(null);
+    if (!postResponse) {
+      setPost(null);
+      return;
+    }
 
-      const response = await fetch(`/api/posts/${postId}`);
-      const result = await response.json();
+    // Access the raw response data which may have extra fields beyond the generated type
+    const rawData = postResponse as unknown as Record<string, unknown>;
+    const postData = (rawData.data || rawData.post || rawData) as Record<string, unknown>;
 
-      const postData = result.data || result;
+    // If this is an article-type post, redirect to /article/[id]
+    if (postData.type === 'article' && postData.fullContent) {
+      router.replace(`/article/${postId}`);
+      return;
+    }
 
-      // If this is an article-type post, redirect to /article/[id]
-      if (postData.type === 'article' && postData.fullContent) {
-        router.replace(`/article/${postId}`);
-        return;
-      }
-
-      setPost({
-        id: postData.id,
-        type: postData.type || 'post',
-        content: postData.content,
-        fullContent: postData.fullContent || null,
-        articleTitle: postData.articleTitle || null,
-        byline: postData.byline || null,
-        biasScore: postData.biasScore !== undefined ? postData.biasScore : null,
-        sentiment: postData.sentiment || null,
-        slant: postData.slant || null,
-        category: postData.category || null,
-        authorId: postData.authorId,
-        authorName: postData.authorName,
-        authorUsername: postData.authorUsername || null,
-        authorProfileImageUrl: postData.authorProfileImageUrl || null,
-        timestamp: postData.timestamp,
-        likeCount: postData.likeCount ?? 0,
-        commentCount: postData.commentCount ?? 0,
-        shareCount: postData.shareCount ?? 0,
-        isLiked: postData.isLiked ?? false,
-        isShared: postData.isShared ?? false,
-        // Repost metadata (new clean structure)
-        isRepost: postData.isRepost || false,
-        isQuote: postData.isQuote || false,
-        quoteComment: postData.quoteComment || null,
-        originalPostId: postData.originalPostId || null,
-        originalPost: postData.originalPost || null,
-      });
-
-      // Update the interaction store with fresh API data
-      // For reposts, use the original post ID to match InteractionBar's behavior
-      const interactionPostId = postData.originalPostId || postId;
-      const { postInteractions } = useInteractionStore.getState();
-      const storeData = postInteractions.get(interactionPostId);
-
-      // Only update store if likeCount or commentCount changed to avoid overwriting isLiked/isShared
-      if (
-        postData.likeCount !== undefined ||
-        postData.commentCount !== undefined
-      ) {
-        const store = useInteractionStore.getState();
-        const updatedInteractions = new Map(store.postInteractions);
-        updatedInteractions.set(interactionPostId, {
-          postId: interactionPostId,
-          likeCount: postData.likeCount ?? 0,
-          commentCount: postData.commentCount ?? 0,
-          shareCount: postData.shareCount ?? 0,
-          // Preserve existing isLiked/isShared from store, don't overwrite with API
-          isLiked: storeData?.isLiked ?? postData.isLiked ?? false,
-          isShared: storeData?.isShared ?? postData.isShared ?? false,
-        });
-        useInteractionStore.setState({ postInteractions: updatedInteractions });
-      }
-
-      setIsLoading(false);
+    const mapped: ExtendedPostData = {
+      id: postData.id as string,
+      type: (postData.type as string) || 'post',
+      content: postData.content as string,
+      fullContent: (postData.fullContent as string) || null,
+      articleTitle: (postData.articleTitle as string) || null,
+      byline: (postData.byline as string) || null,
+      biasScore: postData.biasScore !== undefined ? (postData.biasScore as number) : null,
+      sentiment: (postData.sentiment as string) || null,
+      slant: (postData.slant as string) || null,
+      category: (postData.category as string) || null,
+      authorId: postData.authorId as string,
+      authorName: postData.authorName as string || (postData.author as Record<string, unknown>)?.displayName as string || '',
+      authorUsername: (postData.authorUsername as string) || (postData.author as Record<string, unknown>)?.username as string || null,
+      authorProfileImageUrl: (postData.authorProfileImageUrl as string) || (postData.author as Record<string, unknown>)?.profileImageUrl as string || null,
+      timestamp: (postData.timestamp || postData.createdAt) as string,
+      likeCount: (postData.likeCount as number) ?? 0,
+      commentCount: (postData.commentCount as number) ?? 0,
+      shareCount: (postData.shareCount as number) ?? 0,
+      isLiked: (postData.isLiked as boolean) ?? false,
+      isShared: (postData.isShared as boolean) ?? false,
+      isRepost: (postData.isRepost as boolean) || false,
+      isQuote: (postData.isQuote as boolean) || false,
+      quoteComment: (postData.quoteComment as string) || null,
+      originalPostId: (postData.originalPostId as string) || null,
+      originalPost: (postData.originalPost as ExtendedPostData['originalPost']) || null,
     };
 
-    loadPost();
-  }, [postId, router.replace]);
+    setPost(mapped);
+
+    // Update the interaction store with fresh API data
+    const interactionPostId = mapped.originalPostId || postId;
+    const { postInteractions } = useInteractionStore.getState();
+    const storeData = postInteractions.get(interactionPostId);
+
+    if (mapped.likeCount !== undefined || mapped.commentCount !== undefined) {
+      const store = useInteractionStore.getState();
+      const updatedInteractions = new Map(store.postInteractions);
+      updatedInteractions.set(interactionPostId, {
+        postId: interactionPostId,
+        likeCount: mapped.likeCount,
+        commentCount: mapped.commentCount,
+        shareCount: mapped.shareCount,
+        isLiked: storeData?.isLiked ?? mapped.isLiked,
+        isShared: storeData?.isShared ?? mapped.isShared,
+      });
+      useInteractionStore.setState({ postInteractions: updatedInteractions });
+    }
+  }, [postResponse, postId, router]);
+
+  const error = queryError ? 'Failed to load post' : null;
 
   // Subscribe to interaction store changes and update post state
   useEffect(() => {

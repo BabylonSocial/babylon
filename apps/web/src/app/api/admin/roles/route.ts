@@ -28,18 +28,17 @@ import {
   users,
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminRoleRequestBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 /**
  * Zod schema for role grant/revoke request validation
  *
- * Uses the canonical ADMIN_ROLES and ADMIN_PERMISSIONS constants from @babylon/db
- * to ensure validation stays in sync with the database schema.
+ * Extends the shared AdminRoleRequestBody with runtime-narrowed role/permissions
+ * enums from @babylon/db to ensure validation stays in sync with the database schema.
  */
-const RoleRequestSchema = z.object({
-  userId: z.string().min(1, 'userId is required'),
-  action: z.enum(['grant', 'revoke']),
+const RoleRequestSchema = AdminRoleRequestBody.extend({
   role: z.enum(ADMIN_ROLES).optional(),
   permissions: z.array(z.enum(ADMIN_PERMISSIONS)).optional(),
 });

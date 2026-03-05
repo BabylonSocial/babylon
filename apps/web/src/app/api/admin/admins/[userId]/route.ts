@@ -29,12 +29,8 @@ import {
 } from '@babylon/api';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminActionBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const AdminActionSchema = z.object({
-  action: z.enum(['promote', 'demote']),
-});
 
 export const POST = withErrorHandling(
   async (
@@ -49,7 +45,7 @@ export const POST = withErrorHandling(
 
     // Parse request body
     const body = await request.json();
-    const { action } = AdminActionSchema.parse(body);
+    const { action } = AdminActionBody.parse(body);
 
     logger.info(
       `Admin ${action} request`,

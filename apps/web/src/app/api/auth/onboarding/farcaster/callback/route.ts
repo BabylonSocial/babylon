@@ -24,22 +24,11 @@
  */
 
 import { withErrorHandling } from '@babylon/api';
+import { FarcasterOnboardingCallbackBodySchema } from '@babylon/api/schemas';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const FarcasterOnboardingCallbackBodySchema = z.object({
-  message: z.string(),
-  signature: z.string(),
-  fid: z.number(),
-  username: z.string(),
-  displayName: z.string().optional(),
-  pfpUrl: z.string().url().optional(),
-  bio: z.string().optional(),
-  state: z.string(),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await request.json();

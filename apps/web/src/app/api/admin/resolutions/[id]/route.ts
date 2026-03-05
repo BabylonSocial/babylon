@@ -15,6 +15,7 @@ import {
 } from '@babylon/api';
 import { db, eq, questions } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminResolutionActionBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -28,9 +29,7 @@ const ParamsSchema = z.object({
   id: z.string().min(1),
 });
 
-const BodySchema = z.object({
-  action: z.enum(['approve', 'reject']),
-});
+const BodySchema = AdminResolutionActionBody;
 
 export const POST = withErrorHandling(
   async (

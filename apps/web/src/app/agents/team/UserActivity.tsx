@@ -1,13 +1,13 @@
 'use client';
 
+import { useGetUserActivity } from '@babylon/api-hooks';
 import {
   BABYLON_POINTS_SYMBOL,
   cn,
   formatCompactCurrency,
 } from '@babylon/shared';
 import { Activity } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { memo, useState } from 'react';
 
 /** Activity types from the API */
 interface TradeActivity {
@@ -381,49 +381,13 @@ function EmptyState() {
  * (matches AgentActivityFeed structure exactly)
  */
 export function UserActivity({ userId, className }: UserActivityProps) {
-  const { getAccessToken } = useAuth();
-  const [activities, setActivities] = useState<UserActivityItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const refresh = useCallback(async () => {
-    const token = await getAccessToken();
-    if (!token) {
-      setError(new Error('Not authenticated'));
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`/api/users/${userId}/activity?limit=50`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const errorMessage =
-          errorData.error || errorData.message || `Server error: ${res.status}`;
-        throw new Error(errorMessage);
-      }
-
-      const data = await res.json();
-      setActivities(data.activities || []);
-    } catch (err) {
-      console.error('Activity fetch error:', err);
-      setError(
-        err instanceof Error ? err : new Error('Failed to load activity')
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, getAccessToken]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const {
+    data: activityData,
+    isLoading,
+    error,
+    refetch,
+  } = useGetUserActivity(userId, { limit: 50 });
+  const activities = (activityData?.activities ?? []) as unknown as UserActivityItem[];
 
   return (
     <div className={cn('flex flex-col', className)}>
@@ -431,10 +395,10 @@ export function UserActivity({ userId, className }: UserActivityProps) {
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 p-3">
           <p className="text-destructive text-sm">
-            Failed to load activity: {error.message}
+            Failed to load activity: {error.message ?? 'Unknown error'}
           </p>
           <button
-            onClick={() => void refresh()}
+            onClick={() => void refetch()}
             disabled={isLoading}
             className="ml-3 shrink-0 rounded-md bg-destructive/20 px-3 py-1 text-destructive text-sm transition-colors hover:bg-destructive/30 disabled:opacity-50"
           >

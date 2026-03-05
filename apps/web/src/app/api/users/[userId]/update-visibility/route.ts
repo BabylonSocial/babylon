@@ -28,15 +28,10 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { UpdateVisibilityBody } from '@babylon/api/schemas';
 import { db, eq, users } from '@babylon/db';
 import { logger, UserIdParamSchema } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const UpdateVisibilityRequestSchema = z.object({
-  platform: z.enum(['twitter', 'farcaster', 'wallet']),
-  visible: z.boolean(),
-});
 
 export const POST = withErrorHandling(
   async (
@@ -61,7 +56,7 @@ export const POST = withErrorHandling(
 
     // Parse and validate request body
     const body = await request.json();
-    const { platform, visible } = UpdateVisibilityRequestSchema.parse(body);
+    const { platform, visible } = UpdateVisibilityBody.parse(body);
 
     // Build update data based on platform
     const updateData: Partial<typeof users.$inferInsert> = {};

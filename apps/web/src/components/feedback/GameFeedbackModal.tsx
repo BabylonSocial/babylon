@@ -6,12 +6,11 @@
 
 'use client';
 
-import { submitGameFeedback, uploadImage } from '@babylon/api-hooks';
+import { deleteImage, submitGameFeedback, uploadImage } from '@babylon/api-hooks';
 import { cn, parseJsonString } from '@babylon/shared';
 import { Loader2, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { getAuthToken } from '@/lib/auth';
 import {
   BugReportFields,
   DescriptionField,
@@ -238,16 +237,8 @@ export function GameFeedbackModal({ isOpen, onClose }: GameFeedbackModalProps) {
 
       // Helper to cleanup orphaned screenshot on submission failure
       const cleanupOrphanedScreenshot = (url: string) => {
-        const token = getAuthToken();
-        const headers: HeadersInit = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
         // Fire-and-forget cleanup - log failures for observability but don't block
-        void fetch('/api/upload/image', {
-          method: 'DELETE',
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
-        }).catch((error) => {
-          // Log for observability but don't block user flow
+        void deleteImage({ url }).catch((error) => {
           console.warn('Failed to cleanup orphaned screenshot:', url, error);
         });
       };

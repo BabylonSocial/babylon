@@ -7,19 +7,14 @@
 
 import { teamChatService } from '@babylon/agents';
 import { authenticateUser, withErrorHandling } from '@babylon/api';
+import { UpdateConversationBody } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 
 // =============================================================================
 // PUT: Switch to conversation or rename it
 // =============================================================================
-
-const updateConversationSchema = z.object({
-  action: z.enum(['switch', 'rename']),
-  title: z.string().max(100).optional(), // Required for rename
-});
 
 export const PUT = withErrorHandling(
   async (
@@ -39,7 +34,7 @@ export const PUT = withErrorHandling(
       );
     }
 
-    const parseResult = updateConversationSchema.safeParse(body);
+    const parseResult = UpdateConversationBody.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json(
         { success: false, error: 'Invalid request body' },

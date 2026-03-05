@@ -60,26 +60,11 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { CreateGroupSchema } from '@babylon/api/schemas';
 import { asUser, generateSnowflakeId, groupInvites } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { nanoid } from 'nanoid';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const CreateGroupSchema = z.object({
-  name: z.string().min(1).max(100),
-  memberIds: z.array(z.string()).optional().default([]),
-  // Note: 'type' is intentionally NOT accepted from client.
-  // User-created groups always get type: 'user'.
-  // NPC groups (type: 'npc') are created by backend services.
-  // Agent groups (type: 'agent') are created via MCP tools.
-  requiredNftContractAddress: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid contract address format')
-    .optional(),
-  requiredNftTokenId: z.number().int().min(0).nullable().optional(),
-  requiredNftChainId: z.number().int().positive().optional(),
-});
 
 /**
  * GET /api/groups

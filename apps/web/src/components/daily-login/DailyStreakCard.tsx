@@ -1,6 +1,10 @@
 'use client';
 
-import { claimDailyLogin, getDailyLoginStatus } from '@babylon/api-hooks';
+import {
+  claimDailyLogin,
+  getDailyLoginStatus,
+  getUserPortfolioBreakdown,
+} from '@babylon/api-hooks';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -95,14 +99,12 @@ export function DailyStreakCard() {
         setModal(result);
         await fetchData();
 
-        // Fetch latest portfolio breakdown (same as profile page) to update totalPoints & virtualBalance
-        // No generated function for portfolio-breakdown yet, use raw fetch
+        // Fetch latest portfolio breakdown to update totalPoints & virtualBalance
         if (user?.id) {
-          const breakdownRes = await fetch(
-            `/api/users/${encodeURIComponent(user.id)}/portfolio-breakdown`
-          );
-          if (breakdownRes.ok) {
-            const breakdown = await breakdownRes.json();
+          try {
+            const breakdown = (await getUserPortfolioBreakdown(
+              user.id
+            )) as unknown as { totalPoints: number; wallet: number };
             if (user) {
               setUser({
                 ...user,
@@ -110,6 +112,8 @@ export function DailyStreakCard() {
                 virtualBalance: breakdown.wallet,
               });
             }
+          } catch {
+            // Non-critical — don't block the claim flow
           }
         }
       } else if (result.error) {

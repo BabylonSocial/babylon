@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  getChatById,
+  listChats,
+  sendChatMessage,
+} from '@babylon/api-hooks';
 import { usePrivy } from '@privy-io/react-auth';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -104,58 +109,48 @@ export function useChatPage() {
       }
     }
 
-    const token = await getAccessToken();
-    if (!token && !isDebugMode) {
-      setLoading(false);
-      return;
-    }
+    try {
+      const [personalData, gameResponse] = await Promise.all([
+        // listChats uses orvalFetch which handles auth automatically
+        listChats(),
+        isDebugMode ? fetch('/api/chats?all=true') : Promise.resolve(null),
+      ]);
 
-    const [personalResponse, gameResponse] = await Promise.all([
-      fetch('/api/chats', {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      isDebugMode ? fetch('/api/chats?all=true') : Promise.resolve(null),
-    ]);
-
-    if (!personalResponse.ok) {
-      setLoading(false);
-      return;
-    }
-
-    const personalData = await personalResponse.json();
-
-    let gameChats: Chat[] = [];
-    if (gameResponse?.ok) {
-      const gameData = await gameResponse.json();
-      gameChats = gameData.chats || [];
-    }
-
-    const combined = [
-      ...(personalData.groupChats || []),
-      ...(personalData.directChats || []),
-      ...gameChats,
-    ].sort((a, b) => {
-      const aTime = a.lastMessage?.createdAt || a.updatedAt;
-      const bTime = b.lastMessage?.createdAt || b.updatedAt;
-      return new Date(bTime).getTime() - new Date(aTime).getTime();
-    });
-
-    // Client-side fallback: filter out DMs with the user's own agents
-    // This guards against any edge cases where API-level filtering didn't catch them
-    // Agent-owner communication should happen through /agents/team instead
-    const filteredCombined = combined.filter((chat) => {
-      // Only filter DMs (not group chats)
-      if (chat.isGroup) return true;
-      // Check if the other user is an agent managed by the current user
-      if (chat.otherUser?.isAgent && chat.otherUser?.managedBy === user?.id) {
-        return false;
+      let gameChats: Chat[] = [];
+      if (gameResponse?.ok) {
+        const gameData = await gameResponse.json();
+        gameChats = gameData.chats || [];
       }
-      return true;
-    });
 
-    setAllChats(filteredCombined);
+      const combined = ([
+        ...(personalData.groupChats || []),
+        ...(personalData.directChats || []),
+        ...gameChats,
+      ] as Chat[]).sort((a, b) => {
+        const aTime = a.lastMessage?.createdAt || a.updatedAt;
+        const bTime = b.lastMessage?.createdAt || b.updatedAt;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      });
+
+      // Client-side fallback: filter out DMs with the user's own agents
+      // This guards against any edge cases where API-level filtering didn't catch them
+      // Agent-owner communication should happen through /agents/team instead
+      const filteredCombined = combined.filter((chat) => {
+        // Only filter DMs (not group chats)
+        if (chat.isGroup) return true;
+        // Check if the other user is an agent managed by the current user
+        if (chat.otherUser?.isAgent && chat.otherUser?.managedBy === user?.id) {
+          return false;
+        }
+        return true;
+      });
+
+      setAllChats(filteredCombined);
+    } catch {
+      // Failed to load chats
+    }
     setLoading(false);
-  }, [getAccessToken, isDebugMode, ready, authenticated, user?.id]);
+  }, [isDebugMode, ready, authenticated, user?.id]);
 
   // Load chat details
   const loadChatDetails = useCallback(
@@ -175,36 +170,21 @@ export function useChatPage() {
         return;
       }
 
-      const token = await getAccessToken();
-      if (!token) {
-        setLoadingChat(false);
-        return;
+      try {
+        // getChatById uses orvalFetch which handles auth automatically
+        const data = await getChatById(chatId) as unknown as Record<string, unknown>;
+        setChatDetails({
+          ...data,
+          chat: data.chat || null,
+          messages: (data.messages as unknown[]) || [],
+          participants: (data.participants as unknown[]) || [],
+        } as ChatDetails);
+      } catch {
+        // Failed to load chat details (404 or other error)
       }
-
-      const response = await fetch(`/api/chats/${chatId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 404) {
-        setLoadingChat(false);
-        return;
-      }
-
-      if (!response.ok) {
-        setLoadingChat(false);
-        return;
-      }
-
-      const data = await response.json();
-      setChatDetails({
-        ...data,
-        chat: data.chat || null,
-        messages: data.messages || [],
-        participants: data.participants || [],
-      });
       setLoadingChat(false);
     },
-    [getAccessToken, isDebugMode]
+    [isDebugMode]
   );
 
   // Send message
@@ -216,67 +196,49 @@ export function useChatPage() {
     setSendWarning(null);
     setSendSuccess(false);
 
-    const token = await getAccessToken();
-    if (!token) {
-      setSendError('Authentication required. Please log in again.');
-      setSending(false);
-      return;
-    }
+    try {
+      // sendChatMessage uses orvalFetch which handles auth automatically
+      const data = await sendChatMessage(selectedChatId, {
+        content: messageInput.trim(),
+      }) as unknown as Record<string, unknown>;
 
-    const response = await fetch(`/api/chats/${selectedChatId}/message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ content: messageInput.trim() }),
-    }).catch((error: Error) => {
-      setSendError('Failed to send message. Please try again.');
-      setSending(false);
-      throw error;
-    });
+      const warnings = Array.isArray(data?.warnings) ? data.warnings as string[] : [];
+      if (warnings.length > 0) {
+        setSendWarning(warnings.join('. '));
+        setTimeout(() => setSendWarning(null), 5000);
+      }
 
-    const data = await response.json();
+      setSendSuccess(true);
+      setTimeout(() => setSendSuccess(false), 2000);
 
-    if (!response.ok) {
+      const msg = data.message as Record<string, unknown> | undefined;
+      if (msg) {
+        addMessage({
+          id: msg.id as string,
+          content: msg.content as string,
+          chatId: msg.chatId as string,
+          senderId: msg.senderId as string,
+          createdAt:
+            typeof msg.createdAt === 'string'
+              ? msg.createdAt
+              : new Date(msg.createdAt as number).toISOString(),
+        });
+      }
+
+      setMessageInput('');
+      void loadChats();
+    } catch (error) {
       const message =
-        (data && (data.error || data.message)) ||
-        'Failed to send message. Please try again.';
+        error instanceof Error
+          ? error.message
+          : 'Failed to send message. Please try again.';
       setSendError(message);
-      setSending(false);
-      return;
     }
-
-    const warnings = Array.isArray(data?.warnings) ? data.warnings : [];
-    if (warnings.length > 0) {
-      setSendWarning(warnings.join('. '));
-      setTimeout(() => setSendWarning(null), 5000);
-    }
-
-    setSendSuccess(true);
-    setTimeout(() => setSendSuccess(false), 2000);
-
-    if (data.message) {
-      addMessage({
-        id: data.message.id,
-        content: data.message.content,
-        chatId: data.message.chatId,
-        senderId: data.message.senderId,
-        createdAt:
-          typeof data.message.createdAt === 'string'
-            ? data.message.createdAt
-            : new Date(data.message.createdAt).toISOString(),
-      });
-    }
-
-    setMessageInput('');
-    void loadChats();
     setSending(false);
   }, [
     selectedChatId,
     messageInput,
     sending,
-    getAccessToken,
     addMessage,
     loadChats,
   ]);

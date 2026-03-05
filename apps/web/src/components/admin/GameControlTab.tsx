@@ -1,6 +1,6 @@
 'use client';
 
-import { adminGetGameStats } from '@babylon/api-hooks';
+import { adminGetGameStats, controlGame } from '@babylon/api-hooks';
 import { cn } from '@babylon/shared';
 import {
   Activity,
@@ -154,13 +154,9 @@ export function GameControlTab() {
 
   const handleGameControl = async (action: 'start' | 'pause') => {
     setActionLoading(true);
-    const response = await fetch('/api/game/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-
-    if (!response.ok) {
+    try {
+      await controlGame({ action });
+    } catch {
       setActionLoading(false);
       setError(`Failed to ${action} game`);
       return;

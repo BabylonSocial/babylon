@@ -31,28 +31,10 @@ import {
 } from '@babylon/api';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminCreateNotificationBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
-const CreateNotificationSchema = z.object({
-  userId: z.string().optional(), // If not provided, send to all users
-  message: z.string().min(1).max(500),
-  type: z
-    .enum([
-      'system',
-      'comment',
-      'reaction',
-      'follow',
-      'mention',
-      'reply',
-      'share',
-    ])
-    .default('system'),
-  postId: z.string().optional(),
-  commentId: z.string().optional(),
-  link: z.string().optional(), // Optional custom link
-  sendToAll: z.boolean().default(false), // Send to all users
-});
+const CreateNotificationSchema = AdminCreateNotificationBody;
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   // Require admin authentication

@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  getChatHistory,
+  useSendAgentChatMessage,
+} from '@babylon/api-hooks';
 import { BABYLON_POINTS_SYMBOL, logger } from '@babylon/shared';
 import { Wallet } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -79,7 +83,8 @@ export function AgentChat({
   showBackButton = false,
   onBack,
 }: AgentChatProps) {
-  const { user, getAccessToken } = useAuth();
+  const { user } = useAuth();
+  const { mutateAsync: sendChatMessage } = useSendAgentChatMessage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -179,75 +184,63 @@ export function AgentChat({
 
   const fetchMessages = useCallback(async () => {
     setLoading(true);
-    const token = await getAccessToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
 
-    const res = await fetch(
-      `/api/agents/${agent.id}/chat?limit=${CHAT_PAGE_SIZE}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (res.ok) {
-      const data = (await res.json()) as {
-        success: boolean;
-        messages: Message[];
-        pagination?: { hasMore: boolean; nextCursor: string | null };
-      };
+    try {
+      const data = await getChatHistory(agent.id, {
+        limit: String(CHAT_PAGE_SIZE),
+      });
       if (data.success && data.messages) {
         // Messages come newest first, reverse for display (oldest first)
-        setMessages(data.messages.reverse());
+        const mapped: Message[] = data.messages.map((m) => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant' | 'system',
+          content: m.content,
+          modelUsed: m.modelUsed,
+          pointsCost: m.pointsCost ?? 0,
+          createdAt: m.createdAt,
+        }));
+        setMessages(mapped.reverse());
         setHasMore(data.pagination?.hasMore || false);
         setNextCursor(data.pagination?.nextCursor || null);
       }
-    } else {
+    } catch {
       logger.error('Failed to fetch messages', undefined, 'AgentChat');
     }
     setLoading(false);
-  }, [agent.id, getAccessToken]);
+  }, [agent.id]);
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
     if (!nextCursor || isLoadingMore || !hasMore) return;
 
     setIsLoadingMore(true);
-    const token = await getAccessToken();
-    if (!token) {
-      setIsLoadingMore(false);
-      return;
-    }
 
-    const res = await fetch(
-      `/api/agents/${agent.id}/chat?limit=${CHAT_PAGE_SIZE}&cursor=${nextCursor}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (res.ok) {
-      const data = (await res.json()) as {
-        success: boolean;
-        messages: Message[];
-        pagination?: { hasMore: boolean; nextCursor: string | null };
-      };
+    try {
+      const data = await getChatHistory(agent.id, {
+        limit: String(CHAT_PAGE_SIZE),
+        cursor: nextCursor,
+      });
       if (data.success && data.messages && data.messages.length > 0) {
         // Prepend older messages (they come newest first, so reverse them)
-        const olderMessages = data.messages.reverse();
+        const olderMessages: Message[] = data.messages
+          .map((m) => ({
+            id: m.id,
+            role: m.role as 'user' | 'assistant' | 'system',
+            content: m.content,
+            modelUsed: m.modelUsed,
+            pointsCost: m.pointsCost ?? 0,
+            createdAt: m.createdAt,
+          }))
+          .reverse();
         setMessages((prev) => [...olderMessages, ...prev]);
         setHasMore(data.pagination?.hasMore || false);
         setNextCursor(data.pagination?.nextCursor || null);
       }
+    } catch {
+      // Silently handle pagination errors
     }
     setIsLoadingMore(false);
-  }, [agent.id, getAccessToken, nextCursor, isLoadingMore, hasMore]);
+  }, [agent.id, nextCursor, isLoadingMore, hasMore]);
 
   // Reset state when agent changes
   useEffect(() => {
@@ -397,73 +390,54 @@ export function AgentChat({
     // Scroll to bottom after adding message
     setTimeout(() => scrollToBottom('smooth'), 50);
 
-    const token = await getAccessToken();
-    if (!token) {
+    try {
+      const data = await sendChatMessage({
+        agentId: agent.id,
+        data: {
+          message: userMessage,
+          usePro,
+        },
+      });
+
+      if (!data.response || !data.messageId) {
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== optimisticMessage.id)
+        );
+        toast.error('Invalid response from agent');
+        setSending(false);
+        return;
+      }
+
+      // Add assistant message
+      const assistantMessage: Message = {
+        id: data.messageId,
+        role: 'assistant',
+        content: data.response,
+        modelUsed: data.modelUsed,
+        pointsCost: data.pointsCost,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Scroll to bottom after response
+      setTimeout(() => scrollToBottom('smooth'), 50);
+
+      // Update agent balance without full page refresh
+      onBalanceUpdate?.(data.balanceAfter);
+      if (data.pointsCost > 0) {
+        toast.success(`Message sent (-${data.pointsCost} points)`);
+      }
+
+      // Notify parent to refresh chat list (updates sidebar with latest message)
+      onMessageSent?.();
+    } catch (err) {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
-      toast.error('Authentication required');
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to send message';
+      toast.error(errorMessage);
+    } finally {
       setSending(false);
-      return;
     }
-
-    const res = await fetch(`/api/agents/${agent.id}/chat`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: userMessage,
-        usePro,
-      }),
-    });
-
-    if (!res.ok) {
-      const error = (await res.json()) as { error: string };
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
-      toast.error(error.error || 'Failed to send message');
-      setSending(false);
-      return;
-    }
-
-    const data = (await res.json()) as {
-      success: boolean;
-      messageId: string;
-      response: string;
-      modelUsed: string;
-      pointsCost: number;
-      balanceAfter: number;
-    };
-
-    if (!data.response || !data.messageId) {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id));
-      toast.error('Invalid response from agent');
-      setSending(false);
-      return;
-    }
-
-    // Add assistant message
-    const assistantMessage: Message = {
-      id: data.messageId,
-      role: 'assistant',
-      content: data.response,
-      modelUsed: data.modelUsed,
-      pointsCost: data.pointsCost,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, assistantMessage]);
-
-    // Scroll to bottom after response
-    setTimeout(() => scrollToBottom('smooth'), 50);
-
-    // Update agent balance without full page refresh
-    onBalanceUpdate?.(data.balanceAfter);
-    if (data.pointsCost > 0) {
-      toast.success(`Message sent (-${data.pointsCost} points)`);
-    }
-
-    // Notify parent to refresh chat list (updates sidebar with latest message)
-    onMessageSent?.();
-    setSending(false);
   };
 
   // Check if sending should be disabled due to insufficient points

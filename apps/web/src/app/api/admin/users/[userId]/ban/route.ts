@@ -40,15 +40,10 @@ import {
 } from '@babylon/api';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
+import { AdminBanUserBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
-const BanUserSchema = z.object({
-  action: z.enum(['ban', 'unban']),
-  reason: z.string().min(1).max(500).optional(),
-  isScammer: z.boolean().optional(),
-  isCSAM: z.boolean().optional(),
-});
+const BanUserSchema = AdminBanUserBody;
 
 export const POST = withErrorHandling(
   async (

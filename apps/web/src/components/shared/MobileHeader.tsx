@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  getGetUserBalanceQueryKey,
+  getGetUserProfileQueryKey,
+  useGetUserBalance,
+  useGetUserProfile,
+} from '@babylon/api-hooks';
 import { cn, getDisplayReferralUrl, getReferralUrl } from '@babylon/shared';
 import {
   Check,
@@ -18,7 +24,6 @@ import { GameFeedbackModal } from '@/components/feedback/GameFeedbackModal';
 import { Avatar } from '@/components/shared/Avatar';
 import { BabylonIcon } from '@/components/shared/icons/BabylonIcon';
 import { useAuth } from '@/hooks/useAuth';
-import { getAuthToken } from '@/lib/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -35,10 +40,6 @@ function MobileHeaderContent() {
   const { authenticated, logout } = useAuth();
   const { user, setUser } = useAuthStore();
   const [showSideMenu, setShowSideMenu] = useState(false);
-  const [pointsData, setPointsData] = useState<{
-    available: number;
-    total: number;
-  } | null>(null);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const pathname = usePathname();
@@ -48,110 +49,66 @@ function MobileHeaderContent() {
   const isHomePage = pathname === '/';
   const shouldHide = isWaitlistMode && isHomePage;
 
-  // All hooks must be called before any conditional returns
+  // Fetch user profile for hydrating profile image and reputation points
+  const profileUserId = user?.id || '';
+  const { data: profileData } = useGetUserProfile(profileUserId, {
+    query: {
+      queryKey: getGetUserProfileQueryKey(profileUserId),
+      enabled: authenticated && !!user?.id,
+      refetchInterval: 30000,
+    },
+  });
+
+  // Fetch user balance with polling
+  const { data: balanceData } = useGetUserBalance(profileUserId, {
+    query: {
+      queryKey: getGetUserBalanceQueryKey(profileUserId),
+      enabled: authenticated && !!user?.id,
+      refetchInterval: 30000,
+    },
+  });
+
+  const pointsData =
+    authenticated && user?.id && balanceData
+      ? {
+          available: Number(balanceData.balance || 0),
+          total: user.reputationPoints || 0,
+        }
+      : null;
+
+  // Hydrate profile image from profile data
   useEffect(() => {
-    if (!authenticated || !user?.id || user.profileImageUrl) {
-      return;
+    if (!authenticated || !user?.id || !profileData?.user) return;
+
+    const profileUser = profileData.user as {
+      profileImageUrl?: string;
+      coverImageUrl?: string;
+      reputationPoints?: number;
+    };
+
+    // Hydrate profile/cover images if missing
+    if (
+      !user.profileImageUrl &&
+      (profileUser.profileImageUrl || profileUser.coverImageUrl)
+    ) {
+      setUser({
+        ...user,
+        profileImageUrl: profileUser.profileImageUrl ?? user.profileImageUrl,
+        coverImageUrl: profileUser.coverImageUrl ?? user.coverImageUrl,
+      });
     }
 
-    const controller = new AbortController();
-
-    const hydrateProfileImage = async () => {
-      const response = await fetch(
-        `/api/users/${encodeURIComponent(user.id)}/profile`,
-        {
-          signal: controller.signal,
-        }
-      ).catch((error: Error) => {
-        if (error.name === 'AbortError') return null;
-        throw error;
+    // Update reputation points if changed
+    if (
+      profileUser.reputationPoints !== undefined &&
+      profileUser.reputationPoints !== user.reputationPoints
+    ) {
+      setUser({
+        ...user,
+        reputationPoints: profileUser.reputationPoints,
       });
-
-      if (!response || !response.ok) return;
-      const data = await response.json();
-      const profileUrl = data?.user?.profileImageUrl as string | undefined;
-      const coverUrl = data?.user?.coverImageUrl as string | undefined;
-      if (profileUrl || coverUrl) {
-        setUser({
-          ...user,
-          profileImageUrl: profileUrl ?? user.profileImageUrl,
-          coverImageUrl: coverUrl ?? user.coverImageUrl,
-        });
-      }
-    };
-
-    void hydrateProfileImage();
-
-    return () => controller.abort();
-  }, [
-    authenticated,
-    setUser,
-    user?.id,
-    user?.profileImageUrl,
-    user?.coverImageUrl,
-    user,
-  ]);
-
-  useEffect(() => {
-    const fetchPoints = async () => {
-      if (!authenticated || !user?.id) {
-        setPointsData(null);
-        return;
-      }
-
-      const token = getAuthToken();
-      if (!token) {
-        // No token available yet, skip fetching protected data
-        return;
-      }
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      };
-
-      // Fetch both trading balance and profile for reputation points
-      const [balanceResponse, profileResponse] = await Promise.all([
-        fetch(`/api/users/${encodeURIComponent(user.id)}/balance`, { headers }),
-        fetch(`/api/users/${encodeURIComponent(user.id)}/profile`, { headers }),
-      ]);
-
-      if (balanceResponse.ok) {
-        const balanceData = await balanceResponse.json();
-        setPointsData({
-          available: Number(balanceData.balance || 0),
-          total: user.reputationPoints || 0, // Use reputation points from authStore as fallback
-        });
-      }
-
-      // Update reputation points from profile if changed
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json();
-        if (
-          profileData.user?.reputationPoints !== undefined &&
-          profileData.user.reputationPoints !== user.reputationPoints
-        ) {
-          setUser({
-            ...user,
-            reputationPoints: profileData.user.reputationPoints,
-          });
-          // Update local state with new reputation points
-          setPointsData((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  total: profileData.user.reputationPoints,
-                }
-              : null
-          );
-        }
-      }
-    };
-
-    fetchPoints();
-    const interval = setInterval(fetchPoints, 30000);
-    return () => clearInterval(interval);
-  }, [authenticated, user?.id, user?.reputationPoints, setUser, user]);
+    }
+  }, [authenticated, profileData, setUser, user]);
 
   const copyReferralCode = async () => {
     if (!user?.referralCode) return;

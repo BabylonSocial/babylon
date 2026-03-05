@@ -16,16 +16,11 @@
  */
 
 import { withErrorHandling } from '@babylon/api';
+import { DiscordActivityRequestSchema } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { verifySignedState } from './state/state-utils';
-
-const RequestSchema = z.object({
-  code: z.string().min(1),
-  state: z.string().min(1, 'OAuth state parameter is required'),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const clientId =
@@ -55,7 +50,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const parsed = RequestSchema.safeParse(body);
+  const parsed = DiscordActivityRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Missing or invalid request parameters' },

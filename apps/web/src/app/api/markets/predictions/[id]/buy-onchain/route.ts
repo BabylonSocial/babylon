@@ -6,18 +6,11 @@ import {
   withErrorHandling,
 } from '@babylon/api';
 import { db } from '@babylon/db';
+import { OnChainBuyBody } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { z } from 'zod';
-
-const OnChainBuySchema = z.object({
-  side: z.enum(['yes', 'no']),
-  numShares: z.number().positive(),
-  txHash: z.string().startsWith('0x'),
-  walletAddress: z.string().startsWith('0x'),
-});
 
 const DIAMOND_ADDRESS = '0xdC3f0aD2f76Cea9379af897fa8EAD4A6d5e43990';
 
@@ -35,7 +28,7 @@ export const POST = withErrorHandling(
 
     const body = await request.json();
     const { side, numShares, txHash, walletAddress } =
-      OnChainBuySchema.parse(body);
+      OnChainBuyBody.parse(body);
 
     logger.info('On-chain buy verification requested', {
       marketId,

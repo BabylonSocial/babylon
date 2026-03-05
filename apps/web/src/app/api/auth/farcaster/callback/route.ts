@@ -34,22 +34,12 @@
  */
 
 import { PointsService, withErrorHandling } from '@babylon/api';
+import { FarcasterCallbackBodySchema } from '@babylon/api/schemas';
 import { db } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import { createAppClient, viemConnector } from '@farcaster/auth-client';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const FarcasterCallbackBodySchema = z.object({
-  message: z.string(),
-  signature: z.string(),
-  fid: z.number(),
-  username: z.string(),
-  displayName: z.string().optional(),
-  pfpUrl: z.string().url().optional(),
-  state: z.string(),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const body = await request.json();

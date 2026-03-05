@@ -1,5 +1,6 @@
 'use client';
 
+import { deletePost as deletePostApi } from '@babylon/api-hooks';
 import { cn, logger } from '@babylon/shared';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -62,19 +63,12 @@ export function DeleteButton({
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    const response = await fetch(`/api/posts/${postId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
+    try {
+      await deletePostApi(postId);
+    } catch (e) {
       setIsDeleting(false);
       setShowConfirmation(false);
-      throw new Error(data.error || 'Failed to delete post');
+      throw e instanceof Error ? e : new Error('Failed to delete post');
     }
 
     logger.info(

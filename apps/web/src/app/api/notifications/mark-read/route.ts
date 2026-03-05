@@ -19,15 +19,9 @@
  */
 
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
+import { MarkNotificationsReadSchema } from '@babylon/api/schemas';
 import { and, db, eq, inArray, notifications } from '@babylon/db';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const markReadSchema = z.object({
-  notificationIds: z.array(z.string()).optional(),
-  type: z.string().optional(), // Mark all notifications of a specific type as read
-  markAll: z.boolean().optional(), // Mark all notifications as read
-});
 
 /**
  * POST /api/notifications/mark-read
@@ -36,7 +30,7 @@ const markReadSchema = z.object({
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const user = await authenticate(request);
   const body = await request.json();
-  const { notificationIds, type, markAll } = markReadSchema.parse(body);
+  const { notificationIds, type, markAll } = MarkNotificationsReadSchema.parse(body);
 
   if (markAll) {
     // Mark all notifications as read

@@ -31,6 +31,7 @@
  */
 
 import { requireAdmin, withErrorHandling } from '@babylon/api';
+import { PerpTuningBody } from '@babylon/api/schemas';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
@@ -38,19 +39,6 @@ import { z } from 'zod';
 
 const TuningQuerySchema = z.object({
   ticker: z.string().optional(),
-});
-
-const TuningBodySchema = z.object({
-  ticker: z.string().optional(),
-  riskMultiplier: z.number().min(0.5).max(2.0).optional(),
-  entryThreshold: z.number().min(0).max(1).optional(),
-  exitThreshold: z.number().min(0).max(1).optional(),
-  positionSizeMultiplier: z.number().min(0.1).max(3.0).optional(),
-  sentimentOverride: z
-    .enum(['bullish', 'bearish', 'neutral'])
-    .optional()
-    .nullable(),
-  maxLeverageOverride: z.number().min(1).max(100).optional().nullable(),
 });
 
 export const GET = withErrorHandling(async (request: NextRequest) => {
@@ -113,7 +101,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   await requireAdmin(request);
 
   const json = await request.json();
-  const parsed = TuningBodySchema.safeParse(json);
+  const parsed = PerpTuningBody.safeParse(json);
 
   if (!parsed.success) {
     return NextResponse.json(

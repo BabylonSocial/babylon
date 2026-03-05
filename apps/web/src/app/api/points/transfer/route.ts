@@ -28,17 +28,11 @@ import {
   createNotification,
   withErrorHandling,
 } from '@babylon/api';
+import { TransferPointsSchema } from '@babylon/api/schemas';
 import { db } from '@babylon/db';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-
-const TransferPointsSchema = z.object({
-  recipientId: z.string().min(1, 'Recipient ID is required'),
-  amount: z.number().int().positive('Amount must be a positive integer'),
-  message: z.string().max(200).optional(),
-});
 
 /**
  * POST /api/points/transfer

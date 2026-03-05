@@ -23,11 +23,21 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AcceptInviteResponse,
+  AddGroupMemberBody,
+  AddGroupMemberResponse,
   CreateGroup200,
   CreateGroupBody,
+  DeclineInviteResponse,
+  DemoteAdminResponse,
+  DemoteGroupAdminParams,
   GetGroupResponse,
   ListGroupInvitesResponse,
-  ListGroupsResponse
+  ListGroupsResponse,
+  PromoteAdminBody,
+  PromoteAdminResponse,
+  RemoveGroupMemberParams,
+  RemoveGroupMemberResponse
 } from '.././model';
 
 import { orvalFetch } from '../../orval-fetch';
@@ -457,3 +467,446 @@ export function useListGroupInvitesSuspense<TData = Awaited<ReturnType<typeof li
 
 
 
+/**
+ * Accepts a pending group invitation and adds the user as a member.
+ * @summary Accept group invite
+ */
+export const getAcceptGroupInviteUrl = (inviteId: string,) => {
+
+
+  
+
+  return `/api/groups/invites/${inviteId}/accept`
+}
+
+export const acceptGroupInvite = async (inviteId: string, options?: RequestInit): Promise<AcceptInviteResponse> => {
+  
+  return orvalFetch<AcceptInviteResponse>(getAcceptGroupInviteUrl(inviteId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+
+
+export const getAcceptGroupInviteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptGroupInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acceptGroupInvite>>, TError,{inviteId: string}, TContext> => {
+
+const mutationKey = ['acceptGroupInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptGroupInvite>>, {inviteId: string}> = (props) => {
+          const {inviteId} = props ?? {};
+
+          return  acceptGroupInvite(inviteId,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptGroupInviteMutationResult = NonNullable<Awaited<ReturnType<typeof acceptGroupInvite>>>
+    
+    export type AcceptGroupInviteMutationError = ErrorType<void>
+
+    /**
+ * @summary Accept group invite
+ */
+export const useAcceptGroupInvite = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptGroupInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acceptGroupInvite>>,
+        TError,
+        {inviteId: string},
+        TContext
+      > => {
+      return useMutation(getAcceptGroupInviteMutationOptions(options));
+    }
+    /**
+ * Declines a pending group invitation.
+ * @summary Decline group invite
+ */
+export const getDeclineGroupInviteUrl = (inviteId: string,) => {
+
+
+  
+
+  return `/api/groups/invites/${inviteId}/decline`
+}
+
+export const declineGroupInvite = async (inviteId: string, options?: RequestInit): Promise<DeclineInviteResponse> => {
+  
+  return orvalFetch<DeclineInviteResponse>(getDeclineGroupInviteUrl(inviteId),
+  {      
+    ...options,
+    method: 'POST'
+    
+    
+  }
+);}
+  
+
+
+
+export const getDeclineGroupInviteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineGroupInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof declineGroupInvite>>, TError,{inviteId: string}, TContext> => {
+
+const mutationKey = ['declineGroupInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof declineGroupInvite>>, {inviteId: string}> = (props) => {
+          const {inviteId} = props ?? {};
+
+          return  declineGroupInvite(inviteId,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeclineGroupInviteMutationResult = NonNullable<Awaited<ReturnType<typeof declineGroupInvite>>>
+    
+    export type DeclineGroupInviteMutationError = ErrorType<void>
+
+    /**
+ * @summary Decline group invite
+ */
+export const useDeclineGroupInvite = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof declineGroupInvite>>, TError,{inviteId: string}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof declineGroupInvite>>,
+        TError,
+        {inviteId: string},
+        TContext
+      > => {
+      return useMutation(getDeclineGroupInviteMutationOptions(options));
+    }
+    /**
+ * Adds a member to the group. Agents/NPCs are added directly; human users receive an invite. Admin only.
+ * @summary Add member to group
+ */
+export const getAddGroupMemberUrl = (groupId: string,) => {
+
+
+  
+
+  return `/api/groups/${groupId}/members`
+}
+
+export const addGroupMember = async (groupId: string,
+    addGroupMemberBody: AddGroupMemberBody, options?: RequestInit): Promise<AddGroupMemberResponse> => {
+  
+  return orvalFetch<AddGroupMemberResponse>(getAddGroupMemberUrl(groupId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      addGroupMemberBody,)
+  }
+);}
+  
+
+
+
+export const getAddGroupMemberMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addGroupMember>>, TError,{groupId: string;data: BodyType<AddGroupMemberBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addGroupMember>>, TError,{groupId: string;data: BodyType<AddGroupMemberBody>}, TContext> => {
+
+const mutationKey = ['addGroupMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addGroupMember>>, {groupId: string;data: BodyType<AddGroupMemberBody>}> = (props) => {
+          const {groupId,data} = props ?? {};
+
+          return  addGroupMember(groupId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddGroupMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addGroupMember>>>
+    export type AddGroupMemberMutationBody = BodyType<AddGroupMemberBody>
+    export type AddGroupMemberMutationError = ErrorType<void>
+
+    /**
+ * @summary Add member to group
+ */
+export const useAddGroupMember = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addGroupMember>>, TError,{groupId: string;data: BodyType<AddGroupMemberBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addGroupMember>>,
+        TError,
+        {groupId: string;data: BodyType<AddGroupMemberBody>},
+        TContext
+      > => {
+      return useMutation(getAddGroupMemberMutationOptions(options));
+    }
+    /**
+ * Removes a member from the group. Admin only, or member can remove themselves.
+ * @summary Remove member from group
+ */
+export const getRemoveGroupMemberUrl = (groupId: string,
+    params: RemoveGroupMemberParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/groups/${groupId}/members?${stringifiedParams}` : `/api/groups/${groupId}/members`
+}
+
+export const removeGroupMember = async (groupId: string,
+    params: RemoveGroupMemberParams, options?: RequestInit): Promise<RemoveGroupMemberResponse> => {
+  
+  return orvalFetch<RemoveGroupMemberResponse>(getRemoveGroupMemberUrl(groupId,params),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+  
+
+
+
+export const getRemoveGroupMemberMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeGroupMember>>, TError,{groupId: string;params: RemoveGroupMemberParams}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeGroupMember>>, TError,{groupId: string;params: RemoveGroupMemberParams}, TContext> => {
+
+const mutationKey = ['removeGroupMember'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeGroupMember>>, {groupId: string;params: RemoveGroupMemberParams}> = (props) => {
+          const {groupId,params} = props ?? {};
+
+          return  removeGroupMember(groupId,params,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveGroupMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeGroupMember>>>
+    
+    export type RemoveGroupMemberMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove member from group
+ */
+export const useRemoveGroupMember = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeGroupMember>>, TError,{groupId: string;params: RemoveGroupMemberParams}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeGroupMember>>,
+        TError,
+        {groupId: string;params: RemoveGroupMemberParams},
+        TContext
+      > => {
+      return useMutation(getRemoveGroupMemberMutationOptions(options));
+    }
+    /**
+ * Promotes a group member to admin role. Admin/owner only.
+ * @summary Promote member to admin
+ */
+export const getPromoteGroupAdminUrl = (groupId: string,) => {
+
+
+  
+
+  return `/api/groups/${groupId}/admins`
+}
+
+export const promoteGroupAdmin = async (groupId: string,
+    promoteAdminBody: PromoteAdminBody, options?: RequestInit): Promise<PromoteAdminResponse> => {
+  
+  return orvalFetch<PromoteAdminResponse>(getPromoteGroupAdminUrl(groupId),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      promoteAdminBody,)
+  }
+);}
+  
+
+
+
+export const getPromoteGroupAdminMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof promoteGroupAdmin>>, TError,{groupId: string;data: BodyType<PromoteAdminBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof promoteGroupAdmin>>, TError,{groupId: string;data: BodyType<PromoteAdminBody>}, TContext> => {
+
+const mutationKey = ['promoteGroupAdmin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof promoteGroupAdmin>>, {groupId: string;data: BodyType<PromoteAdminBody>}> = (props) => {
+          const {groupId,data} = props ?? {};
+
+          return  promoteGroupAdmin(groupId,data,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PromoteGroupAdminMutationResult = NonNullable<Awaited<ReturnType<typeof promoteGroupAdmin>>>
+    export type PromoteGroupAdminMutationBody = BodyType<PromoteAdminBody>
+    export type PromoteGroupAdminMutationError = ErrorType<void>
+
+    /**
+ * @summary Promote member to admin
+ */
+export const usePromoteGroupAdmin = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof promoteGroupAdmin>>, TError,{groupId: string;data: BodyType<PromoteAdminBody>}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof promoteGroupAdmin>>,
+        TError,
+        {groupId: string;data: BodyType<PromoteAdminBody>},
+        TContext
+      > => {
+      return useMutation(getPromoteGroupAdminMutationOptions(options));
+    }
+    /**
+ * Demotes a group admin back to regular member role. Admin/owner only.
+ * @summary Demote admin to member
+ */
+export const getDemoteGroupAdminUrl = (groupId: string,
+    params: DemoteGroupAdminParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/groups/${groupId}/admins?${stringifiedParams}` : `/api/groups/${groupId}/admins`
+}
+
+export const demoteGroupAdmin = async (groupId: string,
+    params: DemoteGroupAdminParams, options?: RequestInit): Promise<DemoteAdminResponse> => {
+  
+  return orvalFetch<DemoteAdminResponse>(getDemoteGroupAdminUrl(groupId,params),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+  
+
+
+
+export const getDemoteGroupAdminMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof demoteGroupAdmin>>, TError,{groupId: string;params: DemoteGroupAdminParams}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof demoteGroupAdmin>>, TError,{groupId: string;params: DemoteGroupAdminParams}, TContext> => {
+
+const mutationKey = ['demoteGroupAdmin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof demoteGroupAdmin>>, {groupId: string;params: DemoteGroupAdminParams}> = (props) => {
+          const {groupId,params} = props ?? {};
+
+          return  demoteGroupAdmin(groupId,params,requestOptions)
+        }
+
+
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DemoteGroupAdminMutationResult = NonNullable<Awaited<ReturnType<typeof demoteGroupAdmin>>>
+    
+    export type DemoteGroupAdminMutationError = ErrorType<void>
+
+    /**
+ * @summary Demote admin to member
+ */
+export const useDemoteGroupAdmin = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof demoteGroupAdmin>>, TError,{groupId: string;params: DemoteGroupAdminParams}, TContext>, request?: SecondParameter<typeof orvalFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof demoteGroupAdmin>>,
+        TError,
+        {groupId: string;params: DemoteGroupAdminParams},
+        TContext
+      > => {
+      return useMutation(getDemoteGroupAdminMutationOptions(options));
+    }
+    

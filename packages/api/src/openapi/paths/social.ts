@@ -1,140 +1,25 @@
 import { z } from 'zod';
 import type { ZodOpenApiPathsObject } from 'zod-openapi';
-
-const CommentAuthor = z.object({
-  id: z.string(),
-  displayName: z.string(),
-  username: z.string().nullable(),
-  profileImageUrl: z.string().nullable(),
-});
-
-const Comment = z
-  .object({
-    id: z.string(),
-    content: z.string(),
-    postId: z.string(),
-    authorId: z.string(),
-    parentCommentId: z.string().nullable(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    updatedAt: z
-      .string()
-      .optional()
-      .meta({ description: 'ISO 8601 timestamp' }),
-    author: CommentAuthor,
-    likeCount: z.number(),
-    replyCount: z.number(),
-    isLiked: z.boolean().optional(),
-  })
-  .meta({ id: 'Comment' });
-
-const PostAuthor = z.object({
-  id: z.string(),
-  displayName: z.string(),
-  username: z.string().nullable(),
-  profileImageUrl: z.string().nullable(),
-});
-
-const PostDetail = z
-  .object({
-    id: z.string(),
-    content: z.string(),
-    type: z.string().optional(),
-    authorId: z.string(),
-    author: PostAuthor,
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    updatedAt: z
-      .string()
-      .optional()
-      .meta({ description: 'ISO 8601 timestamp' }),
-    likeCount: z.number(),
-    commentCount: z.number(),
-    shareCount: z.number(),
-    isLiked: z.boolean(),
-    isShared: z.boolean(),
-    isRepost: z.boolean().optional(),
-    isQuote: z.boolean().optional(),
-    quoteComment: z.string().nullable().optional(),
-    originalPostId: z.string().nullable().optional(),
-    comments: z.array(Comment).optional(),
-  })
-  .meta({ id: 'PostDetail' });
-
-const Notification = z
-  .object({
-    id: z.string(),
-    type: z.string().meta({
-      description: 'Notification type (like, comment, follow, mention, etc.)',
-    }),
-    message: z.string(),
-    read: z.boolean(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    actorId: z.string().optional(),
-    actor: z
-      .object({
-        id: z.string(),
-        displayName: z.string(),
-        username: z.string().nullable(),
-        profileImageUrl: z.string().nullable(),
-      })
-      .optional(),
-    postId: z.string().nullable().optional(),
-    commentId: z.string().nullable().optional(),
-    groupId: z.string().nullable().optional(),
-  })
-  .meta({ id: 'Notification' });
-
-const GroupMember = z.object({
-  id: z.string(),
-  displayName: z.string(),
-  username: z.string().nullable(),
-  profileImageUrl: z.string().nullable(),
-  role: z
-    .string()
-    .optional()
-    .meta({ description: 'Member role (owner, admin, member)' }),
-  joinedAt: z.string().optional().meta({ description: 'ISO 8601 timestamp' }),
-});
-
-const Group = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string().optional(),
-    imageUrl: z.string().nullable().optional(),
-    memberCount: z.number(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    ownerId: z.string(),
-  })
-  .meta({ id: 'Group' });
-
-const GroupDetail = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string().optional(),
-    imageUrl: z.string().nullable().optional(),
-    memberCount: z.number(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    ownerId: z.string(),
-    members: z.array(GroupMember),
-    isMember: z.boolean(),
-    role: z.string().optional(),
-  })
-  .meta({ id: 'GroupDetail' });
-
-const GroupInvite = z
-  .object({
-    id: z.string(),
-    groupId: z.string(),
-    groupName: z.string(),
-    inviterId: z.string(),
-    inviterName: z.string(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    status: z
-      .string()
-      .meta({ description: 'Invite status (pending, accepted, declined)' }),
-  })
-  .meta({ id: 'GroupInvite' });
+import {
+  CommentAuthor,
+  Comment,
+  PostAuthor,
+  PostDetail,
+  Notification,
+  Group,
+  GroupDetail,
+  GroupInvite,
+  inviteIdPath,
+  groupIdPath,
+  AcceptInviteResponse,
+  DeclineInviteResponse,
+  AddGroupMemberBody,
+  AddGroupMemberResponse,
+  RemoveGroupMemberResponse,
+  PromoteAdminBody,
+  PromoteAdminResponse,
+  DemoteAdminResponse,
+} from '../../schemas/social';
 
 export const socialPaths: ZodOpenApiPathsObject = {
   '/api/comments/{id}': {
@@ -318,6 +203,40 @@ export const socialPaths: ZodOpenApiPathsObject = {
             },
           },
         },
+        '404': { description: 'Post not found' },
+      },
+    },
+    delete: {
+      operationId: 'deletePost',
+      tags: ['Posts'],
+      summary: 'Delete a post',
+      description: 'Delete a post owned by the authenticated user.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: z.object({
+          id: z.string().meta({ description: 'Post ID' }),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Post deleted',
+          content: {
+            'application/json': {
+              schema: z
+                .object({
+                  message: z.string(),
+                  data: z.object({
+                    id: z.string(),
+                    deletedAt: z
+                      .string()
+                      .meta({ description: 'ISO 8601 timestamp' }),
+                  }),
+                })
+                .meta({ id: 'DeletePostResponse' }),
+            },
+          },
+        },
+        '401': { description: 'Unauthorized' },
         '404': { description: 'Post not found' },
       },
     },
@@ -685,6 +604,147 @@ export const socialPaths: ZodOpenApiPathsObject = {
           },
         },
         '401': { description: 'Unauthorized' },
+      },
+    },
+  },
+
+  '/api/groups/invites/{inviteId}/accept': {
+    post: {
+      operationId: 'acceptGroupInvite',
+      tags: ['Groups'],
+      summary: 'Accept group invite',
+      description:
+        'Accepts a pending group invitation and adds the user as a member.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: inviteIdPath },
+      responses: {
+        '200': {
+          description: 'Invite accepted',
+          content: { 'application/json': { schema: AcceptInviteResponse } },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Invite is not for this user' },
+        '404': { description: 'Invite not found' },
+      },
+    },
+  },
+
+  '/api/groups/invites/{inviteId}/decline': {
+    post: {
+      operationId: 'declineGroupInvite',
+      tags: ['Groups'],
+      summary: 'Decline group invite',
+      description: 'Declines a pending group invitation.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: inviteIdPath },
+      responses: {
+        '200': {
+          description: 'Invite declined',
+          content: { 'application/json': { schema: DeclineInviteResponse } },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Invite is not for this user' },
+        '404': { description: 'Invite not found' },
+      },
+    },
+  },
+
+  '/api/groups/{groupId}/members': {
+    post: {
+      operationId: 'addGroupMember',
+      tags: ['Groups'],
+      summary: 'Add member to group',
+      description:
+        'Adds a member to the group. Agents/NPCs are added directly; human users receive an invite. Admin only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: groupIdPath },
+      requestBody: {
+        content: { 'application/json': { schema: AddGroupMemberBody } },
+      },
+      responses: {
+        '200': {
+          description: 'Member added or invite sent',
+          content: { 'application/json': { schema: AddGroupMemberResponse } },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Only admins can add members' },
+        '404': { description: 'Group or user not found' },
+      },
+    },
+    delete: {
+      operationId: 'removeGroupMember',
+      tags: ['Groups'],
+      summary: 'Remove member from group',
+      description:
+        'Removes a member from the group. Admin only, or member can remove themselves.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: groupIdPath,
+        query: z.object({
+          userId: z
+            .string()
+            .meta({ description: 'User ID of the member to remove' }),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Member removed',
+          content: {
+            'application/json': { schema: RemoveGroupMemberResponse },
+          },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Only admins can remove members' },
+        '404': { description: 'Member not found' },
+      },
+    },
+  },
+
+  '/api/groups/{groupId}/admins': {
+    post: {
+      operationId: 'promoteGroupAdmin',
+      tags: ['Groups'],
+      summary: 'Promote member to admin',
+      description:
+        'Promotes a group member to admin role. Admin/owner only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: { path: groupIdPath },
+      requestBody: {
+        content: { 'application/json': { schema: PromoteAdminBody } },
+      },
+      responses: {
+        '200': {
+          description: 'Member promoted to admin',
+          content: { 'application/json': { schema: PromoteAdminResponse } },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Only admins can promote members' },
+        '400': { description: 'User is already an admin or is the owner' },
+      },
+    },
+    delete: {
+      operationId: 'demoteGroupAdmin',
+      tags: ['Groups'],
+      summary: 'Demote admin to member',
+      description:
+        'Demotes a group admin back to regular member role. Admin/owner only.',
+      security: [{ PrivyAuth: [] }],
+      requestParams: {
+        path: groupIdPath,
+        query: z.object({
+          userId: z
+            .string()
+            .meta({ description: 'User ID of the admin to demote' }),
+        }),
+      },
+      responses: {
+        '200': {
+          description: 'Admin demoted to member',
+          content: { 'application/json': { schema: DemoteAdminResponse } },
+        },
+        '401': { description: 'Unauthorized' },
+        '403': { description: 'Only admins can demote' },
+        '400': { description: 'Cannot demote the owner' },
       },
     },
   },

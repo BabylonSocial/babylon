@@ -28,13 +28,10 @@ import {
 import { logger } from '@babylon/shared';
 import type { LoadTestResult } from '@babylon/testing';
 import { LoadTestSimulator, TEST_SCENARIOS } from '@babylon/testing';
+import { AdminLoadTestBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
-const LoadTestRequestSchema = z.object({
-  scenario: z.enum(['LIGHT', 'NORMAL', 'HEAVY', 'STRESS']),
-  baseUrl: z.string().url().optional(),
-});
+const LoadTestRequestSchema = AdminLoadTestBody;
 
 // Store active load test
 let activeTest: {

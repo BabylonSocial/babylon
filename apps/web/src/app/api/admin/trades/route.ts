@@ -30,6 +30,7 @@ import {
 import { Decimal, db } from '@babylon/db';
 import { StaticDataRegistry } from '@babylon/engine';
 import { generateSnowflakeId, logger } from '@babylon/shared';
+import { AdminCreateTradeBody } from '@babylon/api/schemas';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 
@@ -219,44 +220,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   });
 });
 
-const CreateBalanceTradeSchema = z.object({
-  type: z.literal('balance'),
-  userId: z.string().min(1),
-  transactionType: z.enum([
-    'pred_buy',
-    'pred_sell',
-    'perp_open',
-    'perp_close',
-    'perp_liquidation',
-    'deposit',
-    'withdrawal',
-  ]),
-  amount: z.number(),
-  description: z.string().optional(),
-  relatedId: z.string().optional(),
-  updateBalance: z.boolean().default(true), // Whether to update user's balance
-});
-
-const CreateNPCTradeSchema = z.object({
-  type: z.literal('npc'),
-  npcActorId: z.string().min(1),
-  marketType: z.enum(['prediction', 'perp']),
-  ticker: z.string().optional(),
-  marketId: z.string().optional(),
-  action: z.string().min(1),
-  side: z.string().optional(),
-  amount: z.number().positive(),
-  price: z.number().positive(),
-  sentiment: z.number().optional(),
-  reason: z.string().optional(),
-  poolId: z.string().optional(),
-  postId: z.string().optional(),
-});
-
-const CreateTradeSchema = z.discriminatedUnion('type', [
-  CreateBalanceTradeSchema,
-  CreateNPCTradeSchema,
-]);
+const CreateTradeSchema = AdminCreateTradeBody;
 
 /**
  * POST /api/admin/trades

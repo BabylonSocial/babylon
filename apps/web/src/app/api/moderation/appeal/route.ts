@@ -34,21 +34,16 @@ import { db } from '@babylon/db';
 import { WalletService } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
+import { AppealBody } from '@babylon/api/schemas';
 import { type Address, createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { z } from 'zod';
-
-const AppealSchema = z.object({
-  reason: z.string().min(10).max(2000),
-  stakeTxHash: z.string().optional(), // For staked appeals ($10)
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const authUser = await authenticate(request);
   const userId = authUser.dbUserId!;
 
   const body = await request.json();
-  const { reason, stakeTxHash } = AppealSchema.parse(body);
+  const { reason, stakeTxHash } = AppealBody.parse(body);
 
   // Get user
   const user = await db.user.findUnique({

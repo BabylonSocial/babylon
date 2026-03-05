@@ -31,21 +31,14 @@ import {
   successResponse,
   withErrorHandling,
 } from '@babylon/api';
+import { VerifyShareBody } from '@babylon/api/schemas';
 import { db, eq, shareActions, users } from '@babylon/db';
 import {
   logger,
   POINTS,
-  SnowflakeIdSchema,
   UserIdParamSchema,
 } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const VerifyShareRequestSchema = z.object({
-  shareId: SnowflakeIdSchema,
-  platform: z.enum(['twitter', 'farcaster']),
-  postUrl: z.string().url().optional(), // URL to the actual post for verification
-});
 
 const SUPPORTED_TWITTER_HOSTS = new Set([
   'twitter.com',
@@ -172,7 +165,7 @@ export const POST = withErrorHandling(
 
     // Parse and validate request body
     const body = await request.json();
-    const { shareId, platform, postUrl } = VerifyShareRequestSchema.parse(body);
+    const { shareId, platform, postUrl } = VerifyShareBody.parse(body);
 
     // Get the share action
     const [shareAction] = await db

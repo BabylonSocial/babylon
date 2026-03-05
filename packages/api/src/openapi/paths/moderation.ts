@@ -1,81 +1,12 @@
 import { z } from 'zod';
 import type { ZodOpenApiPathsObject } from 'zod-openapi';
-
-// ---------------------------------------------------------------------------
-// Reusable schemas
-// ---------------------------------------------------------------------------
-
-const ModerationUserSummary = z.object({
-  id: z.string(),
-  username: z.string().nullable(),
-  displayName: z.string().nullable(),
-  profileImageUrl: z.string().nullable(),
-});
-
-const Report = z
-  .object({
-    id: z.string(),
-    reporterId: z.string(),
-    reportedUserId: z.string().nullable(),
-    reportedPostId: z.string().nullable(),
-    reportType: z.string(),
-    category: z.string(),
-    reason: z.string(),
-    evidence: z.string().nullable(),
-    priority: z.string(),
-    status: z.string(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    reportedUser: ModerationUserSummary.optional(),
-    resolver: ModerationUserSummary.optional(),
-  })
-  .passthrough()
-  .meta({ id: 'Report' });
-
-const BlockEntry = z
-  .object({
-    id: z.string(),
-    blockerId: z.string(),
-    blockedId: z.string(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    blocked: z
-      .object({
-        id: z.string(),
-        username: z.string().nullable(),
-        displayName: z.string().nullable(),
-        profileImageUrl: z.string().nullable(),
-        isActor: z.boolean(),
-      })
-      .optional(),
-  })
-  .meta({ id: 'BlockEntry' });
-
-const MuteEntry = z
-  .object({
-    id: z.string(),
-    muterId: z.string(),
-    mutedId: z.string(),
-    createdAt: z.string().meta({ description: 'ISO 8601 timestamp' }),
-    muted: z
-      .object({
-        id: z.string(),
-        username: z.string().nullable(),
-        displayName: z.string().nullable(),
-        profileImageUrl: z.string().nullable(),
-        isActor: z.boolean(),
-      })
-      .optional(),
-  })
-  .meta({ id: 'MuteEntry' });
-
-const Pagination = z.object({
-  limit: z.number(),
-  offset: z.number(),
-  total: z.number(),
-});
-
-// ---------------------------------------------------------------------------
-// Paths
-// ---------------------------------------------------------------------------
+import {
+  AppealBody,
+  BlockEntry,
+  ModerationPagination as Pagination,
+  MuteEntry,
+  Report,
+} from '../../schemas/moderation';
 
 export const moderationPaths: ZodOpenApiPathsObject = {
   '/api/moderation/reports': {
@@ -232,12 +163,7 @@ export const moderationPaths: ZodOpenApiPathsObject = {
       requestBody: {
         content: {
           'application/json': {
-            schema: z
-              .object({
-                reason: z.string(),
-                stakeTxHash: z.string().optional(),
-              })
-              .meta({ id: 'AppealBody' }),
+            schema: AppealBody,
           },
         },
       },

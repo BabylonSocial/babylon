@@ -25,6 +25,7 @@
  */
 
 import { authenticate, successResponse, withErrorHandling } from '@babylon/api';
+import { DeleteAccountBody } from '@babylon/api/schemas';
 import {
   db,
   eq,
@@ -44,19 +45,13 @@ import {
 } from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
-
-const DeleteAccountSchema = z.object({
-  confirmation: z.literal('DELETE MY ACCOUNT'),
-  reason: z.string().optional(),
-});
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const authUser = await authenticate(request);
   const userId = authUser.dbUserId ?? authUser.userId;
 
   const body = await request.json();
-  const { reason } = DeleteAccountSchema.parse(body);
+  const { reason } = DeleteAccountBody.parse(body);
 
   logger.info(
     'User requested account deletion',
