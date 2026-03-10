@@ -134,7 +134,7 @@ The page is minimal: no main app header, sidebar, or bottom nav. It is intended 
 | --------- |--------|--------|-------------|
 | `streams` | string | `news,predictions,perps` | Same as API: comma-separated `news`, `predictions`, `perps`. |
 | `theme`  | string | `dark` | `light` or `dark`. |
-| `speed`  | number | `1`    | Scroll speed multiplier; valid range 0.5–2 (higher = faster). |
+| `speed`  | number | `0.7`  | Scroll speed: 0.1 = slowest, 1 = medium, 3 = fastest. Valid range 0.1–3. |
 | `height` | number | `48`   | Bar height in pixels; valid range 32–120. |
 
 ### Behavior
