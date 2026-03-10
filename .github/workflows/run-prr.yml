@@ -20,9 +20,13 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && (
         (github.event.action == 'labeled' && github.event.label.name == 'run-prr') ||
-        (github.event.action == 'review_requested' && vars.PRR_REVIEWER_LOGIN != '' && github.event.requested_reviewer.login == vars.PRR_REVIEWER_LOGIN)
+        (github.event.action == 'review_requested' && vars.PRR_REVIEWER_LOGIN != '' && (
+          (github.event.requested_reviewer && github.event.requested_reviewer.login == vars.PRR_REVIEWER_LOGIN) ||
+          (github.event.requested_team && github.event.requested_team.slug == vars.PRR_REVIEWER_LOGIN)
+        ))
       ))
-    uses: elizaOS/prr/.github/workflows/run-prr-server.yml@master
+    # Note: Replace placeholder SHA below with actual commit from elizaOS/prr
+    uses: elizaOS/prr/.github/workflows/run-prr-server.yml@a1b2c3d4e5f6789012345678901234567890abcd
     with:
       pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
       prr_repo: 'elizaOS/prr'
