@@ -4,6 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'bun:test';
+
 import {
   checkDuplicate,
   checkRateLimit,
@@ -13,7 +14,7 @@ import {
   getDuplicateStats,
   getRateLimitStatus,
   RATE_LIMIT_CONFIGS,
-} from '@babylon/api';
+} from '@babylon/engine';
 
 describe('Rate Limiting (Shared)', () => {
   beforeEach(async () => {

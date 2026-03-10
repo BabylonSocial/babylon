@@ -639,7 +639,8 @@ describe('dispatchAgentChat', () => {
         'TSLAI is trading at $150.'
       );
 
-      const summaryState = mockComposePromptFromState.mock.calls[2]![0].state as {
+      const summaryState = mockComposePromptFromState.mock.calls[2]![0]
+        .state as {
         values: Record<string, unknown>;
       };
       expect(summaryState.values.hasActionResults).toBe(true);

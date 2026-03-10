@@ -15,42 +15,7 @@
  * - Critical operations that existed before are still present
  */
 
-import { describe, expect, mock, test } from 'bun:test';
-
-// ─── Mock dependencies that integration-a2a-sdk needs ────────────────────────
-
-mock.module('@babylon/db', () => ({
-  db: {
-    select: mock(() => ({
-      from: mock(() => ({
-        where: mock(() => ({ limit: mock(async () => []) })),
-      })),
-    })),
-  },
-  eq: () => ({}),
-  users: { id: '' },
-}));
-
-mock.module('@elizaos/core', () => ({
-  ActionTimelineType: {},
-  ModelType: {},
-  composePromptFromState: mock(),
-  parseKeyValueXml: mock(),
-  generateText: mock(),
-}));
-
-mock.module('../../../agents/src/shared/logger', () => ({
-  logger: {
-    info: mock(),
-    warn: mock(),
-    error: mock(),
-    debug: mock(),
-  },
-}));
-
-mock.module('../../../agents/src/shared/snowflake', () => ({
-  generateSnowflakeId: mock(async () => 'test-id'),
-}));
+import { describe, expect, test } from 'bun:test';
 
 // ─── Import the module to access operationMap ────────────────────────────────
 

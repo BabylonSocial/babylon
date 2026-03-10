@@ -754,7 +754,14 @@ export const GET = withErrorHandling(
 );
 
 // Backwards-compatible alias for clients that POST to the post resource to like it.
-export const POST = likePost;
+export const POST = withErrorHandling(
+  async (
+    request: NextRequest,
+    context: { params: Promise<{ id: string }> }
+  ) => {
+    return likePost(request, context);
+  }
+);
 
 /**
  * DELETE /api/posts/[id]

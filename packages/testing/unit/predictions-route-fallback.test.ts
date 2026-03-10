@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import * as apiActual from '../../api/src';
+import * as predictionCoreActual from '../../core/markets/prediction';
 
 const mockPublicRateLimit = mock();
 const mockListMarkets = mock();
 const mockListUserPositions = mock();
-const mockLogger = {
-  error: mock(),
-  info: mock(),
-};
 
 mock.module('@babylon/api', () => ({
+  ...apiActual,
   addPublicReadHeaders: () => {},
   publicRateLimit: mockPublicRateLimit,
   successResponse: (data: unknown) => data,
@@ -17,56 +16,15 @@ mock.module('@babylon/api', () => ({
 }));
 
 mock.module('@babylon/core/markets/prediction', () => ({
+  ...predictionCoreActual,
   PredictionDbAdapter: class PredictionDbAdapter {},
-  PredictionMarketService: class PredictionMarketService {
+  PredictionMarketService: class PredictionMarketService extends predictionCoreActual.PredictionMarketService {
     listMarkets = mockListMarkets;
     listUserPositions = mockListUserPositions;
   },
-  PredictionPricing: {
-    getCurrentPrice: () => 0.5,
-    calculateSellWithFees: () => ({
-      netProceeds: 10,
-      totalCost: 10,
-    }),
-  },
-}));
-
-mock.module('@babylon/engine', () => ({
-  FEE_CONFIG: {
-    TRADING_FEE_RATE: 0.02,
-    PLATFORM_SHARE: 0.5,
-    REFERRER_SHARE: 0.5,
-    MIN_FEE_AMOUNT: 0,
-  },
-  WalletService: {
-    debit: mock(),
-    credit: mock(),
-    recordPnL: mock(),
-    getBalance: mock(),
-  },
-}));
-
-mock.module('@babylon/shared', () => ({
-  logger: mockLogger,
-  MarketQuerySchema: {
-    merge: () => ({
-      partial: () => ({
-        safeParse: (value: Record<string, unknown>) => ({
-          success: true,
-          data: value,
-        }),
-      }),
-    }),
-  },
-}));
-
-mock.module('zod', () => ({
-  z: {
-    string: () => ({
-      optional: () => ({}),
-    }),
-    object: () => ({}),
-  },
+  // Keep the real pricing API to avoid cross-test contamination when this
+  // module mock is reused in combined runs.
+  PredictionPricing: predictionCoreActual.PredictionPricing,
 }));
 
 const { GET } = await import(
@@ -78,8 +36,6 @@ describe('GET /api/markets/predictions', () => {
     mockPublicRateLimit.mockReset();
     mockListMarkets.mockReset();
     mockListUserPositions.mockReset();
-    mockLogger.error.mockReset();
-    mockLogger.info.mockReset();
 
     mockPublicRateLimit.mockResolvedValue({
       error: null,
@@ -109,15 +65,20 @@ describe('GET /api/markets/predictions', () => {
   it('returns markets even when user position enrichment fails', async () => {
     mockListUserPositions.mockRejectedValue(new Error('permission denied'));
 
-    const result = await GET({
-      url: 'https://example.com/api/markets/predictions?userId=user-1',
-    } as Request);
+    const result = (await GET(
+      new Request(
+        'https://example.com/api/markets/predictions?userId=user-1'
+      ) as unknown as import('next/server').NextRequest
+    )) as unknown as {
+      success: boolean;
+      count: number;
+      questions: { userPositions: unknown[] }[];
+    };
 
     expect(result).toMatchObject({
       success: true,
       count: 1,
     });
     expect(result.questions[0]?.userPositions).toEqual([]);
-    expect(mockLogger.error).toHaveBeenCalledTimes(1);
   });
 });

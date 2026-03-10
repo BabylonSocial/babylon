@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { PredictionPricing } from '@babylon/engine';
+import { PredictionPricing } from '../../core/markets/prediction/pricing';
 
 describe('PredictionPricing CPMM', () => {
   describe('k invariant', () => {

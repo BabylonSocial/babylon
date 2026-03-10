@@ -1,20 +1,20 @@
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  mock,
-} from 'bun:test';
+  setDefaultErrorCapture as importedSetDefaultErrorCapture,
+  withErrorHandling as importedWithErrorHandling,
+} from '../../../api/src/error-handler';
+import {
+  AuthenticationError,
+  BadRequestError,
+  ValidationError,
+} from '../../../api/src/errors';
 
 type ErrorHandlerModule = typeof import('../../../api/src/error-handler');
 
-let AuthenticationError: new (message?: string) => Error;
-let BadRequestError: new (message: string) => Error;
-let ValidationError: new (message: string) => Error;
-let setDefaultErrorCapture: ErrorHandlerModule['setDefaultErrorCapture'];
-let withErrorHandling: ErrorHandlerModule['withErrorHandling'];
+let setDefaultErrorCapture: ErrorHandlerModule['setDefaultErrorCapture'] =
+  importedSetDefaultErrorCapture;
+let withErrorHandling: ErrorHandlerModule['withErrorHandling'] =
+  importedWithErrorHandling;
 
 function createRequest(): import('next/server').NextRequest {
   return new Request('http://localhost/api/test', {
@@ -27,64 +27,18 @@ function createRequest(): import('next/server').NextRequest {
 }
 
 describe('withErrorHandling + default Sentry capture', () => {
-  beforeAll(async () => {
-    mock.module('@babylon/db', () => ({
-      DatabaseError: class DatabaseError extends Error {
-        code?: string;
-      },
-    }));
-
-    mock.module('@babylon/shared', () => ({
-      logger: {
-        error: () => {},
-        warn: () => {},
-      },
-    }));
-
-    mock.module('zod', () => ({
-      ZodError: class ZodError extends Error {
-        issues: Array<{ code: string; message: string; path: string[] }>;
-
-        constructor(
-          issues: Array<{ code: string; message: string; path: string[] }> = []
-        ) {
-          super('ZodError');
-          this.name = 'ZodError';
-          this.issues = issues;
-        }
-      },
-    }));
-
-    mock.module('next/server', () => ({
-      NextResponse: class NextResponse extends Response {
-        static json(body: unknown, init?: ResponseInit): NextResponse {
-          const headers = new Headers(init?.headers);
-          if (!headers.has('content-type')) {
-            headers.set('content-type', 'application/json');
-          }
-
-          return new NextResponse(JSON.stringify(body), {
-            ...init,
-            headers,
-          });
-        }
-      },
-    }));
-
-    ({ AuthenticationError, BadRequestError, ValidationError } = await import(
-      '../../../api/src/errors'
-    ));
-    ({ setDefaultErrorCapture, withErrorHandling } = await import(
-      '../../../api/src/error-handler'
-    ));
+  beforeEach(async () => {
+    // Load a fresh module instance so this suite is immune to cross-file mock.module
+    // overrides of @babylon/api exports (including withErrorHandling).
+    const freshModule = (await import(
+      `../../../api/src/error-handler.ts?isolation=${Date.now()}-${Math.random()}`
+    )) as ErrorHandlerModule;
+    setDefaultErrorCapture = freshModule.setDefaultErrorCapture;
+    withErrorHandling = freshModule.withErrorHandling;
   });
 
   afterEach(() => {
     setDefaultErrorCapture(undefined);
-  });
-
-  afterAll(() => {
-    mock.restore();
   });
 
   it('captures unexpected errors through the global capture callback', async () => {

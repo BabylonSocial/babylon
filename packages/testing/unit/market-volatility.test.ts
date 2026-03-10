@@ -19,34 +19,41 @@ interface VolatilityState {
 
 const MIN_MARKET_VOLATILITY = 0.005;
 
+function createSeededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 function generateVolatilityMove(
   state: VolatilityState,
   initialPrice: number,
-  currentPrice: number
+  currentPrice: number,
+  random: () => number = Math.random
 ): number {
   const baseVolatility = state.recentVolatility;
-  const volatilityMultiplier = 0.5 + Math.random();
+  const volatilityMultiplier = 0.5 + random();
   const currentVolatility = baseVolatility * volatilityMultiplier;
 
   let move: number;
-  const fatTailChance = Math.random();
+  const fatTailChance = random();
 
   if (fatTailChance < 0.01) {
-    const direction = Math.random() > 0.5 ? 1 : -1;
-    move = direction * currentVolatility * (3 + Math.random() * 3);
+    const direction = random() > 0.5 ? 1 : -1;
+    move = direction * currentVolatility * (3 + random() * 3);
   } else if (fatTailChance < 0.05) {
-    move = (Math.random() - 0.5) * 2 * currentVolatility * (2 + Math.random());
+    move = (random() - 0.5) * 2 * currentVolatility * (2 + random());
   } else if (fatTailChance < 0.15) {
-    move =
-      (Math.random() - 0.5) *
-      2 *
-      currentVolatility *
-      (1.5 + Math.random() * 0.5);
+    move = (random() - 0.5) * 2 * currentVolatility * (1.5 + random() * 0.5);
   } else {
-    move = (Math.random() - 0.5) * 2 * currentVolatility;
+    move = (random() - 0.5) * 2 * currentVolatility;
   }
 
-  move += state.momentum * (0.5 + Math.random() * 0.5);
+  move += state.momentum * (0.5 + random() * 0.5);
 
   const priceRatio = currentPrice / initialPrice;
   if (priceRatio > 1.5) {
@@ -72,9 +79,15 @@ describe('Market Volatility Simulation', () => {
     };
 
     test('generates moves within reasonable bounds', () => {
+      const random = createSeededRandom(1001);
       const moves: number[] = [];
       for (let i = 0; i < 1000; i++) {
-        const move = generateVolatilityMove({ ...defaultState }, 100, 100);
+        const move = generateVolatilityMove(
+          { ...defaultState },
+          100,
+          100,
+          random
+        );
         moves.push(move);
       }
 
@@ -87,9 +100,15 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('produces fat tails (occasional large moves)', () => {
+      const random = createSeededRandom(1002);
       const moves: number[] = [];
       for (let i = 0; i < 10000; i++) {
-        const move = generateVolatilityMove({ ...defaultState }, 100, 100);
+        const move = generateVolatilityMove(
+          { ...defaultState },
+          100,
+          100,
+          random
+        );
         moves.push(move);
       }
 
@@ -104,6 +123,7 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('respects momentum', () => {
+      const random = createSeededRandom(1003);
       const upMomentum: VolatilityState = {
         recentVolatility: MIN_MARKET_VOLATILITY,
         momentum: 0.005, // Strong upward momentum
@@ -112,7 +132,7 @@ describe('Market Volatility Simulation', () => {
 
       const moves: number[] = [];
       for (let i = 0; i < 1000; i++) {
-        const move = generateVolatilityMove(upMomentum, 100, 100);
+        const move = generateVolatilityMove(upMomentum, 100, 100, random);
         moves.push(move);
       }
 
@@ -122,12 +142,14 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('applies mean reversion when price is high', () => {
+      const random = createSeededRandom(1004);
       const moves: number[] = [];
       for (let i = 0; i < 1000; i++) {
         const move = generateVolatilityMove(
           { ...defaultState },
           100,
-          200 // Price is 2x initial
+          200, // Price is 2x initial
+          random
         );
         moves.push(move);
       }
@@ -138,12 +160,14 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('applies mean reversion when price is low', () => {
+      const random = createSeededRandom(1005);
       const moves: number[] = [];
       for (let i = 0; i < 1000; i++) {
         const move = generateVolatilityMove(
           { ...defaultState },
           100,
-          50 // Price is 0.5x initial
+          50, // Price is 0.5x initial
+          random
         );
         moves.push(move);
       }
@@ -154,12 +178,18 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('crashes are faster than rallies (asymmetry)', () => {
+      const random = createSeededRandom(1006);
       // Generate many moves and compare magnitude of up vs down
       const upMoves: number[] = [];
       const downMoves: number[] = [];
 
       for (let i = 0; i < 10000; i++) {
-        const move = generateVolatilityMove({ ...defaultState }, 100, 100);
+        const move = generateVolatilityMove(
+          { ...defaultState },
+          100,
+          100,
+          random
+        );
         if (move > 0) upMoves.push(move);
         else downMoves.push(Math.abs(move));
       }
@@ -174,6 +204,7 @@ describe('Market Volatility Simulation', () => {
 
   describe('price evolution over time', () => {
     test('price stays within bounds over many ticks', () => {
+      const random = createSeededRandom(1007);
       const initialPrice = 100;
       let currentPrice = 100;
       const state: VolatilityState = {
@@ -184,7 +215,12 @@ describe('Market Volatility Simulation', () => {
 
       // Simulate 1000 ticks (about 16 hours of game time)
       for (let i = 0; i < 1000; i++) {
-        const move = generateVolatilityMove(state, initialPrice, currentPrice);
+        const move = generateVolatilityMove(
+          state,
+          initialPrice,
+          currentPrice,
+          random
+        );
         currentPrice = currentPrice * (1 + move);
 
         // Update state
@@ -202,34 +238,69 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('volatility clustering occurs', () => {
+      const random = createSeededRandom(1008);
       const state: VolatilityState = {
         recentVolatility: MIN_MARKET_VOLATILITY,
         momentum: 0,
         lastMove: 0,
       };
 
-      const volatilities: number[] = [];
+      const absoluteMoves: number[] = [];
 
-      for (let i = 0; i < 100; i++) {
-        const move = generateVolatilityMove(state, 100, 100);
+      // Use a longer simulation and compare next-step volatility after
+      // high-vol vs low-vol moves. This is less noisy than max/min ratios.
+      for (let i = 0; i < 3000; i++) {
+        const move = generateVolatilityMove(state, 100, 100, random);
         state.lastMove = move;
         state.momentum = move * 0.3;
         state.recentVolatility = Math.max(
           MIN_MARKET_VOLATILITY,
           state.recentVolatility * 0.8 + Math.abs(move) * 0.2
         );
-        volatilities.push(state.recentVolatility);
+        absoluteMoves.push(Math.abs(move));
       }
 
-      // Volatility should vary over time (not constant)
-      const minVol = Math.min(...volatilities);
-      const maxVol = Math.max(...volatilities);
-      expect(maxVol / minVol).toBeGreaterThan(1.5); // At least 50% variation
+      const warmup = 200;
+      const usableMoves = absoluteMoves.slice(warmup, -1);
+      const sortedMoves = [...usableMoves].sort((a, b) => a - b);
+
+      const lowVolThreshold =
+        sortedMoves[Math.floor(sortedMoves.length * 0.25)] ?? 0;
+      const highVolThreshold =
+        sortedMoves[Math.floor(sortedMoves.length * 0.75)] ?? 0;
+
+      let highNextVolSum = 0;
+      let lowNextVolSum = 0;
+      let highCount = 0;
+      let lowCount = 0;
+
+      for (let i = warmup; i < absoluteMoves.length - 1; i++) {
+        const currentMove = absoluteMoves[i] ?? 0;
+        const nextMove = absoluteMoves[i + 1] ?? 0;
+
+        if (currentMove >= highVolThreshold) {
+          highNextVolSum += nextMove;
+          highCount++;
+        } else if (currentMove <= lowVolThreshold) {
+          lowNextVolSum += nextMove;
+          lowCount++;
+        }
+      }
+
+      expect(highCount).toBeGreaterThan(100);
+      expect(lowCount).toBeGreaterThan(100);
+
+      const avgNextAfterHigh = highNextVolSum / highCount;
+      const avgNextAfterLow = lowNextVolSum / lowCount;
+
+      // In clustered volatility, high-vol moves are followed by higher volatility.
+      expect(avgNextAfterHigh / avgNextAfterLow).toBeGreaterThan(1.15);
     });
   });
 
   describe('statistical properties', () => {
     test('distribution is not uniform', () => {
+      const random = createSeededRandom(1009);
       const moves: number[] = [];
       for (let i = 0; i < 10000; i++) {
         const move = generateVolatilityMove(
@@ -239,7 +310,8 @@ describe('Market Volatility Simulation', () => {
             lastMove: 0,
           },
           100,
-          100
+          100,
+          random
         );
         moves.push(move);
       }
@@ -260,6 +332,7 @@ describe('Market Volatility Simulation', () => {
     });
 
     test('volatility floor prevents the market from going flat', () => {
+      const random = createSeededRandom(1010);
       const state: VolatilityState = {
         recentVolatility: MIN_MARKET_VOLATILITY,
         momentum: 0,
@@ -267,7 +340,7 @@ describe('Market Volatility Simulation', () => {
       };
 
       for (let i = 0; i < 500; i++) {
-        const move = generateVolatilityMove(state, 100, 100);
+        const move = generateVolatilityMove(state, 100, 100, random);
         state.lastMove = move;
         state.momentum = move * 0.3;
         state.recentVolatility = Math.max(

@@ -2757,8 +2757,7 @@ export async function executeResolveMarket(
     marketId: args.marketId,
     winningSide,
     resolutionDescription:
-      args.reason ||
-      `Resolved by admin as ${args.resolution ? 'YES' : 'NO'}`,
+      args.reason || `Resolved by admin as ${args.resolution ? 'YES' : 'NO'}`,
   });
 
   await logAdminModify({

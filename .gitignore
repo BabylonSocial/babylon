@@ -116,6 +116,8 @@ scripts/cleanup-excess-markets.ts
 # Continuous Claude cache (local only)
 .claude/cache/
 .claude/tsc-cache/
+.claudekit/
+.env.hook-test
 /thoughts
 
 # START Ruler Generated Files

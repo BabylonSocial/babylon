@@ -1442,7 +1442,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     'POST /api/posts'
   );
 
-  const mentions = content.match(/@(\w+)/g) || [];
+  const mentions = normalizedContent.match(/@(\w+)/g) || [];
   const usernames = [...new Set(mentions.map((m: string) => m.substring(1)))];
 
   const mentionedUsers =
@@ -1516,13 +1516,13 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
 
   trackServerEvent(canonicalUserId, 'post_created', {
     postId: post.id,
-    contentLength: content.trim().length,
+    contentLength: normalizedContent.length,
     hasUsername: Boolean(canonicalUser.username),
   });
 
   // Generate and store tags asynchronously (don't block response)
   // This allows posts to be tagged for trending without slowing down the API
-  void generateTagsFromPost(content.trim())
+  void generateTagsFromPost(normalizedContent)
     .then((generatedTags: GeneratedTag[]) => {
       if (generatedTags.length > 0) {
         return storeTagsForPost(post.id, generatedTags).then(() => {

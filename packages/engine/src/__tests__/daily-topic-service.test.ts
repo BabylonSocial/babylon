@@ -57,27 +57,25 @@ const dbMock = {
   })),
   insert: mock(() => ({
     values: mock((data: Record<string, unknown>) => ({
-      onConflictDoUpdate: mock(
-        ({ set }: { set: Record<string, unknown> }) => ({
-          returning: mock(async () => {
-            const existingIndex = storedTopics.findIndex(
-              (topic) =>
-                (topic.date as Date).getTime() === (data.date as Date).getTime()
-            );
+      onConflictDoUpdate: mock(({ set }: { set: Record<string, unknown> }) => ({
+        returning: mock(async () => {
+          const existingIndex = storedTopics.findIndex(
+            (topic) =>
+              (topic.date as Date).getTime() === (data.date as Date).getTime()
+          );
 
-            if (existingIndex >= 0) {
-              storedTopics[existingIndex] = {
-                ...storedTopics[existingIndex],
-                ...set,
-              };
-              return [storedTopics[existingIndex]];
-            }
+          if (existingIndex >= 0) {
+            storedTopics[existingIndex] = {
+              ...storedTopics[existingIndex],
+              ...set,
+            };
+            return [storedTopics[existingIndex]];
+          }
 
-            storedTopics.push(data);
-            return [data];
-          }),
-        })
-      ),
+          storedTopics.push(data);
+          return [data];
+        }),
+      })),
     })),
   })),
   delete: mock(() => ({

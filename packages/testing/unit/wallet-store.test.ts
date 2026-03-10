@@ -40,18 +40,18 @@ const mockFetch = mock<MockFetch>(() =>
 // @ts-expect-error - mock global fetch
 globalThis.fetch = mockFetch;
 
-// Mock React hooks since the store file imports them
+// Mock only hook behavior; preserve core React exports/version for react-dom.
+const actualReact = await import('react');
 const reactMock = {
+  ...actualReact,
   useCallback: (fn: Function) => fn,
   useEffect: () => {},
   useRef: (val: unknown) => ({ current: val }),
   useState: (init: unknown) => [init, () => {}],
-  createElement: () => null,
-  Fragment: Symbol('Fragment'),
 };
 mock.module('react', () => ({
   ...reactMock,
-  default: reactMock,
+  default: actualReact.default ?? reactMock,
 }));
 
 mock.module('zustand/react/shallow', () => ({

@@ -30,9 +30,9 @@ import { isAddress } from 'viem';
 
 import { walletOptionsResponse } from '../_cors';
 
-export function OPTIONS() {
+export const OPTIONS = withErrorHandling(async () => {
   return walletOptionsResponse();
-}
+});
 
 export const GET = withErrorHandling(async (request: NextRequest) => {
   const user = await authenticateUser(request);

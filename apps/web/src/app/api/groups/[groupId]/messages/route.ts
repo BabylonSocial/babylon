@@ -175,7 +175,7 @@ export const GET = withErrorHandling(
           limit,
           hasMore,
           nextCursor: hasMore
-            ? visibleMessages[visibleMessages.length - 1]?.id ?? null
+            ? (visibleMessages[visibleMessages.length - 1]?.id ?? null)
             : null,
         },
       };

@@ -5,8 +5,8 @@ import type {
   PredictionPositionRecord,
   PredictionServiceDeps,
   QuestionRecord,
-} from '@babylon/core/markets/prediction';
-import { PredictionMarketService } from '@babylon/core/markets/prediction';
+} from '../../core/markets/prediction';
+import { PredictionMarketService } from '../../core/markets/prediction';
 
 describe('PredictionMarketService broadcast events', () => {
   const mockBroadcast = {

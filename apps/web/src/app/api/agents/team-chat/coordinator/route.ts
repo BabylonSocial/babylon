@@ -68,9 +68,7 @@ export const maxDuration = 120;
  * Verified against: @elizaos/core processActions (line ~48919) and
  * composeState (line ~49200) in node_modules/@elizaos/core/dist/node/index.node.js
  */
-function getRuntimeStateCache(
-  runtime: unknown
-):
+function getRuntimeStateCache(runtime: unknown):
   | Map<
       string,
       {
@@ -763,7 +761,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
         totalParseRetries++;
         logger.warn(
           `[Coordinator] Failed to parse decision (attempt ${attempt})`,
-          { preview: response.substring(0, 200) },
+          { preview: response?.substring(0, 200) ?? 'null response' },
           'CoordinatorChat'
         );
       }
@@ -1043,7 +1041,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       totalParseRetries++;
       logger.warn(
         `[Coordinator] Failed to parse summary (attempt ${attempt})`,
-        { preview: summaryResponse.substring(0, 200) },
+        { preview: summaryResponse?.substring(0, 200) ?? 'null response' },
         'CoordinatorChat'
       );
     }

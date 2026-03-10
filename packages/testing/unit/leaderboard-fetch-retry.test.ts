@@ -1,12 +1,18 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import {
   fetchLeaderboardData,
   LeaderboardFetchError,
 } from '../../../apps/web/src/app/leaderboard/fetchLeaderboardData';
 
 describe('fetchLeaderboardData', () => {
+  const originalFetch = globalThis.fetch;
+
   beforeEach(() => {
-    mock.restore();
+    globalThis.fetch = originalFetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   it('retries transient network errors and eventually succeeds', async () => {
@@ -28,7 +34,7 @@ describe('fetchLeaderboardData', () => {
           { status: 200 }
         )
       );
-    globalThis.fetch = fetchMock as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const result = await fetchLeaderboardData({
       currentPage: 1,
@@ -46,7 +52,7 @@ describe('fetchLeaderboardData', () => {
     const fetchMock = mock().mockResolvedValue(
       new Response('{}', { status: 403 })
     );
-    globalThis.fetch = fetchMock as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await expect(
       fetchLeaderboardData({
@@ -78,7 +84,7 @@ describe('fetchLeaderboardData', () => {
         { status: 200 }
       )
     );
-    globalThis.fetch = fetchMock as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     await fetchLeaderboardData({
       currentPage: 1,

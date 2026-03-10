@@ -167,8 +167,8 @@ import {
   type PrivyIdentitySnapshot,
   shouldSyncMissingPrivyIdentity,
 } from '@/lib/auth/privyIdentitySync';
-import { POST as updateProfilePOST } from '../[userId]/update-profile/route';
 import { getOptionalProfileStats } from '@/lib/users/profile-stats';
+import { POST as updateProfilePOST } from '../[userId]/update-profile/route';
 
 type PrivyUserWithWallets = PrivyUser &
   PrivyUserWithEmails &
@@ -1162,6 +1162,14 @@ const updateCurrentUserProfile = withErrorHandling(
   }
 );
 
-export const POST = updateCurrentUserProfile;
-export const PUT = updateCurrentUserProfile;
-export const PATCH = updateCurrentUserProfile;
+export const POST = withErrorHandling(async (request: NextRequest) => {
+  return updateCurrentUserProfile(request);
+});
+
+export const PUT = withErrorHandling(async (request: NextRequest) => {
+  return updateCurrentUserProfile(request);
+});
+
+export const PATCH = withErrorHandling(async (request: NextRequest) => {
+  return updateCurrentUserProfile(request);
+});

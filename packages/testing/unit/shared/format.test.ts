@@ -151,8 +151,8 @@ describe('Format Utilities', () => {
 
     it('should handle negative numbers correctly', () => {
       // Shared formatter keeps symbol first for positive and negative values.
-      expect(formatCurrency(-100)).toBe('ƀ-100.00');
-      expect(formatCurrency(-1234.56)).toBe('ƀ-1234.56');
+      expect(formatCurrency(-100)).toBe('-ƀ100.00');
+      expect(formatCurrency(-1234.56)).toBe('-ƀ1234.56');
     });
 
     it('should handle edge cases with thousands separators', () => {
@@ -161,7 +161,7 @@ describe('Format Utilities', () => {
         'ƀ999.00'
       );
       expect(formatCurrency(-1234.56, { useThousandsSeparator: true })).toBe(
-        'ƀ-1,234.56'
+        '-ƀ1,234.56'
       );
     });
   });

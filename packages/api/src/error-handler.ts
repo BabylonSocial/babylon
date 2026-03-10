@@ -2,13 +2,17 @@
  * Global error handler and middleware for API routes
  */
 
-import { DatabaseError } from '@babylon/db';
+import * as BabylonDb from '@babylon/db';
 import { logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { ZodError } from 'zod';
+import { z } from 'zod';
 import { ApiError, BabylonError, isAuthenticationError } from './errors';
 import type { JsonValue } from './types';
+
+const DatabaseErrorCtor = (
+  BabylonDb as { DatabaseError?: new (...args: unknown[]) => Error }
+).DatabaseError;
 
 const SENSITIVE_HEADER_KEYS = new Set([
   'authorization',
@@ -206,7 +210,7 @@ export function errorHandler(
   }
 
   // Handle validation errors early - these are expected client input issues
-  if (error instanceof ZodError) {
+  if (error instanceof z.ZodError) {
     // Skip logging for test tokens to reduce noise in test output
     const authHeader = request.headers.get('authorization');
     const isTestToken = authHeader?.includes('test-token');
@@ -324,7 +328,7 @@ export function errorHandler(
   if (
     options?.trackError &&
     !isAuthenticationError(error) &&
-    !(error instanceof ZodError) &&
+    !(error instanceof z.ZodError) &&
     !isClientError
   ) {
     void options.trackError(userId, error, {
@@ -394,8 +398,8 @@ export function errorHandler(
   }
 
   // Handle database errors
-  if (error instanceof DatabaseError) {
-    return handleDatabaseError(error);
+  if (DatabaseErrorCtor && error instanceof DatabaseErrorCtor) {
+    return handleDatabaseError(error as Error & { code?: string });
   }
 
   if (error instanceof Error) {
@@ -447,9 +451,7 @@ export function errorHandler(
  * Handle database-specific errors
  * Uses PostgreSQL error codes (23xxx series for integrity constraints)
  */
-function handleDatabaseError(
-  error: DatabaseError & { code?: string }
-): NextResponse {
+function handleDatabaseError(error: Error & { code?: string }): NextResponse {
   const errorCode = 'code' in error ? error.code : undefined;
   switch (errorCode) {
     case '23505': // PostgreSQL unique_violation

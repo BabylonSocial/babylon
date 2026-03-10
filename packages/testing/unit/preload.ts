@@ -8,11 +8,21 @@
  * because the db module has many exports that tests need to control individually.
  */
 
-import { mock } from 'bun:test';
+import { afterEach, mock } from 'bun:test';
 
 // Set test environment
 void Reflect.set(process.env, 'NODE_ENV', 'test');
 void Reflect.set(process.env, 'BUN_ENV', 'test');
+
+// Prevent file-local React module mocks from leaking across test files.
+// React 19's react-dom performs a strict `react.version` check at runtime.
+const actualReact = await import('react');
+afterEach(() => {
+  mock.module('react', () => ({
+    ...actualReact,
+    default: actualReact.default ?? actualReact,
+  }));
+});
 
 // Mock server-only so tests can import Next.js route handlers that use it
 mock.module('server-only', () => ({}));

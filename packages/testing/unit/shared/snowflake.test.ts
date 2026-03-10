@@ -5,10 +5,10 @@
 
 import { describe, expect, it } from 'bun:test';
 import {
-  generateSnowflakeId,
   isValidSnowflakeId,
   parseSnowflakeId,
-} from '@babylon/shared';
+  SnowflakeGenerator,
+} from '../../../shared/src/utils/snowflake';
 
 /** Fallback valid id when generated id is unparseable by BigInt in some runtimes */
 const FALLBACK_ID = '1234567890123456789';
@@ -22,15 +22,17 @@ function parseIdSafe(id: string): bigint | null {
 }
 
 describe('Snowflake ID Generator', () => {
+  const testGenerator = new SnowflakeGenerator(777);
+
   describe('generateSnowflakeId', () => {
     it('should generate a unique ID', async () => {
-      const id = await generateSnowflakeId();
+      const id = await testGenerator.generate();
       expect(typeof id).toBe('string');
       expect(id.length).toBeGreaterThan(0);
     });
 
     it('should generate IDs that are valid numbers', async () => {
-      const id = await generateSnowflakeId();
+      const id = await testGenerator.generate();
       const num = parseIdSafe(id);
       if (num !== null) {
         expect(num).toBeGreaterThan(0n);
@@ -41,22 +43,19 @@ describe('Snowflake ID Generator', () => {
     });
 
     it('should generate unique IDs on sequential calls', async () => {
-      const ids = await Promise.all([
-        generateSnowflakeId(),
-        generateSnowflakeId(),
-        generateSnowflakeId(),
-        generateSnowflakeId(),
-        generateSnowflakeId(),
-      ]);
+      const ids: string[] = [];
+      for (let i = 0; i < 5; i++) {
+        ids.push(await testGenerator.generate());
+      }
 
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
     });
 
     it('should generate monotonically increasing IDs', async () => {
-      const id1 = await generateSnowflakeId();
-      const id2 = await generateSnowflakeId();
-      const id3 = await generateSnowflakeId();
+      const id1 = await testGenerator.generate();
+      const id2 = await testGenerator.generate();
+      const id3 = await testGenerator.generate();
       const n1 = parseIdSafe(id1);
       const n2 = parseIdSafe(id2);
       const n3 = parseIdSafe(id3);
@@ -73,7 +72,7 @@ describe('Snowflake ID Generator', () => {
 
   describe('isValidSnowflakeId', () => {
     it('should validate correct snowflake IDs', async () => {
-      const id = await generateSnowflakeId();
+      const id = await testGenerator.generate();
       const valid =
         parseIdSafe(id) !== null
           ? isValidSnowflakeId(id)
@@ -104,7 +103,7 @@ describe('Snowflake ID Generator', () => {
 
   describe('parseSnowflakeId', () => {
     it('should parse a snowflake ID and return components', async () => {
-      let id = await generateSnowflakeId();
+      let id = await testGenerator.generate();
       if (parseIdSafe(id) === null) id = FALLBACK_ID;
       const parsed = parseSnowflakeId(id);
 
@@ -115,7 +114,7 @@ describe('Snowflake ID Generator', () => {
 
     it('should return a timestamp close to current time', async () => {
       const before = new Date();
-      let id = await generateSnowflakeId();
+      let id = await testGenerator.generate();
       const useFallback = parseIdSafe(id) === null;
       if (useFallback) id = FALLBACK_ID;
       const after = new Date();
@@ -133,7 +132,7 @@ describe('Snowflake ID Generator', () => {
     });
 
     it('should handle BigInt input', async () => {
-      const id = await generateSnowflakeId();
+      const id = await testGenerator.generate();
       const n = parseIdSafe(id);
       const parsed = parseSnowflakeId(n !== null ? n : BigInt(FALLBACK_ID));
 

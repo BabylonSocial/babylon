@@ -27,6 +27,8 @@
 
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { NextRequest } from 'next/server';
+import * as apiActual from '../../../api/src';
+import * as sharedActual from '../../../shared/src';
 
 // ─── XML helpers — real XML that parseKeyValueXml can parse ───────────────────
 
@@ -87,6 +89,7 @@ const mockCheckRateLimitAsync = mock<
 >(async () => ({ allowed: true, retryAfter: null }));
 
 mock.module('@babylon/api', () => ({
+  ...apiActual,
   authenticateUser: mockAuthenticateUser,
   broadcastChatMessage: mockBroadcastChatMessage,
   checkRateLimitAsync: mockCheckRateLimitAsync,
@@ -130,6 +133,7 @@ const mockGenerateSnowflakeId = mock(async () => 'snowflake-coord-123');
 const mockLogger = { info: mock(), warn: mock(), error: mock(), debug: mock() };
 
 mock.module('@babylon/shared', () => ({
+  ...sharedActual,
   COORDINATOR_SENDER_ID: 'coordinator-sender-id',
   checkUserInput: mockCheckUserInput,
   GROQ_MODELS: { FREE: { displayName: 'llama-free' } },
@@ -148,7 +152,7 @@ mock.module('uuid', () => ({
 const routeModule = await import(
   '@/app/api/agents/team-chat/coordinator/route'
 );
-const { POST } = routeModule;
+let POST = routeModule.POST as (req: NextRequest) => Promise<Response>;
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -185,7 +189,7 @@ function setupSuccessfulRun() {
 
 // ─── Reset between tests ──────────────────────────────────────────────────────
 
-beforeEach(() => {
+beforeEach(async () => {
   mockAuthenticateUser.mockReset();
   mockBroadcastChatMessage.mockReset();
   mockBroadcastChatMessage.mockResolvedValue(undefined);
@@ -202,22 +206,31 @@ beforeEach(() => {
   mockUseModel.mockReset();
   mockProcessActions.mockReset();
   mockProcessActions.mockResolvedValue(undefined);
-  mockDbSelect.mockClear();
-  mockDbSelectFrom.mockClear();
-  mockDbSelectWhere.mockClear();
-  mockDbSelectLimit.mockClear();
+  mockDbSelect.mockReset();
+  mockDbSelectFrom.mockReset();
+  mockDbSelectWhere.mockReset();
+  mockDbSelectLimit.mockReset();
+  mockDbSelectWhere.mockImplementation(() => ({ limit: mockDbSelectLimit }));
+  mockDbSelectFrom.mockImplementation(() => ({ where: mockDbSelectWhere }));
+  mockDbSelect.mockImplementation(() => ({ from: mockDbSelectFrom }));
   mockDbSelectLimit.mockResolvedValue([
     { displayName: 'Alice', username: 'alice' },
   ]);
-  mockDbInsert.mockClear();
-  mockDbInsert.mockReturnValue({ values: mockDbInsertValues });
-  mockDbInsertValues.mockClear();
+  mockDbInsert.mockReset();
+  mockDbInsert.mockImplementation(() => ({ values: mockDbInsertValues }));
+  mockDbInsertValues.mockReset();
   mockDbInsertValues.mockResolvedValue([]);
   mockGenerateSnowflakeId.mockClear();
   mockGenerateSnowflakeId.mockResolvedValue('snowflake-coord-123');
   mockLogger.info.mockClear();
   mockLogger.warn.mockClear();
   mockLogger.error.mockClear();
+  mockLogger.debug.mockClear();
+
+  const isolatedModule = await import(
+    `@/app/api/agents/team-chat/coordinator/route?isolation=${Date.now()}-${Math.random()}`
+  );
+  POST = isolatedModule.POST as typeof POST;
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -417,7 +430,7 @@ describe('POST /api/agents/team-chat/coordinator', () => {
     it('response body contains success=true and coordinator text', async () => {
       setupSuccessfulRun();
       const response = await POST(
-        createRequest({ content: 'hello', teamChatId: TEAM_CHAT_ID })
+        createRequest({ content: 'help with this', teamChatId: TEAM_CHAT_ID })
       );
       const body = await response.json();
 
@@ -461,7 +474,9 @@ describe('POST /api/agents/team-chat/coordinator', () => {
 
     it('calls broadcastChatMessage with teamChatId and response content', async () => {
       setupSuccessfulRun();
-      await POST(createRequest({ content: 'hello', teamChatId: TEAM_CHAT_ID }));
+      await POST(
+        createRequest({ content: 'help with this', teamChatId: TEAM_CHAT_ID })
+      );
 
       expect(mockBroadcastChatMessage).toHaveBeenCalledTimes(1);
       const [calledChatId, calledMsg] = mockBroadcastChatMessage.mock.calls[0]!;
