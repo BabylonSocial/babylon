@@ -51,7 +51,7 @@ type TickerItem = {
   key: string;
   label: string;
   text: string;
-  type: string;
+  type: 'news' | 'prediction' | 'perp';
   /** Perps only: 24h % change for red/green coloring */
   changePercent24h?: number | null;
   /** Predictions only: yes % for the meter (0–100) */
