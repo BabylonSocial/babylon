@@ -10,8 +10,12 @@ import type {
 
 const DEFAULT_STREAMS = 'news,predictions,perps';
 const DEFAULT_THEME = 'dark';
-const DEFAULT_SPEED = 1;
+const DEFAULT_SPEED = 0.7;
 const DEFAULT_HEIGHT = 48;
+
+/** Speed param: 0.1 = slowest, 1 = medium, 3 = fastest. Clamped to [0.1, 3]. */
+const SPEED_MIN = 0.1;
+const SPEED_MAX = 3;
 
 function useTickerParams() {
   if (typeof window === 'undefined') {
@@ -23,17 +27,15 @@ function useTickerParams() {
     };
   }
   const params = new URLSearchParams(window.location.search);
+  const raw = parseFloat(params.get('speed') || String(DEFAULT_SPEED));
+  const speed = Math.min(
+    SPEED_MAX,
+    Math.max(SPEED_MIN, Number.isFinite(raw) ? raw : DEFAULT_SPEED)
+  );
   return {
     streams: params.get('streams')?.trim() || DEFAULT_STREAMS,
     theme: (params.get('theme') || DEFAULT_THEME).toLowerCase(),
-    speed: Math.min(
-      2,
-      Math.max(
-        0.5,
-        parseFloat(params.get('speed') || String(DEFAULT_SPEED)) ||
-          DEFAULT_SPEED
-      )
-    ),
+    speed,
     height: Math.min(
       120,
       Math.max(
@@ -45,15 +47,19 @@ function useTickerParams() {
   };
 }
 
-function buildItems(
-  response: TickerResponse
-): Array<{ key: string; label: string; text: string; type: string }> {
-  const items: Array<{
-    key: string;
-    label: string;
-    text: string;
-    type: string;
-  }> = [];
+type TickerItem = {
+  key: string;
+  label: string;
+  text: string;
+  type: string;
+  /** Perps only: 24h % change for red/green coloring */
+  changePercent24h?: number | null;
+  /** Predictions only: yes % for the meter (0–100) */
+  yesPercent?: number;
+};
+
+function buildItems(response: TickerResponse): TickerItem[] {
+  const items: TickerItem[] = [];
   (response.news ?? []).forEach((n: TickerNewsItem) => {
     items.push({
       key: `news-${n.id}`,
@@ -66,8 +72,9 @@ function buildItems(
     items.push({
       key: `pred-${p.id}`,
       label: 'Prediction',
-      text: `${p.question} · Yes ${p.yesPercent}%`,
+      text: p.question,
       type: 'prediction',
+      yesPercent: p.yesPercent,
     });
   });
   (response.perps ?? []).forEach((p: TickerPerpItem) => {
@@ -80,9 +87,85 @@ function buildItems(
       label: 'Perp',
       text: `${p.ticker} $${p.price.toFixed(2)} (${changeStr})`,
       type: 'perp',
+      changePercent24h: p.changePercent24h,
     });
   });
   return items;
+}
+
+function perpTextColor(
+  changePercent24h: number | null | undefined,
+  isDark: boolean
+): string {
+  if (changePercent24h == null || changePercent24h === 0) return '';
+  if (changePercent24h > 0)
+    return isDark ? 'rgb(34, 197, 94)' : 'rgb(22, 163, 74)'; // green-500 / green-600
+  return isDark ? 'rgb(239, 68, 68)' : 'rgb(220, 38, 38)'; // red-500 / red-600
+}
+
+/** Semi-circular arc meter (0% left, 100% right), percentage centered inside. */
+function PredictionArcMeter({
+  percent,
+  isDark,
+  size = 36,
+}: {
+  percent: number;
+  isDark: boolean;
+  size?: number;
+}) {
+  const pct = Math.min(100, Math.max(0, percent));
+  const r = 40;
+  // Top half-circle: from (10,50) left to (90,50) right, counterclockwise
+  const halfCircleLength = Math.PI * r;
+  const filledLength = (pct / 100) * halfCircleLength;
+  const trackColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)';
+  const fillColor =
+    pct > 50
+      ? isDark
+        ? 'rgb(34, 197, 94)'
+        : 'rgb(22, 163, 74)' // green
+      : isDark
+        ? 'rgb(234, 88, 12)'
+        : 'rgb(234, 88, 12)'; // orange/red below 50%
+
+  const h = (size * 60) / 100;
+  return (
+    <span
+      className="relative inline-flex shrink-0 items-center justify-center"
+      style={{ width: size, height: h }}
+    >
+      <svg
+        viewBox="0 0 100 60"
+        className="absolute inset-0 block"
+        style={{ width: size, height: h }}
+      >
+        {/* Track: full semi-circle */}
+        <path
+          d="M 10 50 A 40 40 0 0 0 90 50"
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
+        {/* Filled: partial arc from left (0%) to percent */}
+        <path
+          d="M 10 50 A 40 40 0 0 0 90 50"
+          fill="none"
+          stroke={fillColor}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={`${filledLength} ${halfCircleLength}`}
+          strokeDashoffset={0}
+        />
+      </svg>
+      <span
+        className="relative text-[10px] font-bold tabular-nums leading-none"
+        style={{ color: isDark ? '#fafafa' : '#0a0a0a' }}
+      >
+        {Math.round(pct)}%
+      </span>
+    </span>
+  );
 }
 
 export function TickerClient() {
@@ -122,7 +205,11 @@ export function TickerClient() {
   const bg = isDark ? '#0a0a0a' : '#fff';
   const fg = isDark ? '#fafafa' : '#0a0a0a';
   const muted = isDark ? '#71717a' : '#52525b';
-  const duration = Math.round(60 / speed);
+  // One full scroll cycle: speed 0.1 → 600s, 0.5 → 240s, 1 → 120s, 3 → 40s
+  const duration = Math.min(
+    600,
+    Math.max(20, Math.round(120 / speed))
+  );
 
   if (loading && !data) {
     return (
@@ -173,25 +260,39 @@ export function TickerClient() {
           animation: `ticker-scroll ${duration}s linear infinite`,
         }}
       >
-        {[...items, ...items].map((item) => (
-          <span
-            key={item.key}
-            className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm"
-          >
+        {[...items, ...items].map((item) => {
+          const textColor =
+            item.type === 'perp'
+              ? perpTextColor(item.changePercent24h, isDark) || fg
+              : fg;
+          const isPrediction = item.type === 'prediction' && item.yesPercent != null;
+          return (
             <span
-              className="rounded px-1.5 py-0.5 font-medium text-xs"
-              style={{
-                background: isDark
-                  ? 'rgba(255,255,255,0.12)'
-                  : 'rgba(0,0,0,0.08)',
-                color: muted,
-              }}
+              key={item.key}
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm"
             >
-              {item.label}
+              <span
+                className="rounded px-1.5 py-0.5 font-medium text-xs"
+                style={{
+                  background: isDark
+                    ? 'rgba(255,255,255,0.12)'
+                    : 'rgba(0,0,0,0.08)',
+                  color: muted,
+                }}
+              >
+                {item.label}
+              </span>
+              {isPrediction ? (
+                <PredictionArcMeter
+                  percent={item.yesPercent!}
+                  isDark={isDark}
+                  size={36}
+                />
+              ) : null}
+              <span style={{ color: textColor }}>{item.text}</span>
             </span>
-            <span>{item.text}</span>
-          </span>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
