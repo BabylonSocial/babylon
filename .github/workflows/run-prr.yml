@@ -22,7 +22,7 @@ jobs:
         (github.event.action == 'labeled' && github.event.label.name == 'run-prr') ||
         (github.event.action == 'review_requested' && vars.PRR_REVIEWER_LOGIN != '' && github.event.requested_reviewer.login == vars.PRR_REVIEWER_LOGIN)
       ))
-    uses: elizaOS/prr/.github/workflows/run-prr-server.yml@main
+    uses: elizaOS/prr/.github/workflows/run-prr-server.yml@master
     with:
       pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
       prr_repo: 'elizaOS/prr'
