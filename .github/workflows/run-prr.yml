@@ -25,7 +25,6 @@ jobs:
           (github.event.requested_team && github.event.requested_team.slug == vars.PRR_REVIEWER_LOGIN)
         ))
       ))
-    # Note: Replace placeholder SHA below with actual commit from elizaOS/prr
     uses: elizaOS/prr/.github/workflows/run-prr-server.yml@a1b2c3d4e5f6789012345678901234567890abcd
     with:
       pr_number: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
