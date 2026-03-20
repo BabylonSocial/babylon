@@ -3,6 +3,7 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect } from 'react';
 import { useLoginModal } from '@/hooks/useLoginModal';
+import { isWaitlistHomePage } from '@/lib/host-routing';
 import { LoginModal } from './LoginModal';
 
 /**
@@ -30,13 +31,11 @@ function GlobalLoginModalContent() {
   // Check if dev mode is enabled via URL parameter
   const isDevMode = searchParams.get('dev') === 'true';
 
-  // Hide on production (babylon.market) on home page unless ?dev=true
-  const isProduction =
+  // Hide on waitlist home pages unless ?dev=true
+  const isWaitlistHome =
     typeof window !== 'undefined' &&
-    window.location.hostname === 'babylon.market';
-  const isHomePage =
-    typeof window !== 'undefined' && window.location.pathname === '/';
-  const shouldHide = isProduction && isHomePage && !isDevMode;
+    isWaitlistHomePage(window.location.hostname, window.location.pathname);
+  const shouldHide = isWaitlistHome && !isDevMode;
 
   useEffect(() => {
     if (!queuedModal || pathname === '/') {

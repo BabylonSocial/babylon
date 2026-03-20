@@ -10,6 +10,7 @@ import {
 } from '@/components/onboarding/OnboardingModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useSignupTracking } from '@/hooks/usePostHog';
+import { isWaitlistHomePage } from '@/lib/host-routing';
 import { useAuthStore } from '@/stores/authStore';
 import { apiFetch } from '@/utils/api-fetch';
 
@@ -132,13 +133,15 @@ export function OnboardingProvider({
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const isDevMode = params.get('dev') === 'true';
-      const isProduction = window.location.hostname === 'babylon.market';
-      const isHomePage = window.location.pathname === '/';
       const isWaitlistFlow = params.get('waitlist') === 'true';
+      const isWaitlistHome = isWaitlistHomePage(
+        window.location.hostname,
+        window.location.pathname
+      );
 
-      // Hide onboarding on production (babylon.market) on home page unless ?dev=true
+      // Hide onboarding on waitlist home pages unless ?dev=true
       // BUT allow it if user is in waitlist flow (coming from waitlist signup)
-      if (isProduction && isHomePage && !isDevMode && !isWaitlistFlow) {
+      if (isWaitlistHome && !isDevMode && !isWaitlistFlow) {
         return false;
       }
     }

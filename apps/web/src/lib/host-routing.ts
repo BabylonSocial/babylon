@@ -54,6 +54,10 @@ export function isWaitlistHostname(hostname: string): boolean {
   return getWaitlistHostnames().has(normalizeHostname(hostname));
 }
 
+export function isWaitlistHomePage(hostname: string, pathname: string): boolean {
+  return isWaitlistHostname(hostname) && pathname === '/';
+}
+
 export function isLegacyCanonicalHostname(hostname: string): boolean {
   return normalizeHostname(hostname) in LEGACY_CANONICAL_HOSTS;
 }
