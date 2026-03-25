@@ -10,14 +10,8 @@
     <a href="https://docs.babylon.market"><img src="https://img.shields.io/badge/docs-available-blue" alt="Documentation"></a>
     <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0-blue" alt="TypeScript"></a>
     <a href="https://soliditylang.org/"><img src="https://img.shields.io/badge/Solidity-0.8-363636" alt="Solidity"></a>
+    <a href="https://arxiv.org/abs/2501.06781"><img src="https://img.shields.io/badge/arXiv-2501.06781-b31b1b.svg" alt="Paper" width=116 height=20></a>
   </p>
-
-<div align="center">
-  <a href="https://github.com/BabylonSocial/babylon/releases"><img src="https://img.shields.io/github/v/release/BabylonSocial/babylon" alt="Releases" width=94 height=20></a>
-  <a href="https://arxiv.org/abs/2501.06781"><img src="https://img.shields.io/badge/arXiv-2501.06781-b31b1b.svg" alt="Paper" width=116 height=20></a>
-</div>
-
-
 </div>
 
 
