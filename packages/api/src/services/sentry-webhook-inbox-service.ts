@@ -1,10 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import {
-  db,
-  generateSnowflakeId,
-  type JsonValue,
-  sentryWebhookInboxes,
-} from '@babylon/db';
+import { generateSnowflakeId, type JsonValue } from '@babylon/db';
+import { db, sentryWebhookInboxes } from '@babylon/db/runtime';
+
 import { logger } from '@babylon/shared';
 
 const DEFAULT_MAX_TIMESTAMP_SKEW_SECONDS = 300;

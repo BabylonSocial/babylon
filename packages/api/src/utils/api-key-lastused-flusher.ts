@@ -19,7 +19,9 @@
 
 import { randomBytes } from 'node:crypto';
 
-import { asSystem, eq, userApiKeys } from '@babylon/db';
+import { type DrizzleClient, eq, type Transaction } from '@babylon/db';
+import { asSystem, userApiKeys } from '@babylon/db/runtime';
+
 import { logger } from '@babylon/shared';
 import { getRedisClient, isRedisAvailable } from '../redis';
 
@@ -182,8 +184,8 @@ async function flushPendingUpdates(
     // Execute individual UPDATE statements within a single transaction.
     // WHY: Transaction groups N updates into one commit, reducing connection overhead vs N separate
     // auto-committed queries. Not a single SQL statement, but still provides significant DB load reduction.
-    await asSystem(async (dbClient) => {
-      await dbClient.transaction(async (tx) => {
+    await asSystem(async (dbClient: DrizzleClient) => {
+      await dbClient.transaction(async (tx: Transaction) => {
         // Execute all updates within single transaction
         // WHY: Transaction ensures atomicity and reduces per-query commit overhead.
         for (const update of updates) {

@@ -19,19 +19,15 @@
  *   --user=<id>    Only process a specific user (for testing)
  */
 
+import { and, count, eq, inArray, isNull } from '@babylon/db';
 import {
-  and,
-  count,
   db,
-  eq,
   groupMembers,
   groups,
-  inArray,
-  isNull,
   nftSnapshot,
   users,
   whitelist,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { UserAlphaGroupAssignmentService } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 

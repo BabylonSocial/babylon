@@ -5,7 +5,8 @@
  * Stores trained models with metadata for easy deployment.
  */
 
-import { db, eq, trainedModels } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, trainedModels } from '@babylon/db/runtime';
 import type { JsonValue } from '@babylon/shared';
 import { del, list, put } from '@vercel/blob';
 import fs from 'fs/promises';

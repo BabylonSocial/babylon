@@ -13,7 +13,8 @@
  * Run: bun run packages/training/scripts/e2e-training-test.ts
  */
 
-import { count, db, desc, eq, isNotNull, trajectories } from '@babylon/db';
+import { count, desc, eq, isNotNull } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import { spawn } from 'child_process';
 import {
   existsSync,

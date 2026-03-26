@@ -13,21 +13,15 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { and, count, desc, eq, gte, isNotNull, isNull, not } from '@babylon/db';
 import {
-  and,
-  count,
   db,
-  desc,
-  eq,
-  gte,
-  isNotNull,
-  isNull,
-  not,
   trainedModels,
   trainingBatches,
   trajectories,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { spawn } from 'child_process';
 import { inArray } from 'drizzle-orm';
 import { getExportGroupedForGRPO } from '../dependencies';

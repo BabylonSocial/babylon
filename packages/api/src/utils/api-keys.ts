@@ -18,7 +18,8 @@
  * - See `api-key-lastused-flusher.ts` for flush service implementation
  */
 
-import { asSystem, eq, userApiKeys } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { asSystem, userApiKeys } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import crypto from 'crypto';
 import { getRedisClient, isRedisAvailable } from '../redis';

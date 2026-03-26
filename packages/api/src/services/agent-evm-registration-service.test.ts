@@ -31,6 +31,11 @@ const usersTable = {
 
 mock.module('@babylon/db', () => ({
   and: (...args: unknown[]) => args,
+  eq: (...args: unknown[]) => args,
+  sql: (strings: TemplateStringsArray) => strings.join(''),
+}));
+
+mock.module('@babylon/db/runtime', () => ({
   balanceTransactions: 'BalanceTransaction',
   db: {
     select: () => ({
@@ -56,8 +61,6 @@ mock.module('@babylon/db', () => ({
       },
     }),
   },
-  eq: (...args: unknown[]) => args,
-  sql: (strings: TemplateStringsArray) => strings.join(''),
   users: usersTable,
 }));
 

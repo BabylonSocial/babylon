@@ -10,20 +10,14 @@
  * - Tier 3 (Followers): 500 members, public content
  */
 
+import { and, count, eq, inArray, isNotNull, isNull, ne } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
-  count,
   db,
-  eq,
   groupMembers,
   groups,
-  inArray,
-  isNotNull,
-  isNull,
-  ne,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { GROUP_CONFIG, generateSnowflakeId, logger } from '@babylon/shared';
 
 import { DistributedLockService } from './distributed-lock-service';

@@ -1,4 +1,5 @@
-import { and, balanceTransactions, db, eq, sql, users } from '@babylon/db';
+import { and, eq, sql } from '@babylon/db';
+import { balanceTransactions, db, users } from '@babylon/db/runtime';
 import {
   BusinessLogicError,
   generateSnowflakeId,

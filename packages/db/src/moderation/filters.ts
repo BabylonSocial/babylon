@@ -7,7 +7,7 @@
 
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db';
-import { userBlocks, userMutes } from '../schema';
+import { userBlocks, userMutes } from '../tables';
 
 /**
  * Get list of user IDs that the current user has blocked.

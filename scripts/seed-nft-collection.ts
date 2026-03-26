@@ -14,16 +14,16 @@
  */
 
 import { PointsService } from '@babylon/api';
+import { count, eq } from '@babylon/db';
 import {
   closeDatabase,
-  count,
   db,
-  eq,
   nftClaims,
   nftCollection,
   nftOwnership,
   nftSnapshot,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { logger } from '@babylon/shared';
 import { nanoid } from 'nanoid';
 

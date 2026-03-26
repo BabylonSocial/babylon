@@ -13,16 +13,14 @@
  *   --dry-run    Show what would be fixed without making changes
  */
 
+import { and, eq, isNull } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
   db,
-  eq,
   groupMembers,
   groups,
-  isNull,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { StaticDataRegistry } from '@babylon/engine';
 import { generateSnowflakeId } from '@babylon/shared';
 

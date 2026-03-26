@@ -12,7 +12,7 @@
  */
 
 import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
-import type * as schema from './schema';
+import type * as schema from './tables';
 
 // ============================================================================
 // Select Types (what you get when reading from the database)

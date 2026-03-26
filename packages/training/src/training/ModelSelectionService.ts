@@ -7,18 +7,8 @@
  * 3. Performance of previous models
  */
 
-import {
-  and,
-  count,
-  db,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  not,
-  trainedModels,
-  trajectories,
-} from '@babylon/db';
+import { and, count, desc, eq, inArray, isNotNull, not } from '@babylon/db';
+import { db, trainedModels, trajectories } from '@babylon/db/runtime';
 import { logger } from '../utils/logger';
 
 export interface ModelSelectionResult {

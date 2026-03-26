@@ -14,7 +14,8 @@
  * @module services/article-persistence
  */
 
-import { db, eq, posts } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, posts } from '@babylon/db/runtime';
 import type { ArticlePersistInput } from '@babylon/shared';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { formatError } from '../utils/error-utils';

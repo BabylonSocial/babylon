@@ -9,14 +9,8 @@
  * @packageDocumentation
  */
 
-import {
-  db,
-  eq,
-  trajectories,
-  type User,
-  userAgentConfigs,
-  users,
-} from '@babylon/db';
+import { eq, type User } from '@babylon/db';
+import { db, trajectories, userAgentConfigs, users } from '@babylon/db/runtime';
 import type { IAgentRuntime } from '@elizaos/core';
 import { ArchetypeConfigService } from '../archetypes/ArchetypeConfigService';
 import {

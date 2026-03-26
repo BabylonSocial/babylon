@@ -6,13 +6,8 @@
  * than those in "setup" phase.
  */
 
-import {
-  arcStates,
-  db,
-  inArray,
-  type LongTermArcState,
-  questions,
-} from '@babylon/db';
+import { inArray, type LongTermArcState } from '@babylon/db';
+import { arcStates, db, questions } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { formatError } from '../utils/error-utils';
 import { StaticDataRegistry } from './static-data-registry';

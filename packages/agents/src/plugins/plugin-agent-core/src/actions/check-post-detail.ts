@@ -5,18 +5,8 @@
  * Shows IDs for each comment so agent can reference them for replies.
  */
 
-import {
-  and,
-  comments,
-  count,
-  db,
-  desc,
-  eq,
-  isNull,
-  posts,
-  shares,
-  users,
-} from '@babylon/db';
+import { and, count, desc, eq, isNull } from '@babylon/db';
+import { comments, db, posts, shares, users } from '@babylon/db/runtime';
 import { StaticDataRegistry } from '@babylon/engine';
 import type { MessageTag } from '@babylon/shared';
 import type {

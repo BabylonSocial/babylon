@@ -1,10 +1,13 @@
 import {
   type PerpPosition as DbPerpPosition,
+  type Transaction,
+} from '@babylon/db';
+import {
   db as defaultDb,
   perpMarketSnapshots,
   perpPositions,
-  type Transaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import type { InferInsertModel } from 'drizzle-orm';
 import { and, eq, isNull } from 'drizzle-orm';

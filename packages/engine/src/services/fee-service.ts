@@ -8,21 +8,23 @@
 
 import {
   and,
-  balanceTransactions,
   count,
   Decimal,
   type DrizzleClient,
-  db,
   desc,
   eq,
   gte,
   lte,
   sum,
   type Transaction,
+} from '@babylon/db';
+import {
+  balanceTransactions,
+  db,
   tradingFees,
   users,
   withTransaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { SQL } from 'drizzle-orm';
 import { FEE_CONFIG, type FeeType } from '../config/fees';

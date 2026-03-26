@@ -5,17 +5,8 @@
  * Provides assertions and logging for model usage verification.
  */
 
-import {
-  and,
-  count,
-  db,
-  eq,
-  gte,
-  inArray,
-  llmCallLogs,
-  trajectories,
-  users,
-} from '@babylon/db';
+import { and, count, eq, gte, inArray } from '@babylon/db';
+import { db, llmCallLogs, trajectories, users } from '@babylon/db/runtime';
 import type { IAgentRuntime } from '@elizaos/core';
 import { logger } from '../utils/logger';
 

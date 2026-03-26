@@ -5,17 +5,8 @@
  * how often users can update their profiles.
  */
 
-import {
-  and,
-  asc,
-  count,
-  db,
-  desc,
-  eq,
-  gte,
-  profileUpdateLogs,
-  sql,
-} from '@babylon/db';
+import { and, asc, count, desc, eq, gte, sql } from '@babylon/db';
+import { db, profileUpdateLogs } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 
 interface RateLimitConfig {

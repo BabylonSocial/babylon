@@ -10,7 +10,8 @@
  * Uses provider pattern for Redis services (injected from API layer).
  */
 
-import { db, desc, gte, worldEvents } from '@babylon/db';
+import { desc, gte } from '@babylon/db';
+import { db, worldEvents } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { npcMemoryService } from './npc-memory-service';
 import { StaticDataRegistry } from './static-data-registry';

@@ -5,7 +5,8 @@
  * (determined by the LLM in the multi-step decision).
  */
 
-import { db, posts } from '@babylon/db';
+import { db, posts } from '@babylon/db/runtime';
+
 import {
   type GeneratedTag,
   generateTagsFromPost,

@@ -9,7 +9,8 @@
  * @module cli/commands/admin
  */
 
-import { asc, closeDatabase, db, eq, or, sql, users } from '@babylon/db';
+import { asc, eq, or, sql } from '@babylon/db';
+import { closeDatabase, db, users } from '@babylon/db/runtime';
 import { parseArgs, wantsHelp } from '../lib/args.js';
 import { logger } from '../lib/logger.js';
 

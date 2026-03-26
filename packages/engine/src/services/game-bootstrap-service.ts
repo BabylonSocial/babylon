@@ -5,20 +5,17 @@
  * Replaces the need for manual seeding scripts.
  */
 
+import { eq, generateSnowflakeId, inArray, sql } from '@babylon/db';
 import {
   actorState,
   db,
-  eq,
   games,
-  generateSnowflakeId,
-  inArray,
   organizationState,
   perpMarketSnapshots,
   pools,
   rssFeedSources,
-  sql,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import type { ActorTier } from '@babylon/shared';
 import { logger } from '@babylon/shared';
 import { DEFAULT_RSS_SOURCES } from '../config/rss-sources';

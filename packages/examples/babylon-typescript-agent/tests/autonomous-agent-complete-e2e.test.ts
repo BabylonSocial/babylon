@@ -23,7 +23,9 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { A2AMarketPosition } from '@babylon/a2a';
-import { db, eq, getDbInstance, markets, posts, users } from '@babylon/db';
+import { eq, getDbInstance } from '@babylon/db';
+import { db, markets, posts, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import dotenv from 'dotenv';
 import { BabylonA2AClient } from '../src/a2a-client';

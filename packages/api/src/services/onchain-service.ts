@@ -15,7 +15,9 @@
 
 import { getAgent0SDK } from '@babylon/agents';
 import { getContractAddresses, getRpcUrl } from '@babylon/contracts';
-import { and, db, eq, follows, referrals, sql, users } from '@babylon/db';
+import { and, eq, sql } from '@babylon/db';
+import { db, follows, referrals, users } from '@babylon/db/runtime';
+
 import type {
   AgentCapabilities,
   AuthenticatedUser,

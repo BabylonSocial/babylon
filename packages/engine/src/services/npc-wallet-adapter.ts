@@ -9,18 +9,11 @@
  * lead to negative balances.
  */
 import type { WalletPort } from '@babylon/core/markets/shared';
-import {
-  actorState,
-  and,
-  db as defaultDb,
-  eq,
-  gte,
-  sql,
-  type Transaction,
-} from '@babylon/db';
+import { and, eq, gte, sql, type Transaction } from '@babylon/db';
+import { actorState, db as globalDb } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
-type DbClient = typeof defaultDb | Transaction;
+type DbClient = typeof globalDb | Transaction;
 
 /**
  * Creates a WalletPort implementation for NPC actors.
@@ -33,7 +26,7 @@ export function createNpcWalletAdapter(
   actorId: string,
   dbClient?: DbClient
 ): WalletPort {
-  const db = dbClient ?? defaultDb;
+  const db = dbClient ?? globalDb;
 
   return {
     async debit({ amount, reason }: { amount: number; reason: string }) {

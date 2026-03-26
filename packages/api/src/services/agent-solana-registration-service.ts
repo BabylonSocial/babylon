@@ -9,7 +9,9 @@ import {
   prepareAgentSolanaRegistrationTransaction,
   SOLANA_REGISTRATION_MIN_BALANCE_LAMPORTS,
 } from '@babylon/agents/solana-registry';
-import { and, balanceTransactions, db, eq, sql, users } from '@babylon/db';
+import { and, eq, sql } from '@babylon/db';
+import { balanceTransactions, db, users } from '@babylon/db/runtime';
+
 import {
   BusinessLogicError,
   generateSnowflakeId,
@@ -570,20 +572,22 @@ export async function registerAgentOnSolanaForOwner({
         domains: [],
       });
 
-      prepared = await prepareAgentSolanaRegistrationTransaction({
-        agentUserId,
-        ownerWalletAddress: wallet.walletAddress,
-        registrationFile,
-      });
+      const registrationPrepared =
+        await prepareAgentSolanaRegistrationTransaction({
+          agentUserId,
+          ownerWalletAddress: wallet.walletAddress,
+          registrationFile,
+        });
+      prepared = registrationPrepared;
 
       const existingOnchain = await getAgentSolanaRegistration(
-        prepared.assetId
+        registrationPrepared.assetId
       );
       if (existingOnchain) {
         await persistSolanaRegistrationState({
           agentUserId,
-          assetId: prepared.assetId,
-          metadataUri: prepared.metadataUri,
+          assetId: registrationPrepared.assetId,
+          metadataUri: registrationPrepared.metadataUri,
           wallet: {
             walletAddress: wallet.walletAddress,
             walletId: wallet.privyWalletId,
@@ -594,8 +598,8 @@ export async function registerAgentOnSolanaForOwner({
           message: 'Agent already registered on Solana',
           alreadyRegistered: true,
           agentUserId,
-          assetId: prepared.assetId,
-          metadataUri: prepared.metadataUri,
+          assetId: registrationPrepared.assetId,
+          metadataUri: registrationPrepared.metadataUri,
           walletAddress: wallet.walletAddress,
           cost: 0,
         };
@@ -605,13 +609,13 @@ export async function registerAgentOnSolanaForOwner({
         ownerUserId,
         agentUserId,
         walletId: wallet.privyWalletId,
-        transactionTemplate: prepared.transactionTemplate,
+        transactionTemplate: registrationPrepared.transactionTemplate,
       });
 
       await persistSolanaRegistrationState({
         agentUserId,
-        assetId: prepared.assetId,
-        metadataUri: prepared.metadataUri,
+        assetId: registrationPrepared.assetId,
+        metadataUri: registrationPrepared.metadataUri,
         wallet: {
           walletAddress: wallet.walletAddress,
           walletId: wallet.privyWalletId,
@@ -624,7 +628,7 @@ export async function registerAgentOnSolanaForOwner({
         {
           ownerUserId,
           agentUserId,
-          assetId: prepared.assetId,
+          assetId: registrationPrepared.assetId,
           txHash: tx.hash,
           cost,
         },
@@ -635,8 +639,8 @@ export async function registerAgentOnSolanaForOwner({
         message: 'Successfully registered agent on Solana',
         alreadyRegistered: false,
         agentUserId,
-        assetId: prepared.assetId,
-        metadataUri: prepared.metadataUri,
+        assetId: registrationPrepared.assetId,
+        metadataUri: registrationPrepared.metadataUri,
         txHash: tx.hash,
         walletAddress: wallet.walletAddress,
         cost,

@@ -11,7 +11,8 @@
 
 import type { AgentCard, Message, Task } from '@a2a-js/sdk';
 import { A2AClient } from '@a2a-js/sdk/client';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { StaticDataRegistry } from '@babylon/engine';
 import type { AgentRuntime, Plugin } from '@elizaos/core';
 import { agentWalletService } from '../../identity/AgentWalletService';

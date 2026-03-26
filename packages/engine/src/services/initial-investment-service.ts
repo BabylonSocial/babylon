@@ -7,7 +7,8 @@
  * Uses LLM to determine appropriate investments based on NPC characteristics.
  */
 
-import { actorState, and, db, eq, getDbInstance, gte, sql } from '@babylon/db';
+import { and, eq, getDbInstance, gte, sql } from '@babylon/db';
+import { actorState, db } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { loadActorById } from '../actors-loader';
 import { BabylonLLMClient } from '../llm/openai-client';

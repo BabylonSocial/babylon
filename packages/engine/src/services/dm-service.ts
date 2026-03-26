@@ -5,18 +5,15 @@
  * Used by agent trade notifications and other system DMs.
  */
 
+import { aliasedTable, and, eq, type Transaction } from '@babylon/db';
 import {
-  aliasedTable,
-  and,
   chatParticipants,
   chats,
   db,
   dmAcceptances,
-  eq,
   messages,
-  type Transaction,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 
 /**

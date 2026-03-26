@@ -6,21 +6,8 @@
  * and leaderboard rankings for waitlist participants.
  */
 
-import {
-  and,
-  asc,
-  count,
-  db,
-  desc,
-  eq,
-  gt,
-  lt,
-  ne,
-  or,
-  pointsTransactions,
-  referrals,
-  users,
-} from '@babylon/db';
+import { and, asc, count, desc, eq, gt, lt, ne, or } from '@babylon/db';
+import { db, pointsTransactions, referrals, users } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger, POINTS } from '@babylon/shared';
 import { nanoid } from 'nanoid';
 import { NotFoundError } from '../errors';

@@ -9,7 +9,8 @@
  * - ORACLE_ENCRYPTION_KEY must be set in environment (no default)
  */
 
-import { asc, db, eq, oracleCommitments } from '@babylon/db';
+import { asc, eq } from '@babylon/db';
+import { db, oracleCommitments } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { first } from '../utils/array-utils';

@@ -6,13 +6,8 @@
  * points for trades.
  */
 
-import {
-  db,
-  eq,
-  pointsTransactions,
-  type Transaction,
-  users,
-} from '@babylon/db';
+import { eq, type Transaction } from '@babylon/db';
+import { db, pointsTransactions, users } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { TotalPointsService } from './total-points-service';
 

@@ -11,16 +11,14 @@
  *   ollama         - Manage Ollama local models (list, pull, delete)
  */
 
+import { desc, eq, gte } from '@babylon/db';
 import {
   benchmarkResults,
   closeDatabase,
   db,
-  desc,
-  eq,
-  gte,
   trainedModels,
   trajectories,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { HuggingFaceModelUploader } from '@babylon/training';
 import { promises as fs } from 'fs';
 import * as path from 'path';

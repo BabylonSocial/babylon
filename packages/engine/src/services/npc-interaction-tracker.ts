@@ -11,21 +11,16 @@
  * Uses configurable thresholds from ALPHA_GROUP_CONFIG.
  */
 
+import { and, count, eq, gte, inArray, lte } from '@babylon/db';
 import {
   agentTrades,
-  and,
-  count,
   db,
-  eq,
-  gte,
-  inArray,
-  lte,
   posts,
   reactions,
   shares,
   userInteractions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { ALPHA_GROUP_CONFIG } from '../config/alpha-group-config';
 

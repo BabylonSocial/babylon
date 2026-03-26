@@ -15,17 +15,8 @@
  * Weights evidence by source reliability and tracks signal strength over time.
  */
 
-import {
-  and,
-  db,
-  eq,
-  inArray,
-  isNull,
-  lte,
-  posts,
-  questions,
-  users,
-} from '@babylon/db';
+import { and, eq, inArray, isNull, lte } from '@babylon/db';
+import { db, posts, questions, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { StaticDataRegistry } from './static-data-registry';
 

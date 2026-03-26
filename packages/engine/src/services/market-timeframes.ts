@@ -61,7 +61,7 @@ import { logger } from '@babylon/shared';
 import { clamp01 } from '../utils/math-utils';
 
 // Re-export types from DB schema for consumers of this module
-// Arc state types are canonical in @babylon/db/schema/narrative.ts
+// Arc state types are canonical in @babylon/db/tables/narrative-types.ts
 export type {
   ArcStateType,
   DailyArcState,

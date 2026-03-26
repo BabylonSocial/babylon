@@ -7,13 +7,12 @@
 
 import {
   and,
-  db,
   eq,
   type GameOnboardingRow,
   type GameOnboardingState,
   type GameOnboardingStep,
-  gameOnboarding,
 } from '@babylon/db';
+import { db, gameOnboarding } from '@babylon/db/runtime';
 import {
   generateSnowflakeId,
   getNextOnboardingStep,

@@ -4,18 +4,15 @@
  * Returns the agent's balance, P&L, open positions (with IDs), and recent trades.
  */
 
+import { and, desc, eq, isNull } from '@babylon/db';
 import {
   agentTrades,
-  and,
   db,
-  desc,
-  eq,
-  isNull,
   markets,
   perpPositions,
   positions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { calculatePortfolioBreakdown, WalletService } from '@babylon/engine';
 import type { MessageTag } from '@babylon/shared';
 import type {

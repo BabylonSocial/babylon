@@ -13,16 +13,8 @@
  * Based on: https://art.openpipe.ai/fundamentals/ruler
  */
 
-import {
-  and,
-  asc,
-  db,
-  eq,
-  inArray,
-  isNull,
-  not,
-  trajectories,
-} from '@babylon/db';
+import { and, asc, eq, inArray, isNull, not } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import type { JsonValue } from '@babylon/shared';
 import { asUUID } from '@elizaos/core';
 import { v4 as uuidv4 } from 'uuid';

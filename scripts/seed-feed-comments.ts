@@ -11,14 +11,8 @@
  *   bun run scripts/seed-feed-comments.ts --clear     # Clear existing and reseed
  */
 
-import {
-  comments,
-  db,
-  generateSnowflakeId,
-  posts,
-  reactions,
-  users,
-} from '@babylon/db';
+import { generateSnowflakeId } from '@babylon/db';
+import { comments, db, posts, reactions, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { eq } from 'drizzle-orm';
 

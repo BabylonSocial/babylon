@@ -2,7 +2,8 @@
  * Engine and tick context factories.
  */
 
-import { type DrizzleClient, db } from '@babylon/db';
+import { type DrizzleClient } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
 import { BabylonLLMClient } from '@babylon/engine';
 import { type Logger, logger } from '@babylon/shared';
 import { DefaultLLMOrchestrator } from './llm-orchestrator';

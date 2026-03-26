@@ -7,7 +7,8 @@
  * @packageDocumentation
  */
 
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import type { IAgentRuntime } from '@elizaos/core';
 import type { BabylonRuntime } from '../plugins/babylon/types';
 import { agentPnLService } from '../services/AgentPnLService';

@@ -5,8 +5,8 @@
  * Analyzes entry timing, exit timing, hold duration, and risk management.
  */
 
-import { db } from '@babylon/db';
-import { positions, questions, users } from '@babylon/db/schema';
+import { db, positions, questions, users } from '@babylon/db/runtime';
+
 import { eq } from 'drizzle-orm';
 import type { TradeMetrics } from './reputation-calculation-service';
 

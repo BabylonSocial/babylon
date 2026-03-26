@@ -5,7 +5,9 @@
  */
 
 import { PerpDbAdapter, PerpMarketService } from '@babylon/core/markets/perps';
-import { and, db, eq, isNull, perpPositions } from '@babylon/db';
+import { and, eq, isNull } from '@babylon/db';
+import { db, perpPositions } from '@babylon/db/runtime';
+
 import {
   createPerpPriceImpactPort,
   FEE_CONFIG,

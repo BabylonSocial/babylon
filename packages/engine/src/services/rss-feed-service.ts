@@ -8,18 +8,13 @@
  */
 
 import type { RSSHeadline } from '@babylon/db';
+import { and, desc, eq, gte, lt, sql } from '@babylon/db';
 import {
-  and,
   db,
-  desc,
-  eq,
-  gte,
-  lt,
   parodyHeadlines,
   rssFeedSources,
   rssHeadlines,
-  sql,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { parseStringPromise } from 'xml2js';
 

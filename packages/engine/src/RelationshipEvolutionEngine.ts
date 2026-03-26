@@ -11,16 +11,8 @@
  * - No complex matrices or calculations
  */
 
-import {
-  actorRelationships,
-  and,
-  db,
-  desc,
-  eq,
-  gte,
-  npcInteractions,
-  or,
-} from '@babylon/db';
+import { and, desc, eq, gte, or } from '@babylon/db';
+import { actorRelationships, db, npcInteractions } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { BabylonLLMClient } from './llm/openai-client';
 import { StaticDataRegistry } from './services/static-data-registry';

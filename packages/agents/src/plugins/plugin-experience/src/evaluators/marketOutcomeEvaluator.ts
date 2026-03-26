@@ -9,7 +9,8 @@
  * Runs automatically when markets resolve.
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import {
   type Evaluator,
   type IAgentRuntime,

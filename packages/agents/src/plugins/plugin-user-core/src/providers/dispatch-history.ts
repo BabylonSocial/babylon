@@ -17,14 +17,8 @@
  * - Avoid re-dispatching when a response already exists
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  messages as messagesTable,
-  users,
-} from '@babylon/db';
+import { and, desc, eq } from '@babylon/db';
+import { db, messages, users } from '@babylon/db/runtime';
 import type {
   IAgentRuntime,
   Memory,
@@ -74,20 +68,20 @@ export const coordinatorDispatchHistoryProvider: Provider = {
     // user or coordinator messages, which are covered by RECENT_MESSAGES.
     const agentMessages = await db
       .select({
-        id: messagesTable.id,
-        content: messagesTable.content,
-        createdAt: messagesTable.createdAt,
-        senderId: messagesTable.senderId,
+        id: messages.id,
+        content: messages.content,
+        createdAt: messages.createdAt,
+        senderId: messages.senderId,
         username: users.username,
         displayName: users.displayName,
       })
-      .from(messagesTable)
+      .from(messages)
       .innerJoin(
         users,
-        and(eq(messagesTable.senderId, users.id), eq(users.isAgent, true))
+        and(eq(messages.senderId, users.id), eq(users.isAgent, true))
       )
-      .where(eq(messagesTable.chatId, teamChatId))
-      .orderBy(desc(messagesTable.createdAt))
+      .where(eq(messages.chatId, teamChatId))
+      .orderBy(desc(messages.createdAt))
       .limit(10);
 
     if (agentMessages.length === 0) {

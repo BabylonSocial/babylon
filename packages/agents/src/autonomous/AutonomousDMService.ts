@@ -4,17 +4,8 @@
  * Handles agents responding to direct messages autonomously
  */
 
-import {
-  and,
-  chatParticipants,
-  db,
-  desc,
-  eq,
-  gte,
-  messages,
-  ne,
-  users,
-} from '@babylon/db';
+import { and, desc, eq, gte, ne } from '@babylon/db';
+import { chatParticipants, db, messages, users } from '@babylon/db/runtime';
 import type { IAgentRuntime } from '@elizaos/core';
 import { callGroqDirect } from '../llm/direct-groq';
 import { getAgentConfig } from '../shared/agent-config';

@@ -12,7 +12,9 @@
 
 import { describe, expect, it } from 'bun:test';
 import type { A2APerpPosition } from '@babylon/a2a';
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
+
 import dotenv from 'dotenv';
 import { BabylonA2AClient } from '../src/a2a-client';
 import { executeAction } from '../src/actions';

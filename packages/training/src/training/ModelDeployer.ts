@@ -5,7 +5,8 @@
  * Handles gradual rollout and rollback if needed.
  */
 
-import { db, eq, trainedModels, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, trainedModels, users } from '@babylon/db/runtime';
 import { getAgentRuntimeManager } from '../dependencies';
 import { logger } from '../utils/logger';
 

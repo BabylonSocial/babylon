@@ -6,19 +6,15 @@
  * activity scores and tracks last activity timestamps.
  */
 
+import { and, count, desc, eq, isNull } from '@babylon/db';
 import {
-  and,
   comments,
-  count,
   db,
-  desc,
-  eq,
-  isNull,
   positions,
   posts,
   reactions,
   shares,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 
 /**
  * Participation statistics for a user

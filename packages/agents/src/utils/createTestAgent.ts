@@ -6,7 +6,8 @@
  * @packageDocumentation
  */
 
-import { db, eq, like, userAgentConfigs, users } from '@babylon/db';
+import { eq, like } from '@babylon/db';
+import { db, userAgentConfigs, users } from '@babylon/db/runtime';
 import { ethers } from 'ethers';
 import { agentRegistry } from '../services/agent-registry.service';
 import { getAgentConfig } from '../shared/agent-config';

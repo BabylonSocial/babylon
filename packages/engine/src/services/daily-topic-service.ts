@@ -1,15 +1,17 @@
 import {
   type DailyTopic,
   type DailyTopicSourceType,
-  dailyTopics,
-  db,
   desc,
   eq,
   generateSnowflakeId,
   gte,
+} from '@babylon/db';
+import {
+  dailyTopics,
+  db,
   parodyHeadlines,
   rssHeadlines,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 /**

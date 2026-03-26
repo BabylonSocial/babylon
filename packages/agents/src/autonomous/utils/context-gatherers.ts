@@ -7,31 +7,33 @@
 
 import {
   and,
-  chatParticipants,
-  chats,
-  comments,
-  count,
-  db,
   desc,
   eq,
   getDbInstance,
-  getRawDrizzle,
-  groups,
   gte,
   ilike,
   inArray,
   isNull,
+  listAgentGroupChatsWithMemberCounts,
+  listTeamGroupIds,
   lte,
-  markets,
   ne,
+  sql,
+} from '@babylon/db';
+import {
+  chatParticipants,
+  chats,
+  comments,
+  db,
+  groups,
+  markets,
   perpPositions,
   positions,
   posts,
   reactions,
   shares,
-  sql,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { StaticDataRegistry } from '@babylon/engine';
 import { logger } from '../../shared/logger';
 import type {
@@ -252,34 +254,12 @@ export async function getAgentGroupChats(
   agentUserId: string
 ): Promise<{ id: string; name: string; memberCount: number }[]> {
   try {
-    // Filter out team chats (Agents)
-    const teamGroups = await db
-      .select({ id: groups.id })
-      .from(groups)
-      .where(eq(groups.type, 'team'));
-    const teamGroupIds = new Set(teamGroups.map((g) => g.id));
+    const teamGroupIds = new Set(await listTeamGroupIds());
 
-    // Use DB-side aggregate count instead of loading all participant rows
-    const rawDb = getRawDrizzle();
-    const agentParticipation = rawDb
-      .select({ chatId: chatParticipants.chatId })
-      .from(chatParticipants)
-      .where(eq(chatParticipants.userId, agentUserId))
-      .as('agent_participation');
-
-    const groupChatsWithCount = await rawDb
-      .select({
-        id: chats.id,
-        name: chats.name,
-        groupId: chats.groupId,
-        memberCount: count(chatParticipants.id),
-      })
-      .from(chats)
-      .innerJoin(agentParticipation, eq(chats.id, agentParticipation.chatId))
-      .innerJoin(chatParticipants, eq(chats.id, chatParticipants.chatId))
-      .where(eq(chats.isGroup, true))
-      .groupBy(chats.id, chats.name, chats.groupId)
-      .limit(10); // Fetch more to account for filtering
+    const groupChatsWithCount = await listAgentGroupChatsWithMemberCounts(
+      agentUserId,
+      10
+    );
 
     // Filter out team chats
     const filteredChats = groupChatsWithCount.filter(

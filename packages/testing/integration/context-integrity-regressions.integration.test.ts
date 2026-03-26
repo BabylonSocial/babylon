@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from 'bun:test';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { generateEvents, loadSharedPostContext } from '@babylon/engine';
 import { generateSnowflakeId } from '@babylon/shared';
 

@@ -53,15 +53,25 @@ jobs:
         run: |
           set -euo pipefail
           PR="${{ steps.meta.outputs.pr }}"
-          DATA=$(gh pr view "$PR" --repo "${{ github.repository }}" --json state,headRepository)
+          DATA=$(gh pr view "$PR" --repo "${{ github.repository }}" --json state,isCrossRepository,headRepository,headRepositoryOwner)
           STATE=$(echo "$DATA" | jq -r .state)
-          REPO=$(echo "$DATA" | jq -r '.headRepository.nameWithOwner')
           if [ "$STATE" != "OPEN" ]; then
             echo "PR #$PR is not open (state=$STATE)"
             exit 1
           fi
-          if [ "$REPO" != "${{ github.repository }}" ]; then
-            echo "Refusing deploy: head repo is $REPO (fork or wrong repo)."
+          CROSS=$(echo "$DATA" | jq -r .isCrossRepository)
+          if [ "$CROSS" = "true" ]; then
+            echo "Refusing deploy: cross-repository PR (fork)."
+            exit 1
+          fi
+          NWO=$(echo "$DATA" | jq -r '.headRepository.nameWithOwner // empty')
+          if [ -n "$NWO" ]; then
+            HEAD_REPO="$NWO"
+          else
+            HEAD_REPO=$(echo "$DATA" | jq -r '"\(.headRepositoryOwner.login)/\(.headRepository.name)"')
+          fi
+          if [ "$HEAD_REPO" != "${{ github.repository }}" ]; then
+            echo "Refusing deploy: head repo is ${HEAD_REPO:-<empty>} (expected ${{ github.repository }})."
             exit 1
           fi
 

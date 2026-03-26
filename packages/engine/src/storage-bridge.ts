@@ -45,6 +45,7 @@
  * These methods are only available in PostgreSQL mode.
  */
 
+import { type StorageMode } from '@babylon/db';
 import {
   db,
   isSimulationMode as dbIsSimulationMode,
@@ -54,9 +55,8 @@ import {
   initializeMemoryMode,
   loadJsonSnapshot,
   resetToPostgresMode,
-  type StorageMode,
   saveJsonSnapshot,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 
 // Re-export db for convenience
 export { db };

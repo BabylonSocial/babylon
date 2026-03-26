@@ -7,16 +7,8 @@
  * for each evaluation.
  */
 
-import {
-  count,
-  db,
-  desc,
-  eq,
-  messages,
-  posts,
-  reports,
-  users,
-} from '@babylon/db';
+import { count, desc, eq } from '@babylon/db';
+import { db, messages, posts, reports, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { callClaudeDirect } from '../claude-service';
 

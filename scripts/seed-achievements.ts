@@ -18,7 +18,8 @@ import {
   challengeDefinitions,
   closeDatabase,
   db,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   ACHIEVEMENT_DEFINITIONS,
   ALL_CHALLENGE_DEFINITIONS,

@@ -8,14 +8,8 @@
  * and membership management.
  */
 
-import {
-  and,
-  chatParticipants,
-  chats,
-  db,
-  eq,
-  groupMembers,
-} from '@babylon/db';
+import { and, eq } from '@babylon/db';
+import { chatParticipants, chats, db, groupMembers } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 import { notifyNftAccessRevoked } from './notification-service';

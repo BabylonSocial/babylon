@@ -5,18 +5,16 @@
  * based on interaction history and social relationships.
  */
 
+import { and, eq, gte } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
   db,
-  eq,
   groupMembers,
   groups,
-  gte,
   messages,
   userInteractions,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { NPC_SOCIAL_ACTIONS_CONFIG } from '../config/npc-activity';
 import { clamp01 } from '../utils/math-utils';

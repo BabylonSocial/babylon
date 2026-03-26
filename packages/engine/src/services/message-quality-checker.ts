@@ -6,14 +6,8 @@
  * chat invite chances, and risk of being booted from group chats.
  */
 
-import {
-  comments,
-  db,
-  desc,
-  eq,
-  messages,
-  userInteractions,
-} from '@babylon/db';
+import { desc, eq } from '@babylon/db';
+import { comments, db, messages, userInteractions } from '@babylon/db/runtime';
 
 /**
  * Message quality check result

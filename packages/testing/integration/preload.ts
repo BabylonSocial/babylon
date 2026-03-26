@@ -18,7 +18,7 @@
 // Reduce LLM timeout for tests (30 seconds instead of default)
 process.env.LLM_TIMEOUT_MS = '30000';
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
 
 /**
  * Global test lifecycle hooks for database isolation

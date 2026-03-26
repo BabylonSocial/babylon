@@ -7,29 +7,27 @@ const mockLoggerWarn = mock();
 const adminRolesTable = { table: 'adminRoles' };
 const usersTable = { table: 'users' };
 
-mock.module('@babylon/db', () => ({
+const MOCK_ROLE_PERMISSIONS = {
+  SUPER_ADMIN: ['manage_admins', 'manage_game', 'manage_escrow'],
+  ADMIN: ['view_stats', 'manage_users'],
+  VIEWER: ['view_stats'],
+} as const;
+
+mock.module('@babylon/db/runtime', () => ({
+  ROLE_PERMISSIONS: MOCK_ROLE_PERMISSIONS,
   adminRoles: adminRolesTable,
-  and: (...conditions: unknown[]) => ({ conditions }),
+  users: usersTable,
   db: {
     select: mockSelect,
   },
-  eq: (left: unknown, right: unknown) => ({ left, right }),
-  isNull: (value: unknown) => ({ value }),
-  notInArray: (left: unknown, right: unknown[]) => ({ left, right }),
-  ROLE_PERMISSIONS: {
-    SUPER_ADMIN: ['manage_admins', 'manage_game', 'manage_escrow'],
-    ADMIN: ['view_stats', 'manage_users'],
-    VIEWER: ['view_stats'],
-  },
-  users: usersTable,
 }));
 
 mock.module('@babylon/shared', () => ({
-  checkForAdminEmail: () => ({ adminEmail: null, allVerifiedEmails: [] }),
   logger: {
     info: mockLoggerInfo,
     warn: mockLoggerWarn,
   },
+  checkForAdminEmail: () => ({ adminEmail: null, allVerifiedEmails: [] }),
 }));
 
 mock.module('../auth-middleware', () => ({
@@ -39,8 +37,7 @@ mock.module('../auth-middleware', () => ({
   }),
 }));
 
-import { ROLE_PERMISSIONS } from '@babylon/db';
-import { getAdminRole, getAllAdmins } from '../admin-middleware';
+const { getAdminRole, getAllAdmins } = await import('../admin-middleware');
 
 describe('admin-middleware role mapping', () => {
   beforeEach(() => {
@@ -76,7 +73,7 @@ describe('admin-middleware role mapping', () => {
     const result = await getAdminRole('legacy-user-id');
 
     expect(result.role).toBe('ADMIN');
-    expect(result.permissions).toEqual(ROLE_PERMISSIONS.ADMIN);
+    expect(result.permissions).toEqual(MOCK_ROLE_PERMISSIONS.ADMIN);
   });
 
   it('maps legacy isAdmin users to ADMIN in getAllAdmins', async () => {
@@ -112,6 +109,6 @@ describe('admin-middleware role mapping', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]?.role).toBe('ADMIN');
-    expect(result[0]?.permissions).toEqual(ROLE_PERMISSIONS.ADMIN);
+    expect(result[0]?.permissions).toEqual(MOCK_ROLE_PERMISSIONS.ADMIN);
   });
 });

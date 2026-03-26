@@ -21,7 +21,7 @@ import {
   saveJsonSnapshot,
 } from './json-storage';
 import { logger } from './logger';
-import * as schema from './schema';
+import * as schema from './tables';
 
 // ============================================================================
 // Types

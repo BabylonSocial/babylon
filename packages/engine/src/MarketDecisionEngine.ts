@@ -66,7 +66,8 @@
  * ```
  */
 
-import { and, db, desc, eq, gte, inArray, posts, questions } from '@babylon/db';
+import { and, desc, eq, gte, inArray } from '@babylon/db';
+import { db, posts, questions } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { loadActorById } from './actors-loader';
 import { getTradingProbability } from './config/npc-activity';

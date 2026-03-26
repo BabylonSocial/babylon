@@ -5,12 +5,14 @@
  * Recalculates reputation when cache is stale.
  */
 
-import { and, db, eq } from '@babylon/db';
+import { and, eq } from '@babylon/db';
 import {
   agentPerformanceMetrics,
+  db,
   pointsTransactions,
   users,
-} from '@babylon/db/schema';
+} from '@babylon/db/runtime';
+
 import { recalculateReputation } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 

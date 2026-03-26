@@ -6,7 +6,9 @@
  */
 
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test';
-import { db, eq, like, or, worldFacts } from '@babylon/db';
+import { eq, like, or } from '@babylon/db';
+import { db, worldFacts } from '@babylon/db/runtime';
+
 import { worldFactsService } from '@babylon/engine';
 
 // Skip if DATABASE_URL is not set

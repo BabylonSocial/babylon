@@ -12,17 +12,14 @@
  * @packageDocumentation
  */
 
+import { and, desc, eq, gte } from '@babylon/db';
 import {
   actorState,
   agentLogs,
   agentTrades,
-  and,
   db,
-  desc,
-  eq,
-  gte,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import {
   type ActorData,
   loadActorById,
@@ -670,7 +667,7 @@ export class AgentRuntimeManager {
     // Initialize runtime to signal services that runtime is ready
     // This prevents 30s timeout errors in services waiting for runtime initialization
     // Skip ElizaOS plugin-sql migrations — Babylon manages its own schema via Drizzle.
-    // ElizaOS tables are included in packages/db/src/schema/eliza.ts and migrated with
+    // ElizaOS tables are included in packages/db/src/tables/eliza.ts and migrated with
     // `bun run db:generate && bun run db:migrate`. The framework's runtime migrator is
     // not designed for serverless and adds ~2 min cold-start overhead per agent.
     await runtime.initialize({ skipMigrations: true });

@@ -24,8 +24,8 @@ import {
   setDefaultTimeout,
   test,
 } from 'bun:test';
+import { db } from '@babylon/db/runtime';
 
-import { db } from '@babylon/db';
 import {
   GroupChatService,
   StaticDataRegistry,

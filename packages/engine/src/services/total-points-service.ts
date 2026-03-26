@@ -23,7 +23,8 @@ import {
   userPointsSnapshots,
   users,
   whitelist,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   generateSnowflakeId,
   logger,

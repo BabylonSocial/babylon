@@ -12,16 +12,8 @@
  * 5. Optional trajectory recording for RL training
  */
 
-import {
-  and,
-  db,
-  eq,
-  gte,
-  markets,
-  or,
-  userAgentConfigs,
-  users,
-} from '@babylon/db';
+import { and, eq, gte, or } from '@babylon/db';
+import { db, markets, userAgentConfigs, users } from '@babylon/db/runtime';
 import { trajectoryRecorder } from '@babylon/training';
 import type { IAgentRuntime } from '@elizaos/core';
 import {

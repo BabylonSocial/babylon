@@ -5,7 +5,8 @@
  * Monitors Python training process and W&B runs.
  */
 
-import { and, db, eq, lt, trainingBatches } from '@babylon/db';
+import { and, eq, lt } from '@babylon/db';
+import { db, trainingBatches } from '@babylon/db/runtime';
 import { logger } from '../utils/logger';
 
 export type TrainingStatus =

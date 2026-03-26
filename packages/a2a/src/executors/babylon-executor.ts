@@ -24,8 +24,12 @@ import {
   PredictionDbAdapter,
   PredictionMarketService,
 } from '@babylon/core/markets/prediction';
-import { db, getRawDrizzle } from '@babylon/db';
-import { perpMarketSnapshots } from '@babylon/db/schema';
+import {
+  getPerpMarketSnapshotPriceRowByTickerIgnoreCase,
+  listPerpMarketSnapshotsForA2a,
+} from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { createPerpPriceImpactPort, WalletService } from '@babylon/engine';
 import type { JsonValue } from '@babylon/shared';
 import {
@@ -1089,21 +1093,7 @@ export class BabylonAgentExecutor implements AgentExecutor {
     }>;
 
     try {
-      const drizzle = getRawDrizzle();
-      snapshots = await drizzle
-        .select({
-          ticker: perpMarketSnapshots.ticker,
-          name: perpMarketSnapshots.name,
-          organizationId: perpMarketSnapshots.organizationId,
-          currentPrice: perpMarketSnapshots.currentPrice,
-          change24h: perpMarketSnapshots.change24h,
-          changePercent24h: perpMarketSnapshots.changePercent24h,
-          volume24h: perpMarketSnapshots.volume24h,
-          openInterest: perpMarketSnapshots.openInterest,
-          fundingRate: perpMarketSnapshots.fundingRate,
-        })
-        .from(perpMarketSnapshots)
-        .limit(limit);
+      snapshots = await listPerpMarketSnapshotsForA2a(limit);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (
@@ -3674,19 +3664,8 @@ export class BabylonAgentExecutor implements AgentExecutor {
 
     // Try perpetual market using database query
     try {
-      const drizzle = getRawDrizzle();
-      const perps = await drizzle
-        .select({
-          ticker: perpMarketSnapshots.ticker,
-          currentPrice: perpMarketSnapshots.currentPrice,
-          change24h: perpMarketSnapshots.change24h,
-        })
-        .from(perpMarketSnapshots)
-        .limit(100);
-
-      const perp = perps.find(
-        (p) => p.ticker.toUpperCase() === marketId.toUpperCase()
-      );
+      const perp =
+        await getPerpMarketSnapshotPriceRowByTickerIgnoreCase(marketId);
 
       if (perp) {
         return {

@@ -1,4 +1,5 @@
-import { db, inArray, users } from '@babylon/db';
+import { inArray } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import {
   type EmailRecipientRow,

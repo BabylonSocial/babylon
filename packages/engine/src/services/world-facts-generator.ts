@@ -8,21 +8,14 @@
  * @module services/world-facts-generator
  */
 
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from '@babylon/db';
 import {
-  and,
   db,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNull,
-  lte,
   posts,
   questions,
-  sql,
   worldEvents,
   worldFacts,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { BabylonLLMClient } from '../llm/openai-client';
 import { StaticDataRegistry } from './static-data-registry';

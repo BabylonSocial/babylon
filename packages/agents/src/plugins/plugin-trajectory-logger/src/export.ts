@@ -7,18 +7,8 @@
  * NOTE: Requires trajectory schema that's not yet in main schema
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  lte,
-  sql,
-  trajectories,
-} from '@babylon/db';
+import { and, desc, eq, gte, inArray, isNotNull, lte, sql } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import { shuffleArray } from '@babylon/engine';
 import { logger } from '../../../shared/logger';
 import type { JsonValue } from '../../../types/common';

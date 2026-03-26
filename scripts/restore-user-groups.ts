@@ -10,7 +10,8 @@
  *   bun run scripts/restore-user-groups.ts --user=<user-id>
  */
 
-import { db, eq, ilike, users } from '@babylon/db';
+import { eq, ilike } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import {
   TieredGroupService,
   UserAlphaGroupAssignmentService,

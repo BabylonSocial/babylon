@@ -28,7 +28,7 @@ module.exports = {
   // which breaks reading existing snapshots under `drizzle/migrations/meta/*`.
   // These scripts are run with `--cwd packages/db`, so relative paths are stable.
   // eliza.ts is listed separately — see drizzle.config.ts for the full explanation.
-  schema: ['./src/schema/index.ts', './src/schema/eliza.ts'],
+  schema: ['./src/tables/index.ts', './src/tables/eliza.ts'],
   out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {

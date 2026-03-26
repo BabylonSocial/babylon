@@ -16,17 +16,8 @@
  * @module engine/services/event-market-linker
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  gte,
-  inArray,
-  markets,
-  questions,
-  worldEvents,
-} from '@babylon/db';
+import { and, desc, eq, gte, inArray } from '@babylon/db';
+import { db, markets, questions, worldEvents } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 /**

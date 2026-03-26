@@ -6,7 +6,8 @@
  * Supports automatic stale lock recovery.
  */
 
-import { and, db, eq, generationLocks, lte } from '@babylon/db';
+import { and, eq, lte } from '@babylon/db';
+import { db, generationLocks } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { randomBytes } from 'crypto';
 

@@ -100,6 +100,30 @@
       }
     },
     {
+      "includes": ["packages/a2a/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@babylon/db/tables", "@babylon/db/tables/**"],
+                    "message": "@babylon/a2a must not import Drizzle table modules; add a helper in packages/db and import it from @babylon/db."
+                  },
+                  {
+                    "group": ["drizzle-orm", "drizzle-orm/**"],
+                    "message": "@babylon/a2a must not import drizzle-orm; use @babylon/db re-exports."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": [
         "apps/web/src/lib/agents/plugins/**",
         "apps/web/src/lib/training/**",

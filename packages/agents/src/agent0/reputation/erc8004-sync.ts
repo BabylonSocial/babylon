@@ -4,7 +4,8 @@
  * Syncs reputation scores and ban status to ERC-8004 via Agent0
  */
 
-import { agentPerformanceMetrics, db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { agentPerformanceMetrics, db, users } from '@babylon/db/runtime';
 import { logger } from '../../shared/logger';
 import { generateSnowflakeId } from '../../shared/snowflake';
 

@@ -1,4 +1,5 @@
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { getPrivyClient } from '../../auth-middleware';
 import { AuthenticationError } from '../../errors';
 import { safeDecodeJwtPayload } from './evm-send-transaction';

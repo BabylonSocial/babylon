@@ -15,19 +15,16 @@
  * has access to NPC insider information from day one.
  */
 
+import { and, count, eq, isNotNull } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
-  count,
   db,
-  eq,
   follows,
   groupMembers,
   groups,
-  isNotNull,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import {
   GROUP_CONFIG,
   generateSnowflakeId,

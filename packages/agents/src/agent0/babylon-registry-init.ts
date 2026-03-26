@@ -6,7 +6,8 @@
  * Publishes game metadata, capabilities, and endpoints for agent discovery.
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { getA2AEndpoint, getMCPEndpoint } from '@babylon/shared';
 import { SDK } from 'agent0-sdk';
 import { logger } from '../shared/logger';

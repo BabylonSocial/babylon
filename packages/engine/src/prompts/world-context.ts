@@ -13,17 +13,15 @@
  * and prevent outdated or incorrect references.
  */
 
+import { desc, eq, getDbInstance } from '@babylon/db';
 import {
   agentTrades,
   db,
-  desc,
-  eq,
-  getDbInstance,
   markets,
   npcTrades,
   questions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { loadActorsData } from '../actors-loader';
 import {
   formatSimulationActiveMarkets,

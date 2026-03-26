@@ -11,16 +11,16 @@
  */
 
 import { randomBytes } from 'node:crypto';
+import { and, eq, type Transaction } from '@babylon/db';
 import {
-  and,
   db,
-  eq,
   nftClaims,
   nftCollection,
   nftOwnership,
   nftSnapshot,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   hardhat,
   logger,
@@ -418,7 +418,7 @@ export async function reconcileOnChainMint(
   const blockNumber = mintLog.blockNumber;
   const now = new Date();
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: Transaction) => {
     // 1. Update NftSnapshot
     await tx
       .update(nftSnapshot)
@@ -937,7 +937,7 @@ export async function confirmMint(
   const now = new Date();
 
   // Update database in transaction
-  const result = await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx: Transaction) => {
     // Get snapshot entry
     const [snapshotEntry] = await tx
       .select({

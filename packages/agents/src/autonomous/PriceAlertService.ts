@@ -15,15 +15,14 @@
  * Owner alerts use team chat instead.
  */
 
+import { eq, type PriceAlert, sql } from '@babylon/db';
 import {
   db,
-  eq,
   perpMarketSnapshots,
-  sql,
   userAgentConfigs,
   users,
-} from '@babylon/db';
-import type { PriceAlert } from '@babylon/db/schema';
+} from '@babylon/db/runtime';
+
 // Import TeamChatService to resolve the team chat for owner alerts
 import { teamChatService } from '../services/TeamChatService';
 import { logger } from '../shared/logger';

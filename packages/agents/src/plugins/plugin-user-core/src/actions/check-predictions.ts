@@ -10,7 +10,9 @@
  */
 
 import { PredictionPricing } from '@babylon/core/markets/prediction/client';
-import { db, desc, eq, gte, markets } from '@babylon/db';
+import { desc, eq, gte } from '@babylon/db';
+import { db, markets } from '@babylon/db/runtime';
+
 import type { MessageTag } from '@babylon/shared';
 import type {
   Action,

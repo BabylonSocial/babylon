@@ -15,7 +15,14 @@ import {
   expect,
   test,
 } from 'bun:test';
-import { actorState, db, eq, perpPositions, poolPositions } from '@babylon/db';
+import { eq } from '@babylon/db';
+import {
+  actorState,
+  db,
+  perpPositions,
+  poolPositions,
+} from '@babylon/db/runtime';
+
 import { NPCInvestmentManager } from '@babylon/engine';
 import { generateSnowflakeId } from '@babylon/shared';
 

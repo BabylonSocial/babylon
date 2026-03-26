@@ -5,7 +5,8 @@
  * Handles feedback submission, reputation queries, and sync with local database.
  */
 
-import { agentPerformanceMetrics, db, eq } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { agentPerformanceMetrics, db } from '@babylon/db/runtime';
 import {
   getCurrentRpcUrl,
   REPUTATION_SYSTEM_ABI,

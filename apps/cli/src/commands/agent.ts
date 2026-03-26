@@ -10,14 +10,14 @@
  */
 
 import { createTestAgent } from '@babylon/agents';
+import { desc, eq } from '@babylon/db';
 import {
   closeDatabase,
   db,
-  desc,
-  eq,
   userAgentConfigs,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { getFlag, getOption, parseArgs, wantsHelp } from '../lib/args.js';

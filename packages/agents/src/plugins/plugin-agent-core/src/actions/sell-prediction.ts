@@ -3,13 +3,14 @@
  * Sell shares from a prediction market position via core PredictionMarketService
  */
 
-import type { JsonValue } from '@babylon/api';
 import { broadcastToChannel } from '@babylon/api';
 import {
   PredictionDbAdapter,
   PredictionMarketService,
 } from '@babylon/core/markets/prediction';
-import { and, asUser, db, eq, positions } from '@babylon/db';
+import { and, type DrizzleClient, eq, type JsonValue } from '@babylon/db';
+import { asUser, db, positions } from '@babylon/db/runtime';
+
 import {
   FEE_CONFIG,
   FeeService,
@@ -139,75 +140,81 @@ export const sellPredictionAction: Action = {
         };
       }
 
-      const sell = await asUser({ userId: agentUserId }, async (txDb) => {
-        const marketId = position.marketId;
-        const service = new PredictionMarketService({
-          db: new PredictionDbAdapter(txDb),
-          wallet: {
-            debit: ({ userId, amount, reason, description, relatedId }) =>
-              WalletService.debit(
-                userId,
-                amount,
-                reason,
-                description ?? '',
-                relatedId,
-                txDb
-              ),
-            credit: ({ userId, amount, reason, description, relatedId }) =>
-              WalletService.credit(
-                userId,
-                amount,
-                reason,
-                description ?? '',
-                relatedId,
-                txDb
-              ),
-            recordPnL: async ({ userId, pnl, reason, relatedId }) => {
-              await WalletService.recordPnL(userId, pnl, reason, relatedId);
+      const sell = await asUser(
+        { userId: agentUserId },
+        async (txDb: DrizzleClient) => {
+          const marketId = position.marketId;
+          const service = new PredictionMarketService({
+            db: new PredictionDbAdapter(txDb),
+            wallet: {
+              debit: ({ userId, amount, reason, description, relatedId }) =>
+                WalletService.debit(
+                  userId,
+                  amount,
+                  reason,
+                  description ?? '',
+                  relatedId,
+                  txDb
+                ),
+              credit: ({ userId, amount, reason, description, relatedId }) =>
+                WalletService.credit(
+                  userId,
+                  amount,
+                  reason,
+                  description ?? '',
+                  relatedId,
+                  txDb
+                ),
+              recordPnL: async ({ userId, pnl, reason, relatedId }) => {
+                await WalletService.recordPnL(userId, pnl, reason, relatedId);
+              },
+              getBalance: (uid: string) => WalletService.getBalance(uid),
             },
-            getBalance: (uid: string) => WalletService.getBalance(uid),
-          },
-          broadcast: {
-            emit: (channel, payload) =>
-              broadcastToChannel(channel, payload as Record<string, JsonValue>),
-          },
-          cache: {
-            invalidate: () => invalidateAfterPredictionTrade(marketId),
-          },
-          fees: {
-            tradingFeeRate: FEE_CONFIG.TRADING_FEE_RATE,
-            platformShare: FEE_CONFIG.PLATFORM_SHARE,
-            referrerShare: FEE_CONFIG.REFERRER_SHARE,
-            minFeeAmount: FEE_CONFIG.MIN_FEE_AMOUNT,
-          },
-          feeProcessor: {
-            processTradingFee: ({
-              userId,
-              amount,
-              type,
-              relatedId,
-              positionId,
-            }) =>
-              FeeService.processTradingFee(
+            broadcast: {
+              emit: (channel, payload) =>
+                broadcastToChannel(
+                  channel,
+                  payload as Record<string, JsonValue>
+                ),
+            },
+            cache: {
+              invalidate: () => invalidateAfterPredictionTrade(marketId),
+            },
+            fees: {
+              tradingFeeRate: FEE_CONFIG.TRADING_FEE_RATE,
+              platformShare: FEE_CONFIG.PLATFORM_SHARE,
+              referrerShare: FEE_CONFIG.REFERRER_SHARE,
+              minFeeAmount: FEE_CONFIG.MIN_FEE_AMOUNT,
+            },
+            feeProcessor: {
+              processTradingFee: ({
                 userId,
-                type as (typeof FEE_CONFIG.FEE_TYPES)[keyof typeof FEE_CONFIG.FEE_TYPES],
                 amount,
-                positionId,
+                type,
                 relatedId,
-                txDb // Pass the existing transaction to avoid nested transaction deadlocks
-              ),
-          },
-        });
+                positionId,
+              }) =>
+                FeeService.processTradingFee(
+                  userId,
+                  type as (typeof FEE_CONFIG.FEE_TYPES)[keyof typeof FEE_CONFIG.FEE_TYPES],
+                  amount,
+                  positionId,
+                  relatedId,
+                  txDb // Pass the existing transaction to avoid nested transaction deadlocks
+                ),
+            },
+          });
 
-        const result = await service.sell({
-          userId: agentUserId,
-          marketId,
-          positionId,
-          shares: sharesToSell,
-        });
+          const result = await service.sell({
+            userId: agentUserId,
+            marketId,
+            positionId,
+            shares: sharesToSell,
+          });
 
-        return { marketId, result };
-      });
+          return { marketId, result };
+        }
+      );
 
       const proceeds = sell.result.netProceeds ?? 0;
       const realizedPnL = sell.result.pnl ?? 0;

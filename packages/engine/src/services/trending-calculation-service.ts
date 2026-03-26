@@ -5,7 +5,8 @@
  * Similar to X/Twitter trending topics
  */
 
-import { db, desc, trendingTags } from '@babylon/db';
+import { desc, inArray } from '@babylon/db';
+import { db, tags, trendingTags } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import {
   getRelatedTags,
@@ -246,9 +247,6 @@ async function getTagDetails(
   if (tagIds.length === 0) {
     return new Map();
   }
-
-  // Import tags table dynamically to avoid circular imports
-  const { tags, inArray } = await import('@babylon/db');
 
   const tagRows = await db
     .select({

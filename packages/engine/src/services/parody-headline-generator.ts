@@ -7,7 +7,8 @@
  */
 
 import type { ParodyHeadline, RSSHeadline } from '@babylon/db';
-import { db, desc, gte, inArray, parodyHeadlines } from '@babylon/db';
+import { desc, gte, inArray } from '@babylon/db';
+import { db, parodyHeadlines } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { BabylonLLMClient } from '../llm/openai-client';
 import { characterMappingService } from './character-mapping-service';

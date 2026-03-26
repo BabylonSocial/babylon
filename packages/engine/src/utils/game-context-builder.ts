@@ -21,16 +21,8 @@
  * - Anti-repetition guidance integration
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  gte,
-  posts,
-  questions as questionsTable,
-  worldEvents,
-} from '@babylon/db';
+import { and, desc, eq, gte } from '@babylon/db';
+import { db, posts, questions, worldEvents } from '@babylon/db/runtime';
 import { parseStringArraySafe } from '../services/jsonb-validators';
 import type {
   Actor,
@@ -209,8 +201,8 @@ export async function buildRichGameContext(
     // Note: questions table doesn't have gameId, so we get all recent questions
     db
       .select()
-      .from(questionsTable)
-      .orderBy(desc(questionsTable.createdAt))
+      .from(questions)
+      .orderBy(desc(questions.createdAt))
       .limit(50)
       .then((questions) =>
         questions.map(

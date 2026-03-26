@@ -10,7 +10,8 @@
  * - Lightweight (no LLM calls)
  */
 
-import { db, type NpcMemory } from '@babylon/db';
+import { type NpcMemory } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
 import { generateSnowflakeId } from '@babylon/shared';
 import { SeededRandom } from '../utils/entropy';
 import { isDegenSpeaker } from '../utils/shared-utils';

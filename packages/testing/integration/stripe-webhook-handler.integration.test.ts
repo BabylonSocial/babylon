@@ -11,7 +11,9 @@
 
 import { afterAll, describe, expect, it } from 'bun:test';
 import { PointsService } from '@babylon/api';
-import { db, eq, pointsTransactions, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, pointsTransactions, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import {
   createChargeRefundedEvent,

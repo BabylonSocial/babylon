@@ -17,17 +17,13 @@
  * update callers to use the shared client.
  */
 
+import { asc, desc, eq, gte, inArray } from '@babylon/db';
 import {
-  asc,
   db,
-  desc,
-  eq,
   games,
-  gte,
-  inArray,
   questions as questionsSchema,
   worldEvents,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 /**

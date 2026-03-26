@@ -5,22 +5,17 @@
  * for agent decision making.
  */
 
+import { and, desc, eq, gte, inArray, isNull } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
   comments,
   db,
-  desc,
-  eq,
   groups,
-  gte,
-  inArray,
-  isNull,
   messages,
   posts,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import type {
   PendingChatMessage,
   PendingCommentReply,

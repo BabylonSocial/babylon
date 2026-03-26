@@ -10,22 +10,25 @@
  */
 
 import {
-  agentMessages,
   and,
-  chats,
-  comments,
   count,
-  db,
   eq,
-  follows,
   generateSnowflakeId,
-  groupMembers,
-  groups,
   gte,
   inArray,
   isNotNull,
   isNull,
   lt,
+  sql,
+} from '@babylon/db';
+import {
+  agentMessages,
+  chats,
+  comments,
+  db,
+  follows,
+  groupMembers,
+  groups,
   messages,
   perpPositions,
   positions,
@@ -33,12 +36,11 @@ import {
   reactions,
   referrals,
   shares,
-  sql,
   userAchievements,
   userActivityLogs,
   userChallengeProgress,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import {
   ACHIEVEMENT_DEFINITIONS,
   type AchievementDef,

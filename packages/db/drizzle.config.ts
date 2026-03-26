@@ -34,7 +34,7 @@ export default defineConfig({
   // eliza.ts is listed separately rather than re-exported through index.ts.
   // Keeping it out of the index.ts barrel prevents @elizaos/plugin-sql from being
   // traced into every Lambda that imports @babylon/db (would exceed Vercel 250 MB limit).
-  schema: ['./src/schema/index.ts', './src/schema/eliza.ts'],
+  schema: ['./src/tables/index.ts', './src/tables/eliza.ts'],
   out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {

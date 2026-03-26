@@ -8,13 +8,8 @@
  */
 
 import {
-  actorRelationships,
-  actorState,
   and,
   asc,
-  chatParticipants,
-  chats,
-  db,
   desc,
   eq,
   getDbInstance,
@@ -22,14 +17,21 @@ import {
   inArray,
   isNull,
   lte,
+  or,
+} from '@babylon/db';
+import {
+  actorRelationships,
+  actorState,
+  chatParticipants,
+  chats,
+  db,
   markets,
   messages,
-  or,
   poolPositions,
   posts,
   stockPrices,
   worldEvents,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import {
   getSimulationPrice,

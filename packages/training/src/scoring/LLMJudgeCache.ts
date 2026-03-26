@@ -11,7 +11,8 @@
  * @packageDocumentation
  */
 
-import { db, eq, trajectories } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import { createHash } from 'crypto';
 import { getRubricHash, RUBRICS_VERSION } from '../rubrics';
 import { logger } from '../utils/logger';

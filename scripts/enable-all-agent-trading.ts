@@ -4,8 +4,8 @@
  * Enable autonomous trading for all agents
  */
 
-import { db } from '@babylon/db';
-import { users } from '@babylon/db/schema';
+import { db, users } from '@babylon/db/runtime';
+
 import { eq } from 'drizzle-orm';
 
 async function enableAllAgentTrading() {

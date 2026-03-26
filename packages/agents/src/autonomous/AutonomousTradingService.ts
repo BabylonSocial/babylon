@@ -6,16 +6,15 @@
  */
 
 import { countTokensSync, truncateToTokenLimitSync } from '@babylon/api';
+import { desc, eq, getDbInstance } from '@babylon/db';
 import {
   db,
-  desc,
-  eq,
-  getDbInstance,
   markets,
   perpPositions,
   positions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   formatRandomContext,
   generateRandomMarketContext,

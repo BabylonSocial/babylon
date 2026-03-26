@@ -11,7 +11,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { asSystem, db } from '@babylon/db';
+import { asSystem, db } from '@babylon/db/runtime';
+
 import { executeGameTick, StaticDataRegistry } from '@babylon/engine';
 import { generateSnowflakeId } from '@babylon/shared';
 

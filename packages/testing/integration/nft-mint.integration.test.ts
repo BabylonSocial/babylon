@@ -16,16 +16,16 @@
  */
 
 import { afterEach, beforeAll, describe, expect, test } from 'bun:test';
+import { eq, inArray } from '@babylon/db';
 import {
   db,
-  eq,
-  inArray,
   nftClaims,
   nftCollection,
   nftOwnership,
   nftSnapshot,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import { nanoid } from 'nanoid';
 

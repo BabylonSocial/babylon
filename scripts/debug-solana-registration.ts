@@ -22,7 +22,9 @@ import {
   getPrivyOfflineConfig,
   registerAgentOnSolanaForOwner,
 } from '@babylon/api/solana-registration-debug';
-import { and, closeDatabase, db, eq, users } from '@babylon/db';
+import { and, eq } from '@babylon/db';
+import { closeDatabase, db, users } from '@babylon/db/runtime';
+
 import { getBaseUrl, getMCPEndpoint } from '@babylon/shared';
 import { Transaction } from '@solana/web3.js';
 import { config as loadEnvFile } from 'dotenv';

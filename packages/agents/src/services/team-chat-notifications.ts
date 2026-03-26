@@ -1,5 +1,7 @@
 import { createNotification } from '@babylon/api';
-import { and, chatParticipants, chats, db, eq, users } from '@babylon/db';
+import { and, eq } from '@babylon/db';
+import { chatParticipants, chats, db, users } from '@babylon/db/runtime';
+
 import { logger } from '@babylon/shared';
 
 interface NotifyTeamChatMessageParams {

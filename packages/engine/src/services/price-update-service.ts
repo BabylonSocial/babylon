@@ -1,11 +1,7 @@
 import { PerpDbAdapter, PerpMarketService } from '@babylon/core/markets/perps';
-import {
-  db,
-  eq,
-  getDbInstance,
-  organizationState,
-  organizations,
-} from '@babylon/db';
+import { eq, getDbInstance } from '@babylon/db';
+import { db, organizationState, organizations } from '@babylon/db/runtime';
+
 import type { JsonValue } from '@babylon/shared';
 import { logger, PERP_MARKET_CONFIG } from '@babylon/shared';
 import { FEE_CONFIG } from '../config/fees';

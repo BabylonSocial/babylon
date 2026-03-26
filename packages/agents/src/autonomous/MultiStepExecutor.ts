@@ -8,16 +8,8 @@
  * This eliminates double LLM calls and makes execution faster.
  */
 
-import {
-  actorState,
-  agentLogs,
-  and,
-  chats,
-  db,
-  desc,
-  eq,
-  users,
-} from '@babylon/db';
+import { and, desc, eq } from '@babylon/db';
+import { actorState, agentLogs, chats, db, users } from '@babylon/db/runtime';
 import { StaticDataRegistry, WalletService } from '@babylon/engine';
 import type { IAgentRuntime } from '@elizaos/core';
 import { callGroqDirect } from '../llm/direct-groq';

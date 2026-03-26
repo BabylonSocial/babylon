@@ -10,14 +10,8 @@
  * @packageDocumentation
  */
 
-import {
-  agentLogs,
-  db,
-  eq,
-  type JsonValue,
-  type User,
-  users,
-} from '@babylon/db';
+import { eq, type JsonValue, type User } from '@babylon/db';
+import { agentLogs, db, users } from '@babylon/db/runtime';
 import { syncAfterAgent0Registration } from '../agent0/reputation/agent0-reputation-sync';
 import { getAgent0SDK } from '../agent0/sdk-instance';
 import {

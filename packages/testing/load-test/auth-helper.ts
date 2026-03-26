@@ -4,7 +4,8 @@
  * Creates test user and generates auth tokens for load testing
  */
 
-import { db, inArray, users } from '@babylon/db';
+import { inArray } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { generateSnowflakeId } from '@babylon/shared';
 
 export interface TestUser {

@@ -5,7 +5,8 @@
  * 100% Drizzle ORM under the hood.
  *
  * Usage:
- *   import { db } from '@babylon/db';
+ *   import { actorFollows, actorRelationships, actorState, adminRoles, agentCapabilities, agentGoalActions, agentGoals, agentLogs, agentMessages, agentPerformanceMetrics, agentPointsTransactions, agentRegistries, agentTrades, balanceTransactions, benchmarkResults, chatParticipants, chats, comments, dailyTopics, db, dmAcceptances, executeRaw, externalAgentConnections, favorites, feedbacks, follows, followStatuses, gameConfigs, games, generationLocks, groupInvites, groupMembers, groups, llmCallLogs, marketOutcomes, markets, messages, moderationEscrows, notifications, npcInteractions, npcTrades, oAuthStates, onboardingIntents, oracleCommitments, oracleTransactions, organizationState, parodyHeadlines, perpPositions, pointsTransactions, poolDeposits, poolPositions, pools, positions, posts, postTags, predictionPriceHistories, profileUpdateLogs, questionArcPlans, questions, reactions, realtimeOutboxes, referrals, reports, rewardJudgments, rssFeedSources, rssHeadlines, shareActions, shares, stockPrices, systemSettings, tables, tags, tickTokenStats, tradingFees, trainedModels, trainingBatches, trajectories, trendingTags, twitterOAuthTokens, userActorFollows, userAgentConfigs, userApiKeys, userBlocks, userInteractions, userMutes, users, widgetCaches, worldEvents, worldFacts } from '@babylon/db/runtime';
+
  *   const user = await db.user.findUnique({ where: { id: '123' } });
  *   const users = await db.user.findMany({ where: { isActive: true } });
  */
@@ -41,7 +42,7 @@ import {
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type { ExtractTablesWithRelations } from 'drizzle-orm/relations';
 import type postgres from 'postgres';
-import * as schema from './schema';
+import * as schema from './tables';
 
 // Helper to find column by name from table config
 function findColumnByName(

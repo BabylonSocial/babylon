@@ -12,7 +12,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import {
   autoJoinEmptyUsersToNpcGroupChats,
   GroupChatService,

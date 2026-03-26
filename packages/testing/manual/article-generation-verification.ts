@@ -9,7 +9,8 @@
  * 5. Article detail pages display fullContent correctly
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { StaticDataRegistry } from '@babylon/engine';
 
 async function verifyArticleGeneration() {

@@ -159,7 +159,7 @@ Marketplace for GPU compute.
 ### Database Schema
 
 - **Location**: `packages/db/`
-- **Drizzle schema**: `packages/db/src/schema/`
+- **Drizzle tables**: `packages/db/src/tables/`
 
 ## Learning Resources
 

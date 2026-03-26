@@ -6,7 +6,8 @@
 
 import { beforeAll, describe, expect, test } from 'bun:test';
 import { syncUserReputationToERC8004 } from '@babylon/agents';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 describe.skip('Reputation Sync with Localnet Default Keys', () => {

@@ -11,15 +11,9 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import {
-  and,
-  db,
-  eq,
-  isNull,
-  userActivityLogs,
-  userSessions,
-  users,
-} from '@babylon/db';
+import { and, eq, isNull } from '@babylon/db';
+import { db, userActivityLogs, userSessions, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 const BASE_URL =

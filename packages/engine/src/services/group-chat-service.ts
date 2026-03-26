@@ -20,38 +20,23 @@
 
 import {
   and,
-  chats,
-  db,
   desc,
   eq,
+  gte,
+  recordNpcGroupChatInviteTransaction,
+} from '@babylon/db';
+import {
+  chats,
+  db,
   followStatuses,
-  getRawDrizzle,
-  groupInvites,
   groupMembers,
   groups,
-  gte,
   messages,
   userInteractions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import type { GroupChat } from '@babylon/shared';
-import { generateSnowflakeId } from '@babylon/shared';
 import { notifyGroupChatInvite } from './group-chat-invite-notifier';
-
-/**
- * Generate a deterministic group ID from a chat ID.
- * This ensures idempotency - same chatId always produces same groupId.
- */
-function deterministicGroupId(chatId: string): string {
-  let hash = 0;
-  for (let i = 0; i < chatId.length; i++) {
-    const char = chatId.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  const absHash = Math.abs(hash);
-  return `grp_${chatId}_${absHash.toString().padStart(10, '0')}`;
-}
 
 // =============================================================================
 // Types
@@ -302,114 +287,21 @@ export class GroupChatService {
     chatId: string,
     chatName: string
   ): Promise<void> {
-    // Use deterministic groupId to prevent race conditions
-    const groupId = deterministicGroupId(chatId);
-    const now = new Date();
-
-    // Get raw Drizzle instance for transaction with upsert support
-    const rawDb = getRawDrizzle();
-
-    // Check for existing invite first (before any modifications)
-    const [existingInvite] = await db
-      .select()
-      .from(groupInvites)
-      .where(
-        and(
-          eq(groupInvites.groupId, groupId),
-          eq(groupInvites.invitedUserId, userId)
-        )
-      )
-      .limit(1);
-
-    // Early return if already pending or accepted
-    if (existingInvite) {
-      if (existingInvite.status === 'pending') {
-        return;
-      }
-      if (existingInvite.status === 'accepted') {
-        return;
-      }
-    }
-
-    let inviteId: string;
-
-    // Use transaction with atomic upserts
-    await rawDb.transaction(async (tx) => {
-      // Step 1: Upsert Group (INSERT ... ON CONFLICT DO NOTHING)
-      await tx
-        .insert(groups)
-        .values({
-          id: groupId,
-          name: chatName,
-          type: 'npc',
-          ownerId: npcId,
-          createdById: npcId,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoNothing({ target: groups.id });
-
-      // Step 2: Upsert Chat (INSERT ... ON CONFLICT DO UPDATE to set groupId)
-      await tx
-        .insert(chats)
-        .values({
-          id: chatId,
-          name: chatName,
-          isGroup: true,
-          gameId: 'realtime',
-          groupId,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: chats.id,
-          set: {
-            groupId,
-            updatedAt: now,
-          },
-        });
-
-      // Step 3: Handle invite
-      if (existingInvite) {
-        // Re-invite flow for declined invites
-        inviteId = existingInvite.id;
-        await tx
-          .update(groupInvites)
-          .set({
-            status: 'pending',
-            invitedBy: npcId,
-            invitedAt: now,
-            respondedAt: null,
-            message: `Join our group chat "${chatName}"!`,
-          })
-          .where(eq(groupInvites.id, existingInvite.id));
-      } else {
-        // Create new pending invite
-        inviteId = await generateSnowflakeId();
-        await tx.insert(groupInvites).values({
-          id: inviteId,
-          groupId,
-          invitedUserId: userId,
-          invitedBy: npcId,
-          status: 'pending',
-          message: `Join our group chat "${chatName}"!`,
-        });
-      }
-
-      // Mark interaction as leading to invite
-      await tx
-        .update(userInteractions)
-        .set({ wasInvitedToChat: true })
-        .where(
-          and(
-            eq(userInteractions.userId, userId),
-            eq(userInteractions.npcId, npcId)
-          )
-        );
+    const result = await recordNpcGroupChatInviteTransaction({
+      userId,
+      npcId,
+      chatId,
+      chatName,
     });
+    if (result.kind === 'noop') return;
 
-    // Send notification to user about the invite (with inviteId for proper linking)
-    await notifyGroupChatInvite(userId, npcId, groupId, chatName, inviteId!);
+    await notifyGroupChatInvite(
+      userId,
+      npcId,
+      result.groupId,
+      chatName,
+      result.inviteId
+    );
   }
 
   /**

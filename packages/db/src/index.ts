@@ -1,67 +1,25 @@
 /**
- * Drizzle ORM Database Client
+ * Drizzle ORM Database Layer — public API
  *
- * @description Complete database abstraction layer using Drizzle ORM.
- * Pure TypeScript solution that works on all platforms including Apple Silicon.
- *
- * Features:
- * - Connection pooling optimized for serverless
- * - Automatic retry with exponential backoff
- * - Row Level Security (RLS) context support
- * - Query monitoring and performance tracking
- * - Lazy initialization for Edge Runtime compatibility
- * - Familiar ORM-style API for findUnique, findMany, create, update, delete
+ * Row/types, query operators, and helpers. For `db`, table symbols (`users`, …), and
+ * `getRawDrizzle`, use `@babylon/db/runtime` (application wire-up only).
  */
-
-import * as schema from './schema';
-
-// Re-export everything from schema
-export * from './schema';
-export { schema };
 
 // Re-export client types
 export type { DrizzleClient, JsonValue, SQLValue } from './client';
 export { TableRepository } from './client';
-// Database runtime (connection management, `db`, JSON mode)
-// We use both "export *" and explicit import-then-export for the same symbols.
-// This dual approach is necessary because some runtimes (particularly Bun in CI)
-// don't reliably resolve symbols from barrel files with only "export *".
-// See: https://github.com/oven-sh/bun/issues/4552 (barrel file re-export issues)
-export * from './db';
-
-// Import-then-export so runtimes (e.g. Bun in CI) resolve these reliably from the barrel
-//
-// MIGRATION GUIDE for deprecated functions:
-// - onReadReplica(query) -> Use dbRead directly: dbRead.select()...
-// - onReadReplicaClient  -> Use dbRead (it's the read replica client)
-// These deprecated functions remain accessible via "export * from './db'" for backward
-// compatibility but will be removed in a future major version.
-import {
-  asPublic,
-  asSystem,
-  asUser,
-  db,
-  dbRead,
-  dbWrite,
-  getJsonState,
-  getJsonStoragePath,
-  getStorageMode,
+// Schema typing for advanced consumers (no runtime client)
+export type {
+  Database,
+  StorageMode,
+  Transaction,
+  UserIdOrUser,
 } from './db';
-export {
-  asPublic,
-  asSystem,
-  asUser,
-  db,
-  dbRead,
-  dbWrite,
-  getJsonState,
-  getJsonStoragePath,
-  getStorageMode,
-};
 /**
  * Re-export unique relation types from model-types.
  *
- * Base types (User, Actor, etc.) are already exported from schema.
+ * Base types (User, Actor, etc.) overlap names with `export type * from './tables'` where
+ * applicable; model-types remains the canonical relation-shaped types.
  */
 export type {
   ActorRef,
@@ -81,6 +39,8 @@ export type {
   UserWithAgentRelations,
   UserWithMetrics,
 } from './model-types';
+// Table-related types (values like `users` are not re-exported here)
+export type * from './tables';
 // Re-export types
 export * from './types';
 
@@ -129,8 +89,22 @@ export {
 // Re-export database service (import-then-export for reliable resolution in Bun/CI)
 import { DatabaseService, getDbInstance } from './database-service';
 
-export type { FeedPost } from './database-service';
+export type { FeedPost } from './tables/posts';
 export { DatabaseService, getDbInstance };
+export {
+  fetchA2aAgentCardUserRow,
+  fetchA2aAgentConfigRow,
+} from './a2a-agent-card-queries';
+export {
+  type AgentGroupChatRow,
+  listAgentGroupChatsWithMemberCounts,
+  listTeamGroupIds,
+} from './agent-group-chat-queries';
+export {
+  deterministicGroupIdFromChatId,
+  type RecordNpcGroupChatInviteResult,
+  recordNpcGroupChatInviteTransaction,
+} from './group-chat-invite-queries';
 // Re-export query helpers
 export {
   $connect,
@@ -142,6 +116,11 @@ export {
 } from './helpers';
 // Re-export moderation filters
 export * from './moderation/filters';
+export type { PerpSnapshotA2aListingRow } from './perp-market-snapshot-queries';
+export {
+  getPerpMarketSnapshotPriceRowByTickerIgnoreCase,
+  listPerpMarketSnapshotsForA2a,
+} from './perp-market-snapshot-queries';
 // Re-export query monitor
 export {
   type QueryMetrics,

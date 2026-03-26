@@ -5,7 +5,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import {
   BabylonLLMClient,
   FeedGenerator,

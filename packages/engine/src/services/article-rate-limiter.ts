@@ -8,7 +8,8 @@
  * @module services/article-rate-limiter
  */
 
-import { and, db, eq, gte, isNull, posts, sql } from '@babylon/db';
+import { and, eq, gte, isNull, sql } from '@babylon/db';
+import { db, posts } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 /**

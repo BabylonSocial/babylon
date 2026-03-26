@@ -6,16 +6,8 @@
  * on report evaluation outcomes and ensures fair distribution among valid reporters.
  */
 
-import {
-  and,
-  asc,
-  db,
-  eq,
-  gte,
-  pointsTransactions,
-  reports,
-  users,
-} from '@babylon/db';
+import { and, asc, eq, gte } from '@babylon/db';
+import { db, pointsTransactions, reports, users } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 
 /**

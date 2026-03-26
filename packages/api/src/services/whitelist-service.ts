@@ -1,20 +1,22 @@
 import {
   and,
   asc,
-  db,
   desc,
   eq,
   gt,
   inArray,
   isNull,
   lt,
-  nftSnapshot,
   or,
   sql,
+} from '@babylon/db';
+import {
+  db,
+  nftSnapshot,
   users,
   whitelist,
   whitelistConfig,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { UserAlphaGroupAssignmentService } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import { nanoid } from 'nanoid';

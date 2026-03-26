@@ -2,7 +2,9 @@
 
 import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { and, closeDatabase, db, eq, isNotNull, users } from '@babylon/db';
+import { and, eq, isNotNull } from '@babylon/db';
+import { closeDatabase, db, users } from '@babylon/db/runtime';
+
 import { getAllVerifiedEmails, type PrivyLinkedAccount } from '@babylon/shared';
 import {
   type LinkedAccount,

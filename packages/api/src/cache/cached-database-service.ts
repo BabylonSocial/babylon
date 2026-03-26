@@ -16,19 +16,21 @@
 import {
   and,
   asc,
-  comments,
   count,
-  db,
   desc,
   eq,
-  follows,
   getDbInstance,
   inArray,
   isNull,
   lt,
   lte,
-  markets,
   type Post,
+} from '@babylon/db';
+import {
+  comments,
+  db,
+  follows,
+  markets,
   positions,
   posts,
   reactions,
@@ -36,7 +38,7 @@ import {
   trendingTags,
   userActorFollows,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { StaticDataRegistry } from '@babylon/engine';
 import { logger, resolveUserIdentifierKind } from '@babylon/shared';
 import {

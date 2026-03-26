@@ -5,8 +5,14 @@
  * Provides bidirectional sync between local database and blockchain.
  */
 
-import { and, db, desc, eq, isNotNull } from '@babylon/db';
-import { agentPerformanceMetrics, feedbacks, users } from '@babylon/db/schema';
+import { and, desc, eq, isNotNull } from '@babylon/db';
+import {
+  agentPerformanceMetrics,
+  db,
+  feedbacks,
+  users,
+} from '@babylon/db/runtime';
+
 import { getReputationBreakdown, recalculateReputation } from '@babylon/engine';
 import { logger } from '../../shared/logger';
 import { generateSnowflakeId } from '../../shared/snowflake';

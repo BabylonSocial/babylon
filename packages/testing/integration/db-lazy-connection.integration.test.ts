@@ -8,7 +8,8 @@
  */
 
 import { afterEach, beforeAll, describe, expect, it } from 'bun:test';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import {
   setupTestEnvironment,
   shouldSkipDatabaseTests,

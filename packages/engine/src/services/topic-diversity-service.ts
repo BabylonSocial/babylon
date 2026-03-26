@@ -32,7 +32,8 @@
  * ```
  */
 
-import { and, db, desc, eq, gte, isNull, posts } from '@babylon/db';
+import { and, desc, eq, gte, isNull } from '@babylon/db';
+import { db, posts } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 /**

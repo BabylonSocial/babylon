@@ -8,16 +8,8 @@
  *   bun run scripts/diagnose-user-groups.ts --user=<userId>
  */
 
-import {
-  and,
-  chats,
-  count,
-  db,
-  eq,
-  groupMembers,
-  groups,
-  users,
-} from '@babylon/db';
+import { and, count, eq } from '@babylon/db';
+import { chats, db, groupMembers, groups, users } from '@babylon/db/runtime';
 import {
   StaticDataRegistry,
   TIER_CONFIG,

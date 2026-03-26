@@ -13,7 +13,8 @@
  * @module services/market-correlation-service
  */
 
-import { db, inArray, organizationState } from '@babylon/db';
+import { inArray } from '@babylon/db';
+import { db, organizationState } from '@babylon/db/runtime';
 import { type JsonValue, logger, PERP_MARKET_CONFIG } from '@babylon/shared';
 import {
   correlations,

@@ -24,7 +24,8 @@ import {
   checkAgentLock,
   releaseAgentLock,
 } from '@babylon/agents/services/agent-lock-service';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import type {
   AgentTickResponse,
   AgentTickResultItem,

@@ -18,7 +18,6 @@
 import {
   type ArcStateType,
   and,
-  db,
   eq,
   gte,
   lte,
@@ -27,14 +26,17 @@ import {
   type NewSubMarketSpawnLog,
   type NewTimeframedMarket,
   or,
-  organizations,
   sql,
-  subMarketSpawnLogs,
   type TimeframedMarket,
   type Transaction,
+} from '@babylon/db';
+import {
+  db,
+  organizations,
+  subMarketSpawnLogs,
   timeframedMarkets,
   withTransaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { formatError } from '../utils/error-utils';
 import {

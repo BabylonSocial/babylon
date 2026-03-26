@@ -4,7 +4,8 @@
  * Final verification of training pipeline
  */
 
-import { count, db, isNotNull, trajectories } from '@babylon/db';
+import { count, isNotNull } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 

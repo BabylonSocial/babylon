@@ -11,7 +11,8 @@ import {
   pointsTransactions,
   positions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { logger, resolveUserIdentifierKind } from '@babylon/shared';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { FEE_CONFIG } from '../config/fees';

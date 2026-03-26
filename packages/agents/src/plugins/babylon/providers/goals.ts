@@ -4,7 +4,8 @@
  * This ensures the agent always remembers its core mission and limitations
  */
 
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import type {
   IAgentRuntime,
   Memory,

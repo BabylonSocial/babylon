@@ -32,20 +32,23 @@ import {
 } from '@babylon/core/markets/prediction';
 import type { WalletPort } from '@babylon/core/markets/shared';
 import {
-  actorState,
   and,
-  db,
   eq,
   gte,
   isNull,
   type JsonValue,
+  sql,
+  type Transaction,
+} from '@babylon/db';
+import {
+  actorState,
+  db,
   npcTrades,
   organizationState,
   perpPositions,
   poolPositions,
-  sql,
-  type Transaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { FEE_CONFIG } from '../config/fees';
 import { isSimulationMode } from '../storage-bridge';

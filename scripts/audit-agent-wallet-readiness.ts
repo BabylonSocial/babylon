@@ -10,7 +10,8 @@
  *   bun run scripts/audit-agent-wallet-readiness.ts --json
  */
 
-import { and, closeDatabase, db, desc, eq, users } from '@babylon/db';
+import { and, desc, eq } from '@babylon/db';
+import { closeDatabase, db, users } from '@babylon/db/runtime';
 import {
   type AgentWalletStateClassification,
   assessAgentWalletState,

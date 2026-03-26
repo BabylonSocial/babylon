@@ -9,14 +9,8 @@
  * when multiple concurrent updates occur.
  */
 
-import {
-  actorState,
-  and,
-  db,
-  eq,
-  type NpcMemory,
-  type RelationshipState,
-} from '@babylon/db';
+import { and, eq, type NpcMemory, type RelationshipState } from '@babylon/db';
+import { actorState, db } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { first } from '../utils/array-utils';
 import { getGameDayNumber } from '../utils/date-utils';

@@ -16,7 +16,8 @@ import {
   PredictionDbAdapter,
   PredictionMarketService,
 } from '@babylon/core/markets/prediction';
-import { asSystem, db } from '@babylon/db';
+import { asSystem, db } from '@babylon/db/runtime';
+
 import {
   EventMarketLinkerService,
   MarketMetricsService,

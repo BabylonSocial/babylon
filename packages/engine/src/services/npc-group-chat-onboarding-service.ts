@@ -8,21 +8,16 @@
  * not a pending invite, because pending invites do not appear in the Messages UI.
  */
 
+import { and, count, eq, inArray, isNull, sql } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
-  count,
   db,
-  eq,
   groupMembers,
   groups,
-  inArray,
-  isNull,
   messages,
-  sql,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { pickRandom, type RngFunction } from '../utils/randomization';
 

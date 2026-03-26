@@ -9,15 +9,8 @@
  * In regular DM mode: Queries the `agentMessages` table (legacy behavior).
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  messages as messagesTable,
-  or,
-  sql,
-} from '@babylon/db';
+import { and, desc, eq, or, sql } from '@babylon/db';
+import { db, messages } from '@babylon/db/runtime';
 import type {
   IAgentRuntime,
   Memory,
@@ -78,7 +71,7 @@ export const recentMessagesProvider: Provider = {
     let formattedMessages: string;
     let messageCount: number;
     // DrizzleMessageRow shape from messages table; AgentMessage from Prisma
-    type DrizzleMessageRow = typeof messagesTable.$inferSelect;
+    type DrizzleMessageRow = typeof messages.$inferSelect;
     type AgentMessage = { role: string; content: string; createdAt: Date };
     let rawMessages: Array<DrizzleMessageRow | AgentMessage>;
 
@@ -88,22 +81,22 @@ export const recentMessagesProvider: Provider = {
       // 2. This agent's own responses
       const recentMsgs = await db
         .select()
-        .from(messagesTable)
+        .from(messages)
         .where(
           and(
-            eq(messagesTable.chatId, teamChatId),
+            eq(messages.chatId, teamChatId),
             or(
               // Agent's own messages
-              eq(messagesTable.senderId, agentUserId),
+              eq(messages.senderId, agentUserId),
               // User messages targeting this agent (use @> for GIN index efficiency)
               and(
-                eq(messagesTable.senderId, ownerId),
-                sql`${messagesTable.targetIds} @> ARRAY[${agentUserId}]`
+                eq(messages.senderId, ownerId),
+                sql`${messages.targetIds} @> ARRAY[${agentUserId}]`
               )
             )
           )
         )
-        .orderBy(desc(messagesTable.createdAt))
+        .orderBy(desc(messages.createdAt))
         .limit(10);
 
       rawMessages = recentMsgs;

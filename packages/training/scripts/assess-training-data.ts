@@ -6,22 +6,19 @@
  * This provides a clear picture of what real data exists.
  */
 
+import { count, desc, eq, sql } from '@babylon/db';
 import {
   agentPerformanceMetrics,
   agentTrades,
   benchmarkResults,
-  count,
   db,
-  desc,
-  eq,
   llmCallLogs,
   rewardJudgments,
-  sql,
   trainedModels,
   trainingBatches,
   trajectories,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { mkdirSync, writeFileSync } from 'fs';
 import { CANONICAL_ARCHETYPES } from '../src/rubrics';
 

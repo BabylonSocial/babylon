@@ -20,15 +20,12 @@
 import {
   type AdminPermission,
   type AdminRoleType,
-  adminRoles,
   and,
-  db,
   eq,
   isNull,
   notInArray,
-  ROLE_PERMISSIONS,
-  users,
 } from '@babylon/db';
+import { adminRoles, db, ROLE_PERMISSIONS, users } from '@babylon/db/runtime';
 import { checkForAdminEmail, logger } from '@babylon/shared';
 import type { NextRequest } from 'next/server';
 import type { AuthenticatedUser } from './auth-middleware';

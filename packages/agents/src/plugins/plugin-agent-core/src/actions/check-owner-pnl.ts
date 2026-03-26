@@ -5,16 +5,14 @@
  * This shows the owner's trading performance, not the agent's.
  */
 
+import { and, eq, isNull } from '@babylon/db';
 import {
-  and,
   db,
-  eq,
-  isNull,
   markets,
   perpPositions,
   positions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { calculatePortfolioBreakdown, WalletService } from '@babylon/engine';
 import type { MessageTag } from '@babylon/shared';
 import type {

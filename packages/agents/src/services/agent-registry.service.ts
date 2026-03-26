@@ -12,22 +12,24 @@ import { verifyApiKey } from '@babylon/api';
 import type { JsonValue } from '@babylon/db';
 import {
   type AgentRegistry,
-  agentCapabilities,
-  agentRegistries,
   and,
-  db,
   desc,
   type ExternalAgentConnection,
   eq,
-  externalAgentConnections,
   gte,
   ilike,
   inArray,
   isNull,
   or,
   type User,
-  users,
 } from '@babylon/db';
+import {
+  agentCapabilities,
+  agentRegistries,
+  db,
+  externalAgentConnections,
+  users,
+} from '@babylon/db/runtime';
 import { type StaticActor, StaticDataRegistry } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';

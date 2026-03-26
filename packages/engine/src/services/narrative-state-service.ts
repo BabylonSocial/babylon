@@ -5,7 +5,8 @@
  * Works with both PostgreSQL and JSON backends.
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { type RngFunction } from '../utils/randomization';
 import type { QuestionArcPlan as ArcPlanType } from './question-arc-planner';

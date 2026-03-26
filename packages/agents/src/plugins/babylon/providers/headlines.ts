@@ -3,7 +3,8 @@
  * Provides recent news headlines from RSS feeds
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import type {
   IAgentRuntime,
   Memory,

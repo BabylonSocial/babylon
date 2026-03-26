@@ -17,7 +17,6 @@
 
 import {
   and,
-  db,
   desc,
   eq,
   generateSnowflakeId,
@@ -25,11 +24,9 @@ import {
   gte,
   isNull,
   lte,
-  poolPositions,
-  posts,
   type Question,
-  worldEvents,
 } from '@babylon/db';
+import { db, poolPositions, posts, worldEvents } from '@babylon/db/runtime';
 import { type JsonValue, logger } from '@babylon/shared';
 import type { BabylonLLMClient } from '../llm/openai-client';
 import type { LLMJsonClient } from '../llm/types';

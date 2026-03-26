@@ -12,18 +12,17 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { teamChatService } from '@babylon/agents';
+import { eq, generateSnowflakeId } from '@babylon/db';
 import {
   chatParticipants,
   chats,
   db,
-  eq,
-  generateSnowflakeId,
   groupMembers,
   groups,
   messages,
   userAgentConfigs,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 
 // Test data cleanup tracking
 const testCleanup: {

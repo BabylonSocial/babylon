@@ -17,14 +17,9 @@ import {
   it,
 } from 'bun:test';
 import { WaitlistService } from '@babylon/api';
-import {
-  db,
-  eq,
-  inArray,
-  pointsTransactions,
-  referrals,
-  users,
-} from '@babylon/db';
+import { eq, inArray } from '@babylon/db';
+import { db, pointsTransactions, referrals, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 // Skip tests if DATABASE_URL is not set

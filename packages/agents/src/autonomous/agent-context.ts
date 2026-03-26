@@ -5,7 +5,8 @@
  * Eliminates duplicate boilerplate across autonomous services.
  */
 
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { StaticDataRegistry } from '@babylon/engine';
 
 export interface AgentContext {

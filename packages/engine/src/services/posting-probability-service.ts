@@ -6,16 +6,8 @@
  * Entropy > elaborate probability math.
  */
 
-import {
-  type ActorStateRow,
-  actorState,
-  db,
-  desc,
-  eq,
-  gte,
-  inArray,
-  worldEvents,
-} from '@babylon/db';
+import { type ActorStateRow, desc, eq, gte, inArray } from '@babylon/db';
+import { actorState, db, worldEvents } from '@babylon/db/runtime';
 import { type ActorTier } from '@babylon/shared';
 import { NPC_POSTING_CONFIG } from '../config/npc-activity';
 import { secureRandom } from '../utils/entropy';

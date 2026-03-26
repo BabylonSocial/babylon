@@ -5,7 +5,8 @@
  * This enables users to see what their agents are doing in real-time.
  */
 
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { getOrCreateDMChat, sendMessageToChat } from './dm-service';
 

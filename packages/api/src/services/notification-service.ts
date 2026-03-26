@@ -4,16 +4,8 @@
  * Helper functions for creating notifications when users interact
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  gt,
-  hasBlocked,
-  notifications,
-  users,
-} from '@babylon/db';
+import { and, desc, eq, gt, hasBlocked } from '@babylon/db';
+import { db, notifications, users } from '@babylon/db/runtime';
 import {
   generateSnowflakeId,
   logger,

@@ -1,12 +1,11 @@
+import { and, eq } from '@babylon/db';
 import {
-  and,
   chatParticipants,
   chats,
   db,
-  eq,
   groupMembers,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger, ValidationError } from '@babylon/shared';
 import { sql } from 'drizzle-orm';
 import { AuthorizationError, NotFoundError } from '../errors';

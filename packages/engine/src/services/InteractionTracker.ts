@@ -6,7 +6,8 @@
  */
 
 import type { InputJsonValue } from '@babylon/db';
-import { db, npcInteractions } from '@babylon/db';
+import { db, npcInteractions } from '@babylon/db/runtime';
+
 import type { Actor } from '@babylon/shared';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 

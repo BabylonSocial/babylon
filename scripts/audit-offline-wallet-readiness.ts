@@ -1,4 +1,5 @@
-import { and, count, db, desc, eq, isNotNull, users } from '@babylon/db';
+import { and, count, desc, eq, isNotNull } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 
 function parseLimitArg(): number {
   const raw = process.argv[2]?.trim();

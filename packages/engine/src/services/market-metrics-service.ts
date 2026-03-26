@@ -10,19 +10,15 @@
  * @module engine/services/market-metrics-service
  */
 
+import { desc, eq, gte, inArray, sql } from '@babylon/db';
 import {
   db,
-  desc,
-  eq,
-  gte,
-  inArray,
   markets,
   perpMarketSnapshots,
   positions,
   predictionPriceHistories,
-  sql,
   stockPrices,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { first, last } from '../utils/array-utils';
 import { formatError } from '../utils/error-utils';

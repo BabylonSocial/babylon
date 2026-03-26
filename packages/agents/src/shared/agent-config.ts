@@ -5,14 +5,8 @@
  * This replaces direct access to agent fields that were previously on the User table.
  */
 
-import {
-  db,
-  eq,
-  type User,
-  type UserAgentConfig,
-  userAgentConfigs,
-  users,
-} from '@babylon/db';
+import { eq, type User, type UserAgentConfig } from '@babylon/db';
+import { db, userAgentConfigs, users } from '@babylon/db/runtime';
 import { generateSnowflakeId } from './snowflake';
 
 /** User with agent configuration attached */

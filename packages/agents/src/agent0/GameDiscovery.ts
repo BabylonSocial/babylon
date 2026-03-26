@@ -6,7 +6,8 @@
  * Uses Agent0 SDK directly.
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import type { SDK } from 'agent0-sdk';
 import { z } from 'zod';
 import { logger } from '../shared/logger';

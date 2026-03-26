@@ -6,7 +6,8 @@
  * each user has a unique referral code for tracking referrals.
  */
 
-import { and, db, eq, ne, users } from '@babylon/db';
+import { and, eq, ne } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { BadRequestError, ConflictError, NotFoundError } from '../errors';
 

@@ -19,7 +19,8 @@
  * - `DistributedLockService` requires Redis (already deployed)
  */
 
-import { balanceTransactions, db, eq, sql, users } from '@babylon/db';
+import { eq, sql } from '@babylon/db';
+import { balanceTransactions, db, users } from '@babylon/db/runtime';
 import { TotalPointsService } from '@babylon/engine';
 import {
   DAILY_LOGIN,

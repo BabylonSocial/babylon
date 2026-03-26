@@ -14,7 +14,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getDevCredentials } from '@babylon/api';
-import { db, eq, userSessions, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, userSessions, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import {
   requireAuth as requireAuthShared,

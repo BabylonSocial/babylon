@@ -12,7 +12,9 @@ import {
   provisionAgentPrivyWallet,
   signPrivyEvmTransaction,
 } from '@babylon/api';
-import { agentLogs, db, eq, type JsonValue, users } from '@babylon/db';
+import { eq, type JsonValue } from '@babylon/db';
+import { agentLogs, db, users } from '@babylon/db/runtime';
+
 import { v4 as uuidv4 } from 'uuid';
 import { getAgent0SDK } from '../agent0/sdk-instance';
 import {

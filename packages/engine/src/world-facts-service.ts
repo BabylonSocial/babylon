@@ -8,7 +8,8 @@
  */
 
 import type { WorldFact } from '@babylon/db';
-import { and, db, desc, eq, worldFacts } from '@babylon/db';
+import { and, desc, eq } from '@babylon/db';
+import { db, worldFacts } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import {
   buildDailyTopicPromptContext,

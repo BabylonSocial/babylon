@@ -7,12 +7,9 @@
  */
 
 import {
-  actorState,
   and,
   asc,
-  balanceTransactions,
   count,
-  db,
   desc,
   eq,
   gt,
@@ -22,11 +19,16 @@ import {
   lt,
   ne,
   or,
+  sql,
+} from '@babylon/db';
+import {
+  actorState,
+  balanceTransactions,
+  db,
   pointsTransactions,
   referrals,
-  sql,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { StaticDataRegistry, TotalPointsService } from '@babylon/engine';
 import {
   generateSnowflakeId,

@@ -4,7 +4,8 @@
  * Returns recent comments for a user (self or another user by ID) with thread context.
  */
 
-import { comments, db, desc, eq, inArray, posts, users } from '@babylon/db';
+import { desc, eq, inArray } from '@babylon/db';
+import { comments, db, posts, users } from '@babylon/db/runtime';
 import type {
   Action,
   ActionResult,

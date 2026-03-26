@@ -22,7 +22,9 @@ import {
   expect,
   test,
 } from 'bun:test';
-import { db, eq, inArray, pointsTransactions, users } from '@babylon/db';
+import { eq, inArray } from '@babylon/db';
+import { db, pointsTransactions, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 const BASE_URL =

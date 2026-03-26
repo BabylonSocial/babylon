@@ -6,7 +6,8 @@
  * @packageDocumentation
  */
 
-import { and, db, desc, eq, groups, gte, messages } from '@babylon/db';
+import { and, desc, eq, gte } from '@babylon/db';
+import { db, groups, messages } from '@babylon/db/runtime';
 import { shuffleArray } from '@babylon/engine';
 import type { IAgentRuntime } from '@elizaos/core';
 import { callGroqDirect } from '../llm/direct-groq';

@@ -5,7 +5,8 @@
  * Shows the parent chain (walking UP) and direct replies (children).
  */
 
-import { and, comments, db, eq, isNull, posts, users } from '@babylon/db';
+import { and, eq, isNull } from '@babylon/db';
+import { comments, db, posts, users } from '@babylon/db/runtime';
 import type {
   Action,
   ActionResult,

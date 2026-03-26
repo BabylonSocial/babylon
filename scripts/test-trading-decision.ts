@@ -6,19 +6,16 @@
  */
 
 import { callGroqDirect } from '@babylon/agents/llm/direct-groq';
+import { and, desc, eq, gte, isNull } from '@babylon/db';
 import {
-  and,
   db,
-  desc,
-  eq,
-  gte,
-  isNull,
   markets,
   organizationState,
   perpPositions,
   positions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   formatRandomContext,
   generateRandomMarketContext,

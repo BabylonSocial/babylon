@@ -1,4 +1,5 @@
-import { db, eq, inArray, nftOwnership, users } from '@babylon/db';
+import { eq, inArray } from '@babylon/db';
+import { db, nftOwnership, users } from '@babylon/db/runtime';
 import { ValidationError } from '@babylon/shared';
 import { getNftChainId } from './nft/nft-chain';
 

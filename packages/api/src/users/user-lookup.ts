@@ -4,7 +4,8 @@
  * @description Utilities for finding users by various identifiers (ID, privyId, username).
  */
 
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { type StaticActor, StaticDataRegistry } from '@babylon/engine';
 import { resolveUserIdentifierKind } from '@babylon/shared';
 import type { InferSelectModel } from 'drizzle-orm';

@@ -15,7 +15,9 @@
 
 import { afterAll, describe, expect, it } from 'bun:test';
 import { PointsService } from '@babylon/api';
-import { and, balanceTransactions, db, eq, users } from '@babylon/db';
+import { and, eq } from '@babylon/db';
+import { balanceTransactions, db, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import { TestScenarios } from '../unit/stripe/test-fixtures';
 

@@ -11,7 +11,8 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { User } from '@babylon/db';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 let testUser1: User;

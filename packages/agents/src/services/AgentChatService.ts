@@ -21,7 +21,8 @@
  * - All dispatches instrumented with action-type and timing telemetry
  */
 
-import { db, eq, messages, userAgentConfigs } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, messages, userAgentConfigs } from '@babylon/db/runtime';
 import type { MessageMetadata, MessageTag } from '@babylon/shared';
 import { checkUserInput, logger } from '@babylon/shared';
 import {

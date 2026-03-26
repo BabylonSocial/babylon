@@ -15,12 +15,14 @@
  * - Continuous reputation tracking
  */
 
-import { and, db, desc, eq, gte, isNotNull } from '@babylon/db';
+import { and, desc, eq, gte, isNotNull } from '@babylon/db';
 import {
   agentPerformanceMetrics,
+  db,
   gameConfigs,
   users,
-} from '@babylon/db/schema';
+} from '@babylon/db/runtime';
+
 import { recalculateReputation } from '@babylon/engine';
 import { logger } from '@babylon/shared';
 import { generateSnowflakeId } from '../../shared/snowflake';

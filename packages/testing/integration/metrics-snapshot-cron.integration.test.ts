@@ -9,7 +9,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getDevCredentials } from '@babylon/api';
-import { db, eq, inArray, systemMetricsSnapshots } from '@babylon/db';
+import { eq, inArray } from '@babylon/db';
+import { db, systemMetricsSnapshots } from '@babylon/db/runtime';
 
 const BASE_URL =
   process.env.TEST_API_URL ||

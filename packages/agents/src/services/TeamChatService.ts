@@ -16,23 +16,25 @@
 import {
   and,
   type Chat,
-  chatParticipants,
-  chats,
-  db,
   desc,
   eq,
   type Group,
   generateSnowflakeId,
-  groupMembers,
-  groups,
   isNull,
-  messages,
   ne,
   sql,
   type User,
+} from '@babylon/db';
+import {
+  chatParticipants,
+  chats,
+  db,
+  groupMembers,
+  groups,
+  messages,
   users,
   withTransaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { logger } from '../shared/logger';
 
 /** Constants for Agents */

@@ -4,7 +4,8 @@
  * Uploads trained RL models to HuggingFace Hub with benchmark results and model cards.
  */
 
-import { benchmarkResults, db, trainedModels } from '@babylon/db';
+import { benchmarkResults, db, trainedModels } from '@babylon/db/runtime';
+
 import { desc, eq } from 'drizzle-orm';
 import { promises as fs } from 'fs';
 import * as path from 'path';

@@ -15,11 +15,10 @@
  *   bun run scripts/seed-alpha-test-data.ts --user=<username>
  */
 
+import { and, eq } from '@babylon/db';
 import {
-  and,
   comments,
   db,
-  eq,
   groupMembers,
   groups,
   posts,
@@ -27,7 +26,7 @@ import {
   shares,
   userInteractions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 
 const REPLY_TEMPLATES = [

@@ -10,19 +10,22 @@ import {
   PredictionMarketService as CorePredictionMarketService,
 } from '@babylon/core/markets/prediction';
 import {
-  actorRelationships,
   and,
-  arcStates,
   count,
-  db,
   getDbInstance as dbService,
   desc,
   eq,
-  games,
   gte,
   inArray,
   isNull,
   type JsonValue,
+  sql,
+} from '@babylon/db';
+import {
+  actorRelationships,
+  arcStates,
+  db,
+  games,
   markets as marketsSchema,
   organizationState,
   perpMarketSnapshots,
@@ -32,14 +35,14 @@ import {
   posts,
   postTags,
   questions as questionsSchema,
-  sql,
   tags,
   tickTokenStats,
   timeframedMarkets,
   trendingTags,
   widgetCaches,
   worldFacts,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   calculatePriceFromHoldings,
   DIAMOND_ADDRESS,

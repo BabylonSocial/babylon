@@ -7,21 +7,14 @@
  * - Manages tag statistics and trending calculations
  */
 
+import { and, asc, count, desc, eq, gte, inArray, ne } from '@babylon/db';
 import {
-  and,
-  asc,
-  count,
   db,
-  desc,
-  eq,
-  gte,
-  inArray,
-  ne,
   postTags,
   tags,
   trendingTags,
   withTransaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import OpenAI from 'openai';
 import { isPromptLoggingEnabled, logPrompt } from '../utils/prompt-logger';

@@ -8,16 +8,13 @@
  *   bun run packages/training/scripts/real-archetype-benchmark.ts
  */
 
+import { and, desc, eq, isNull } from '@babylon/db';
 import {
   agentPerformanceMetrics,
-  and,
   db,
-  desc,
-  eq,
-  isNull,
   poolPositions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { ArchetypeConfigService } from '../src/archetypes/ArchetypeConfigService';
 
 // Get the available archetypes from our actual config

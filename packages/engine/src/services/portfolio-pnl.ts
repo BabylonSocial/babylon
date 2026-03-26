@@ -2,7 +2,14 @@
  * Server-side portfolio P&L calculation
  */
 
-import { db, markets, perpPositions, positions, users } from '@babylon/db';
+import {
+  db,
+  markets,
+  perpPositions,
+  positions,
+  users,
+} from '@babylon/db/runtime';
+
 import { and, eq, isNull } from 'drizzle-orm';
 
 export interface PortfolioPnLSnapshot {

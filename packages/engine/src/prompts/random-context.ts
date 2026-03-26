@@ -10,17 +10,8 @@
  * This adds variety and prevents AI from falling into repetitive patterns.
  */
 
-import {
-  db,
-  desc,
-  eq,
-  getDbInstance,
-  gte,
-  lte,
-  markets,
-  posts,
-  worldEvents,
-} from '@babylon/db';
+import { desc, eq, getDbInstance, gte, lte } from '@babylon/db';
+import { db, markets, posts, worldEvents } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { StaticDataRegistry } from '../services/static-data-registry';
 import { sampleRandom, shuffleArray } from '../utils/randomization';

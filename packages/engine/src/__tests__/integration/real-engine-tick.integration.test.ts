@@ -33,7 +33,9 @@ import {
   setDefaultTimeout,
   test,
 } from 'bun:test';
-import { asSystem, sql } from '@babylon/db';
+import { sql } from '@babylon/db';
+import { asSystem } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import { existsSync, readFileSync } from 'fs';
 

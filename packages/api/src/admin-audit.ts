@@ -7,7 +7,8 @@
  * the AdminAuditLog database table (for persistence and reporting).
  */
 
-import { adminAuditLogs, db } from '@babylon/db';
+import { adminAuditLogs, db } from '@babylon/db/runtime';
+
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { JsonValue } from './types';
 

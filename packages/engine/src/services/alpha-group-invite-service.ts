@@ -14,19 +14,14 @@
  * Runs on game ticks, processing a batch of NPCs each tick.
  */
 
+import { and, count, desc, eq, gte, or } from '@babylon/db';
 import {
-  and,
-  count,
   db,
-  desc,
-  eq,
   groupInvites,
   groupMembers,
   groups,
-  gte,
-  or,
   userInteractions,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { GROUP_CONFIG, logger, type TierLevel } from '@babylon/shared';
 import {
   ALPHA_GROUP_CONFIG,

@@ -7,19 +7,14 @@
 
 import { countTokensSync, truncateToTokenLimitSync } from '@babylon/api';
 import type { JsonValue } from '@babylon/db';
+import { and, desc, eq, getDbInstance, inArray, isNull } from '@babylon/db';
 import {
   agentLogs,
-  and,
   db,
-  desc,
-  eq,
-  getDbInstance,
-  inArray,
-  isNull,
   perpPositions,
   positions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { StaticDataRegistry, type StaticOrganization } from '@babylon/engine';
 import type { IAgentRuntime } from '@elizaos/core';
 import { sql } from 'drizzle-orm';

@@ -8,9 +8,9 @@
  * the agent-tick cron job.
  */
 
-import { agentRegistry } from '@babylon/agents';
-import { db } from '@babylon/db';
-import { agentRegistries, users } from '@babylon/db/schema';
+import { agentRegistries, agentRegistry } from '@babylon/agents';
+import { db, users } from '@babylon/db/runtime';
+
 import { eq } from 'drizzle-orm';
 
 async function registerExistingAgents() {

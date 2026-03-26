@@ -4,7 +4,8 @@
  * Returns recent posts for a user (self or another user by ID).
  */
 
-import { db, desc, eq, posts, users } from '@babylon/db';
+import { desc, eq } from '@babylon/db';
+import { db, posts, users } from '@babylon/db/runtime';
 import type {
   Action,
   ActionResult,

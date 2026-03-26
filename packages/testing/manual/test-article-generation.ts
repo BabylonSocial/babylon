@@ -9,7 +9,8 @@
  * 5. Shows sample outputs
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { BabylonLLMClient } from '@babylon/engine';
 
 async function testArticleGeneration() {

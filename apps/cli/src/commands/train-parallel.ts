@@ -5,7 +5,8 @@
  * This is the proper way to generate training data at scale.
  */
 
-import { closeDatabase, db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { closeDatabase, db, users } from '@babylon/db/runtime';
 import {
   ArchetypeConfigService,
   createParallelGenerator,

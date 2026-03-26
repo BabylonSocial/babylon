@@ -21,11 +21,10 @@ import {
   setDefaultTimeout,
   test,
 } from 'bun:test';
+import { db } from '@babylon/db/runtime';
 
-// Set default timeout to 30 seconds for integration tests
-setDefaultTimeout(30000);
+setDefaultTimeout(30_000);
 
-import { db } from '@babylon/db';
 import {
   AlphaGroupInviteService,
   GroupChatService,

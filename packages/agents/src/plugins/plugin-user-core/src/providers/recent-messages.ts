@@ -6,15 +6,8 @@
  * and coordinator's own responses.
  */
 
-import {
-  and,
-  db,
-  desc,
-  eq,
-  messages as messagesTable,
-  or,
-  sql,
-} from '@babylon/db';
+import { and, desc, eq, or, sql } from '@babylon/db';
+import { db, messages } from '@babylon/db/runtime';
 import { COORDINATOR_SENDER_ID } from '@babylon/shared';
 import type {
   IAgentRuntime,
@@ -87,22 +80,22 @@ export const coordinatorRecentMessagesProvider: Provider = {
     // Fail-fast: let DB errors propagate to caller
     const recentMsgs = await db
       .select()
-      .from(messagesTable)
+      .from(messages)
       .where(
         and(
-          eq(messagesTable.chatId, teamChatId),
+          eq(messages.chatId, teamChatId),
           or(
             // Coordinator's own messages
-            eq(messagesTable.senderId, COORDINATOR_SENDER_ID),
+            eq(messages.senderId, COORDINATOR_SENDER_ID),
             // User messages targeting coordinator (use @> for GIN index efficiency)
             and(
-              eq(messagesTable.senderId, ownerId),
-              sql`${messagesTable.targetIds} @> ARRAY[${COORDINATOR_SENDER_ID}]`
+              eq(messages.senderId, ownerId),
+              sql`${messages.targetIds} @> ARRAY[${COORDINATOR_SENDER_ID}]`
             )
           )
         )
       )
-      .orderBy(desc(messagesTable.createdAt))
+      .orderBy(desc(messages.createdAt))
       .limit(15);
 
     if (recentMsgs.length === 0) {

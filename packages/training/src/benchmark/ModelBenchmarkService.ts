@@ -20,7 +20,8 @@ import {
   trainedModels,
   userAgentConfigs,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { ethers } from 'ethers';
 import { promises as fs } from 'fs';

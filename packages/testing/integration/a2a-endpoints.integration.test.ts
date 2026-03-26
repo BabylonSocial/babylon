@@ -6,7 +6,8 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 import { AgentStatus, AgentType } from '@babylon/agents';
 import { agentRegistry } from '@babylon/agents/services/agent-registry.service';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import {
   type AgentCapabilities,
   OASFDomainCategories,

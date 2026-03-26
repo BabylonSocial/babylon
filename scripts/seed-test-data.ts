@@ -17,13 +17,8 @@
  *   bun run scripts/seed-test-data.ts all           # Create all test data
  */
 
-import {
-  db,
-  eq,
-  generateSnowflakeId,
-  userAgentConfigs,
-  users,
-} from '@babylon/db';
+import { eq, generateSnowflakeId } from '@babylon/db';
+import { db, userAgentConfigs, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/engine';
 import { ethers } from 'ethers';
 import { nanoid } from 'nanoid';

@@ -5,16 +5,13 @@
  * Integrates PNL normalization, game scores, and user feedback into reputation.
  */
 
+import { and, desc, eq, gte } from '@babylon/db';
 import {
   agentPerformanceMetrics,
-  and,
   db,
-  desc,
-  eq,
   feedbacks,
-  gte,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { clamp01, clampPercent } from '../utils/math-utils';
 import {

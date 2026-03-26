@@ -4,7 +4,8 @@
  * Enforces exactly 1 reply per hour per NPC for each player.
  */
 
-import { and, db, desc, eq, userInteractions } from '@babylon/db';
+import { and, desc, eq } from '@babylon/db';
+import { db, userInteractions } from '@babylon/db/runtime';
 import { generateSnowflakeId } from '@babylon/shared';
 
 export interface RateLimitResult {

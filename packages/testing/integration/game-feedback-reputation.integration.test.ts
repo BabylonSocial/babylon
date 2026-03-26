@@ -6,7 +6,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import { NextRequest } from 'next/server';
 

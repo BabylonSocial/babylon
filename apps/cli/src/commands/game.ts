@@ -14,16 +14,18 @@
 import type { JsonValue } from '@babylon/db';
 import {
   and,
-  closeDatabase,
-  db,
   generateSnowflakeId as dbGenerateSnowflakeId,
   desc,
   eq,
+  isNull,
+} from '@babylon/db';
+import {
+  closeDatabase,
+  db,
   gameConfigs,
   games,
-  isNull,
   posts,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import type { GameHistory, GroupMessage } from '@babylon/engine';
 import { GameGenerator, loadActorsData } from '@babylon/engine';
 import { nanoid } from 'nanoid';

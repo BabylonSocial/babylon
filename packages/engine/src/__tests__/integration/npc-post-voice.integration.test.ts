@@ -10,7 +10,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { and, db, eq, gte, posts } from '@babylon/db';
+import { and, eq, gte } from '@babylon/db';
+import { db, posts } from '@babylon/db/runtime';
 
 // Skip unless explicitly enabled with database running
 const SKIP = process.env.RUN_INTEGRATION_TESTS !== 'true';

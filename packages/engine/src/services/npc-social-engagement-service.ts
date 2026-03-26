@@ -8,7 +8,8 @@
  * - Natural randomness with jitter
  */
 
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import type { JsonValue } from '@babylon/shared';
 import { generateSnowflakeId, isPureRepost, logger } from '@babylon/shared';
 import {

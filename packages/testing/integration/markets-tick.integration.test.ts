@@ -104,16 +104,13 @@ mock.module('@babylon/engine', async () => {
 
 import {
   and,
-  db,
   eq,
   inArray,
   isNull,
   type MarketTimeframe,
-  posts,
-  questions,
   sql,
-  timeframedMarkets,
 } from '@babylon/db';
+import { db, posts, questions, timeframedMarkets } from '@babylon/db/runtime';
 import {
   GRANULAR_TO_DB_TIMEFRAME,
   mapGranularToDbTimeframe,

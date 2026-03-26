@@ -12,21 +12,15 @@
  * - More total interactions (10+ quality replies)
  */
 
+import { and, asc, count, desc, eq, gte, inArray } from '@babylon/db';
 import {
-  and,
-  asc,
-  count,
   db,
-  desc,
-  eq,
   followStatuses,
-  gte,
-  inArray,
   posts,
   reactions,
   userInteractions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { NPC_FOLLOWING_CONFIG } from '../config/npc-activity';
 import { secureRandom } from '../utils/entropy';

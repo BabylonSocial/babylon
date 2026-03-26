@@ -6,7 +6,8 @@
  */
 
 import { afterEach, describe, expect, it } from 'bun:test';
-import { db, eq, games, generateSnowflakeId } from '@babylon/db';
+import { eq, generateSnowflakeId } from '@babylon/db';
+import { db, games } from '@babylon/db/runtime';
 
 // Test game creation/auto-start logic directly on games table
 describe('Game Auto-Start Logic', () => {

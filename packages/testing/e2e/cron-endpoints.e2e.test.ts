@@ -12,7 +12,8 @@
  * Run with: npx playwright test cron-endpoints.e2e.test.ts
  */
 
-import { asSystem } from '@babylon/db';
+import { asSystem } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 import { expect, test } from '@playwright/test';
 

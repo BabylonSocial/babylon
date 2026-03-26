@@ -11,22 +11,20 @@
  */
 
 import { getAgentLLMStatus } from '@babylon/agents/llm';
+import { count as drizzleCount, eq, gte, isNotNull } from '@babylon/db';
 import {
   actorState,
   checkDatabaseHealth,
   closeDatabase,
   db,
-  count as drizzleCount,
-  eq,
   gameConfigs,
   games,
-  gte,
-  isNotNull,
   organizationState,
   posts,
   questions,
   worldEvents,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { StaticDataRegistry } from '@babylon/engine';
 import { execSync } from 'child_process';
 import { ethers } from 'ethers';

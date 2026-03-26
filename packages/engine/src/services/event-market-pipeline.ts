@@ -13,14 +13,13 @@
 
 import {
   and,
-  db,
   eq,
   inArray,
-  organizationState,
   type PriceModifier,
   type StructuredEventData,
   sql,
 } from '@babylon/db';
+import { db, organizationState } from '@babylon/db/runtime';
 import { logger, PERP_MARKET_CONFIG } from '@babylon/shared';
 import { secureRandom } from '../utils/entropy';
 import { formatError } from '../utils/error-utils';

@@ -7,7 +7,8 @@
  * - Combined and sorted by time
  */
 
-import { agentTrades, db, desc, eq, npcTrades, users } from '@babylon/db';
+import { desc, eq } from '@babylon/db';
+import { agentTrades, db, npcTrades, users } from '@babylon/db/runtime';
 import { StaticDataRegistry } from '@babylon/engine';
 import type {
   Action,

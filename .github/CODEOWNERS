@@ -96,7 +96,7 @@
 /apps/web/src/components/chats/ @tcm390
 /apps/web/src/app/api/realtime/token/ @tcm390
 
-/packages/db/src/schema/messaging.ts @tcm390
+/packages/db/src/tables/messaging-enums.ts @tcm390
 /packages/api/src/realtime/ @tcm390
 /packages/api/src/sse/ @tcm390
 /packages/testing/synpress/07-chats.synpress.spec.ts @tcm390

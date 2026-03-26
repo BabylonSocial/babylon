@@ -21,7 +21,8 @@
  *   --ticks              Ticks per agent (default: 10)
  */
 
-import { count, db, eq, isNotNull, trajectories } from '@babylon/db';
+import { count, eq, isNotNull } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import { parseArgs } from 'util';
 
 // Parse command line arguments

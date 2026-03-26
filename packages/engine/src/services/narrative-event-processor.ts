@@ -14,17 +14,19 @@ import {
   type ArcState,
   type ArcStateType,
   and,
-  arcStates,
-  db,
   eq,
   type LongTermArcState,
   type MarketImpact,
-  questionArcPlans,
-  questions,
   type ScheduledEvent,
   type StructuredEventData,
-  worldEvents,
 } from '@babylon/db';
+import {
+  arcStates,
+  db,
+  questionArcPlans,
+  questions,
+  worldEvents,
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type { BabylonLLMClient } from '../llm/openai-client';
 import { toSafeDayNumber } from '../utils/date-utils';

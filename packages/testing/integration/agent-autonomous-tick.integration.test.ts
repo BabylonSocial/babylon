@@ -12,7 +12,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { createTestAgent, getAgentConfig } from '@babylon/agents';
-import { asSystem, db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { asSystem, db, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 const BASE_URL =

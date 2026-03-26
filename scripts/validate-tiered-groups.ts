@@ -12,7 +12,8 @@
  *   --verbose     Show detailed output
  */
 
-import { and, count, db, eq, groupMembers, groups, users } from '@babylon/db';
+import { and, count, eq } from '@babylon/db';
+import { db, groupMembers, groups, users } from '@babylon/db/runtime';
 import {
   AlphaGroupInviteService,
   GroupChatService,

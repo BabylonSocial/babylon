@@ -13,7 +13,8 @@ import {
   expect,
   test,
 } from 'bun:test';
-import { db, userAgentConfigs, users } from '@babylon/db';
+import { db, userAgentConfigs, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 const BASE_URL =

@@ -9,7 +9,8 @@
  * process instance, which is acceptable since mention boost is a soft preference.
  */
 
-import { db, eq, organizations } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, organizations } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { formatError } from '../utils/error-utils';
 import { npcMemoryService } from './npc-memory-service';

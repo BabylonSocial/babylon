@@ -14,7 +14,9 @@ import {
   findUserByIdentifier,
   findUserByIdentifierWithSelect,
 } from '@babylon/api';
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 // Test user IDs that we'll clean up

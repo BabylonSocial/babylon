@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { messageTypeEnum } from '@babylon/db/schema/messaging';
+import { messageTypeEnum } from '@babylon/db/tables/messaging-enums';
 import { MessageTypeEnum } from '@babylon/shared';
 
 describe('MessageTypeEnum Sync', () => {

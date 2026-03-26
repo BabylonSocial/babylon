@@ -6,16 +6,14 @@
  * via StaticDataRegistry to avoid unnecessary database queries.
  */
 
+import { and, eq, lte } from '@babylon/db';
 import {
-  and,
   db,
-  eq,
-  lte,
   markets,
   posts,
   questions,
   worldEvents,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import type {
   ActiveMarket,

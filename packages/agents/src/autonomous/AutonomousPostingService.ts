@@ -5,7 +5,9 @@
  */
 
 import { countTokensSync, truncateToTokenLimitSync } from '@babylon/api';
-import { agentTrades, db, desc, eq, posts } from '@babylon/db';
+import { desc, eq } from '@babylon/db';
+import { agentTrades, db, posts } from '@babylon/db/runtime';
+
 import {
   characterMappingService,
   formatRandomContext,

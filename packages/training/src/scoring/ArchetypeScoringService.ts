@@ -7,7 +7,8 @@
  * @packageDocumentation
  */
 
-import { and, db, eq, inArray, isNull, not, trajectories } from '@babylon/db';
+import { and, eq, inArray, isNull, not } from '@babylon/db';
+import { db, trajectories } from '@babylon/db/runtime';
 import { getLLMCaller } from '../dependencies';
 import { type BehavioralMetrics, trajectoryMetricsExtractor } from '../metrics';
 import { hasCustomRubric } from '../rubrics';

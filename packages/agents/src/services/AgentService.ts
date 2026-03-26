@@ -15,22 +15,25 @@
 
 import { assertPrivyOfflineConfig } from '@babylon/api';
 import {
-  agentLogs,
-  agentMessages,
-  agentPointsTransactions,
-  agentTrades,
   and,
-  balanceTransactions,
-  db,
   desc,
   eq,
   lt,
   type User,
   type UserAgentConfig,
+} from '@babylon/db';
+import {
+  agentLogs,
+  agentMessages,
+  agentPointsTransactions,
+  agentTrades,
+  balanceTransactions,
+  db,
   userAgentConfigs,
   users,
   withTransaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import type { AgentCapabilities } from '@babylon/shared';
 import {
   BABYLON_POINTS_SYMBOL,

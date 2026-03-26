@@ -1,14 +1,7 @@
 #!/usr/bin/env bun
 
-import {
-  agentLogs,
-  and,
-  closeDatabase,
-  db,
-  desc,
-  eq,
-  users,
-} from '@babylon/db';
+import { and, desc, eq } from '@babylon/db';
+import { agentLogs, closeDatabase, db, users } from '@babylon/db/runtime';
 import { v4 as uuidv4 } from 'uuid';
 import {
   type AgentWalletStateClassification,

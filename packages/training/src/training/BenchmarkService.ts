@@ -15,17 +15,9 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-  and,
-  db,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  not,
-  trainedModels,
-  users,
-} from '@babylon/db';
+import { and, desc, eq, inArray, isNotNull, not } from '@babylon/db';
+import { db, trainedModels, users } from '@babylon/db/runtime';
+
 import { BenchmarkRunner } from '../benchmark/BenchmarkRunner';
 import { getAgentRuntimeManager } from '../dependencies';
 import { logger } from '../utils/logger';

@@ -9,7 +9,8 @@
  * propagation handled by the ReputationBridge in @babylon/agents.
  */
 
-import { db, eq, inArray, positions, sql, users } from '@babylon/db';
+import { eq, inArray, sql } from '@babylon/db';
+import { db, positions, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 
 // =============================================================================

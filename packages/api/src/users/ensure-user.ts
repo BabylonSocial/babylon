@@ -6,7 +6,8 @@
  * information.
  */
 
-import { db, eq, type User, users } from '@babylon/db';
+import { eq, type User } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import type { AuthenticatedUser } from '../auth-middleware';
 import { cachedDb } from '../cache/cached-database-service';
 

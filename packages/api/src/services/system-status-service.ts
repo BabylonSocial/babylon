@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
-import { checkDatabaseHealth, db, queryMonitor } from '@babylon/db';
+import { queryMonitor } from '@babylon/db';
+import { checkDatabaseHealth, db } from '@babylon/db/runtime';
+
 import { logger } from '@babylon/shared';
 import type { CronJobStats } from '../monitoring/cron-metrics';
 import { cronMetrics } from '../monitoring/cron-metrics';

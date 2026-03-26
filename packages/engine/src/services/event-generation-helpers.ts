@@ -1,12 +1,5 @@
-import {
-  and,
-  db,
-  desc,
-  gte,
-  inArray,
-  type Question,
-  worldEvents,
-} from '@babylon/db';
+import { and, desc, gte, inArray, type Question } from '@babylon/db';
+import { db, worldEvents } from '@babylon/db/runtime';
 import { generateSnowflakeId, logger } from '@babylon/shared';
 import { ArticleGenerator } from '../ArticleGenerator';
 import type { BabylonLLMClient } from '../llm/openai-client';

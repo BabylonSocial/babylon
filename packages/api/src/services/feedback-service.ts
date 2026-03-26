@@ -5,7 +5,8 @@
  * This keeps the API route thin and the business logic portable.
  */
 
-import { db, type JsonValue } from '@babylon/db';
+import { type JsonValue } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
 import {
   type FeedbackType,
   GameFeedbackSchema,

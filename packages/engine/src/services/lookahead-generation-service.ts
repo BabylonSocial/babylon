@@ -19,21 +19,8 @@
  * - Failure resilience
  */
 
-import {
-  actorState,
-  and,
-  count,
-  db,
-  desc,
-  eq,
-  games,
-  gte,
-  isNull,
-  lt,
-  max,
-  posts,
-  questions,
-} from '@babylon/db';
+import { and, count, desc, eq, gte, isNull, lt, max } from '@babylon/db';
+import { actorState, db, games, posts, questions } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import {
   CONTENT_PACING,

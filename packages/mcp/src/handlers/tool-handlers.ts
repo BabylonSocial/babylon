@@ -53,18 +53,21 @@ import {
 } from '@babylon/core/markets/prediction';
 import {
   and,
-  db,
   eq,
   getBlockedByUserIds,
   getBlockedUserIds,
   getMutedUserIds,
+  hasBlocked,
+} from '@babylon/db';
+import {
+  db,
   groupMembers,
   groups,
-  hasBlocked,
   markets,
   perpMarketSnapshots,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   createPerpPriceImpactPort,
   FEE_CONFIG,

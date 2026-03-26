@@ -5,7 +5,13 @@
  * Main entry point for all HuggingFace operations.
  */
 
-import { benchmarkResults, db, trainedModels, trajectories } from '@babylon/db';
+import {
+  benchmarkResults,
+  db,
+  trainedModels,
+  trajectories,
+} from '@babylon/db/runtime';
+
 import { count, desc, eq, gte, isNotNull } from 'drizzle-orm';
 import { ModelBenchmarkService } from '../benchmark/ModelBenchmarkService';
 import { getExportToHuggingFace } from '../dependencies';

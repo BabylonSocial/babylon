@@ -5,7 +5,8 @@
  * with the new batch processing and dashboard system.
  */
 
-import { db, eq, users } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import type { Character } from '@elizaos/core';
 import { AgentRuntime, ModelType } from '@elizaos/core';
 import { autonomousCoordinator } from '../autonomous';

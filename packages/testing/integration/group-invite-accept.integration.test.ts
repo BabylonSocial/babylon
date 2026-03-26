@@ -19,7 +19,8 @@ import {
   expect,
   test,
 } from 'bun:test';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { GROUP_CONFIG, generateSnowflakeId } from '@babylon/shared';
 
 // Base URL for API calls

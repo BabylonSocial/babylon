@@ -2,7 +2,8 @@
  * Service for creating and managing prediction markets on-chain
  */
 
-import { db, eq, markets } from '@babylon/db';
+import { eq } from '@babylon/db';
+import { db, markets } from '@babylon/db/runtime';
 import { DIAMOND_ADDRESS, getCurrentRpcUrl, logger } from '@babylon/shared';
 import {
   type Address,

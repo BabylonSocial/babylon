@@ -12,7 +12,6 @@ import {
   broadcastToChannel,
   type CommentActivityData,
   cachedDb,
-  type JsonValue,
   type MessageActivityData,
   notifyGroupChatMessage,
   type PostActivityData,
@@ -23,9 +22,16 @@ import {
   PredictionMarketService,
 } from '@babylon/core/markets/prediction';
 import {
-  actorState,
   aliasedTable,
   and,
+  eq,
+  gte,
+  isNull,
+  type JsonValue,
+  sql,
+} from '@babylon/db';
+import {
+  actorState,
   asSystem,
   asUser,
   chatParticipants,
@@ -33,18 +39,15 @@ import {
   comments,
   db,
   dmAcceptances,
-  eq,
   follows,
-  gte,
-  isNull,
   messages,
   perpPositions,
   posts,
   reactions,
   shares,
-  sql,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   createPerpPriceImpactPort,
   FEE_CONFIG,

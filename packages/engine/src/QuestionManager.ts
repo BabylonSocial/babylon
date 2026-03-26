@@ -62,17 +62,15 @@ import {
   PredictionDbAdapter as CorePredictionDbAdapter,
   PredictionMarketService as CorePredictionMarketService,
 } from '@babylon/core/markets/prediction';
+import { and, desc, eq, gte } from '@babylon/db';
 import {
-  and,
   db,
-  desc,
-  eq,
-  gte,
   questions,
   tags,
   trendingTags,
   worldEvents,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   generateSnowflakeId,
   logger,

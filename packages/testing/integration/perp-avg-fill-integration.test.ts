@@ -28,15 +28,14 @@ import {
   type PerpServiceDeps,
   type PriceImpactPort,
 } from '@babylon/core/markets/perps';
+import { and, eq, isNull } from '@babylon/db';
 import {
-  and,
   db,
-  eq,
-  isNull,
   organizationState,
   perpMarketSnapshots,
   perpPositions,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   calculatePriceFromHoldings,
   PERP_MARKET_CONFIG,

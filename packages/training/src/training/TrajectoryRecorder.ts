@@ -13,7 +13,8 @@ import {
   isSimulationMode,
   llmCallLogs,
   trajectories,
-} from '@babylon/db'; // keep this at db not engine to avoid circular dep
+} from '@babylon/db/runtime';
+// keep this at db not engine to avoid circular dep
 import type { JsonValue } from '@babylon/shared';
 import { logger } from '../utils/logger';
 import { generateSnowflakeId } from '../utils/snowflake';

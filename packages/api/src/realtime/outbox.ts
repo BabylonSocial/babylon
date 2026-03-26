@@ -1,13 +1,5 @@
-import {
-  and,
-  db,
-  eq,
-  type JsonValue,
-  lt,
-  or,
-  realtimeOutboxes,
-  sql,
-} from '@babylon/db';
+import { and, eq, type JsonValue, lt, or, sql } from '@babylon/db';
+import { db, realtimeOutboxes } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { randomUUID } from 'crypto';
 import { streamAdd } from '../redis';

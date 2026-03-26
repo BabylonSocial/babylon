@@ -9,23 +9,17 @@
  */
 
 import { countTokensSync, truncateToTokenLimitSync } from '@babylon/api';
+import { and, desc, eq, gte, inArray, isNull, lte, ne } from '@babylon/db';
 import {
-  and,
   comments,
   db,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNull,
-  lte,
-  ne,
   perpPositions,
   positions,
   posts,
   reactions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { StaticDataRegistry } from '@babylon/engine';
 import type { IAgentRuntime } from '@elizaos/core';
 import { parseKeyValueXml } from '@elizaos/core';

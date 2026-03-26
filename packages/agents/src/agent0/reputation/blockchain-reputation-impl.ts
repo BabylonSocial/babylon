@@ -7,7 +7,8 @@
  * Note: Agent0 uses feedback-based reputation (averageValue 0-100), not betting-based reputation.
  * Betting-related fields are set to 0 as they're not applicable to Agent0's reputation model.
  */
-
+import { eq } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import type { SDK } from 'agent0-sdk';
 
@@ -115,15 +116,13 @@ export async function syncOnChainReputation(
       return undefined;
     }
 
-    // Update local database with Agent0 reputation
-    const { db } = await import('@babylon/db');
-    await db.user.update({
-      where: { id: agentUserId },
-      data: {
+    await db
+      .update(users)
+      .set({
         agent0TrustScore: summary.averageValue,
         agent0FeedbackCount: summary.count,
-      },
-    });
+      })
+      .where(eq(users.id, agentUserId));
 
     logger.info(
       'Agent0 reputation synced successfully',

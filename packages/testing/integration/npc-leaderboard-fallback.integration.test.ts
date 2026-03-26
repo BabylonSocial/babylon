@@ -15,14 +15,14 @@ import {
   expect,
   test,
 } from 'bun:test';
+import { eq, type Pool } from '@babylon/db';
 import {
   actorState,
   db,
-  eq,
-  type Pool,
   perpPositions,
   poolPositions,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import {
   buildFallbackMetricsByPool,
   type FallbackPerpRow,

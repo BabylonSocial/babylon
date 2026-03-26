@@ -9,7 +9,9 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getDevCredentials } from '@babylon/api';
-import { db, inArray, systemMetricsSnapshots } from '@babylon/db';
+import { inArray } from '@babylon/db';
+import { db, systemMetricsSnapshots } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 const BASE_URL =

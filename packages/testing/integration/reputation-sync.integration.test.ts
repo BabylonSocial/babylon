@@ -12,7 +12,8 @@ import {
   syncAllReputationsToERC8004,
   syncUserReputationToERC8004,
 } from '@babylon/agents/agent0/reputation/erc8004-reputation-sync';
-import { db } from '@babylon/db';
+import { db } from '@babylon/db/runtime';
+
 import { generateSnowflakeId } from '@babylon/shared';
 
 const BASE_URL =

@@ -11,17 +11,16 @@
  */
 
 import { broadcastAgentActivity, type TradeActivityData } from '@babylon/api';
+import { desc, eq, type JsonValue } from '@babylon/db';
 import {
   agentLogs,
   agentTrades,
   db,
-  desc,
-  eq,
-  type JsonValue,
   markets,
   users,
   withTransaction,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
+
 import { StaticDataRegistry } from '@babylon/engine';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../shared/logger';

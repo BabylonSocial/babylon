@@ -13,32 +13,34 @@
  */
 
 import {
-  actorRelationships,
   and,
-  chatParticipants,
-  chats,
   count,
-  db,
   desc,
   eq,
+  gte,
+  inArray,
+  lt,
+  notInArray,
+  or,
+  sql,
+} from '@babylon/db';
+import {
+  actorRelationships,
+  chatParticipants,
+  chats,
+  db,
   follows,
   groupInvites,
   groupMembers,
   groups,
-  gte,
-  inArray,
-  lt,
   messages,
-  notInArray,
-  or,
   poolPositions,
   posts,
   reactions,
   shares,
-  sql,
   userInteractions,
   users,
-} from '@babylon/db';
+} from '@babylon/db/runtime';
 import { GROUP_CONFIG, generateSnowflakeId, logger } from '@babylon/shared';
 import { NPC_GROUP_DYNAMICS_CONFIG } from '../config/npc-activity';
 import { BabylonLLMClient } from '../llm/openai-client';

@@ -19,7 +19,9 @@ import {
   test,
 } from 'bun:test';
 import { DailyLoginService } from '@babylon/api';
-import { db, eq, sql, users } from '@babylon/db';
+import { eq, sql } from '@babylon/db';
+import { db, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId, POINTS } from '@babylon/shared';
 
 setDefaultTimeout(30000);

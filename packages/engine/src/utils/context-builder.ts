@@ -12,7 +12,8 @@
  * - Relationship context
  */
 
-import { and, db, desc, gte, lte, worldEvents } from '@babylon/db';
+import { and, desc, gte, lte } from '@babylon/db';
+import { db, worldEvents } from '@babylon/db/runtime';
 import { RelationshipEvolutionEngine } from '../RelationshipEvolutionEngine';
 import { parseStringArraySafe } from '../services/jsonb-validators';
 import { MarketContextService } from '../services/market-context-service';

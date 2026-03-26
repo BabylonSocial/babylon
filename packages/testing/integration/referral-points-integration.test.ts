@@ -12,16 +12,9 @@
 
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { getOrCreateReferralCode, PointsService } from '@babylon/api';
-import {
-  and,
-  count,
-  db,
-  eq,
-  isNull,
-  pointsTransactions,
-  referrals,
-  users,
-} from '@babylon/db';
+import { and, count, eq, isNull } from '@babylon/db';
+import { db, pointsTransactions, referrals, users } from '@babylon/db/runtime';
+
 import { generateSnowflakeId, POINTS } from '@babylon/shared';
 
 // Test user IDs that we'll clean up

@@ -9,7 +9,8 @@
  * Vercel-compatible: No filesystem access, all data from database.
  */
 
-import { db, desc, eq, games, getDbInstance, markets } from '@babylon/db';
+import { desc, eq, getDbInstance } from '@babylon/db';
+import { db, games, markets } from '@babylon/db/runtime';
 import { logger } from '@babylon/shared';
 import { StaticDataRegistry } from './services/static-data-registry';
 import { getGameDayNumber } from './utils/date-utils';

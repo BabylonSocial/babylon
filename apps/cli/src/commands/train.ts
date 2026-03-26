@@ -13,7 +13,6 @@
  *   generate    - Generate multi-archetype trajectories
  */
 
-// Light imports that don't initialize database connections
 import {
   getAvailableArchetypes,
   getPriorityMetrics,
@@ -27,18 +26,21 @@ import { logger } from '../lib/logger.js';
 
 // Heavy imports loaded lazily to avoid initializing connections for simple commands
 async function getDbImports() {
-  const dbMod = await import('@babylon/db');
+  const [dbMod, runtime] = await Promise.all([
+    import('@babylon/db'),
+    import('@babylon/db/runtime'),
+  ]);
   return {
-    db: dbMod.db,
+    db: runtime.db,
     eq: dbMod.eq,
     and: dbMod.and,
     isNull: dbMod.isNull,
     not: dbMod.not,
     count: dbMod.count,
-    trajectories: dbMod.trajectories,
-    closeDatabase: dbMod.closeDatabase,
-    users: dbMod.users,
-    userAgentConfigs: dbMod.userAgentConfigs,
+    trajectories: runtime.trajectories,
+    closeDatabase: runtime.closeDatabase,
+    users: runtime.users,
+    userAgentConfigs: runtime.userAgentConfigs,
   };
 }
 
@@ -426,7 +428,8 @@ async function collectTrajectories(
   logger.header('Trajectory Collection');
   logger.success('Trajectory recording is always enabled');
 
-  const { db, eq, users, userAgentConfigs } = await getDbImports();
+  const { db, eq, users, userAgentConfigs, count, trajectories } =
+    await getDbImports();
   const { agentRuntimeManager, autonomousCoordinator } =
     await getAgentImports();
 
@@ -448,8 +451,9 @@ async function collectTrajectories(
     .limit(10);
 
   // Filter agents with sufficient balance and at least one feature enabled
+  type AgentQueryRow = (typeof agentResults)[number];
   const agents = agentResults.filter(
-    (a) =>
+    (a: AgentQueryRow) =>
       Number(a.virtualBalance ?? 0) >= 1 &&
       (a.autonomousTrading ||
         a.autonomousPosting ||
@@ -476,8 +480,8 @@ async function collectTrajectories(
 
   const errors = 0;
 
-  // Get initial count
-  const initialCount = await db.trajectory.count();
+  const [initialAgg] = await db.select({ total: count() }).from(trajectories);
+  const initialCount = Number(initialAgg?.total ?? 0);
   console.log(`Current trajectories in database: ${initialCount}\n`);
 
   for (let i = 0; i < countArg; i++) {
@@ -511,8 +515,8 @@ async function collectTrajectories(
     }
   }
 
-  // Get final count
-  const finalCount = await db.trajectory.count();
+  const [finalAgg] = await db.select({ total: count() }).from(trajectories);
+  const finalCount = Number(finalAgg?.total ?? 0);
   const newTrajectories = finalCount - initialCount;
 
   logger.header('Summary');
