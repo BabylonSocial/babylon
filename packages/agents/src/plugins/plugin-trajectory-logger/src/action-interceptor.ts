@@ -70,6 +70,18 @@ export interface RuntimeTrajectoryLogger {
   getCurrentStepId(trajectoryId: string): string | null;
   logLLMCall(stepId: string, llmCall: RuntimeLLMCall): void;
   logProviderAccess(stepId: string, access: RuntimeProviderAccess): void;
+  setCounterpartyContext(
+    trajectoryId: string,
+    stepId: string,
+    counterparty: {
+      counterpartyId?: string;
+      counterpartyAlignment?: 'good' | 'neutral' | 'evil';
+      counterpartyTeam?: 'red' | 'blue' | 'gray';
+      senderRole?: 'admin' | 'team' | 'none';
+      interactionIntent?: 'attack' | 'legitimate' | 'neutral';
+      isVerifiedAdmin?: boolean;
+    }
+  ): void;
   completeStep(
     trajectoryId: string,
     stepId: string,

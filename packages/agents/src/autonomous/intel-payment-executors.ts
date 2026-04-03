@@ -174,7 +174,8 @@ export async function executeDirectShareInformation(
     }
 
     const lines = top.map(
-      (m, i) => `[${i + 1}] (${m.source}) ${m.speaker}: "${m.content.slice(0, 200)}"`
+      (m, i) =>
+        `[${i + 1}] (${m.source}) ${m.speaker}: "${m.content.slice(0, 200)}"`
     );
     const price =
       askingPrice && askingPrice > 0 ? `\nAsking price: $${askingPrice}` : '';
@@ -186,10 +187,22 @@ export async function executeDirectShareInformation(
 
     const chatId = await generateSnowflakeId();
     const messageId = await generateSnowflakeId();
-    await db.insert(chats).values({ id: chatId, createdAt: new Date(), updatedAt: new Date() });
+    await db
+      .insert(chats)
+      .values({ id: chatId, createdAt: new Date(), updatedAt: new Date() });
     await db.insert(chatParticipants).values([
-      { id: crypto.randomUUID(), chatId, userId: agentUserId, joinedAt: new Date() },
-      { id: crypto.randomUUID(), chatId, userId: cleanRecipientId, joinedAt: new Date() },
+      {
+        id: crypto.randomUUID(),
+        chatId,
+        userId: agentUserId,
+        joinedAt: new Date(),
+      },
+      {
+        id: crypto.randomUUID(),
+        chatId,
+        userId: cleanRecipientId,
+        joinedAt: new Date(),
+      },
     ]);
     await db.insert(messages).values({
       id: messageId,
@@ -226,7 +239,8 @@ export async function executeDirectRequestPayment(
   const { agentUserId, recipientId, amount, reason, deadline } = params;
   const cleanRecipientId = recipientId?.trim();
 
-  if (!cleanRecipientId) return { success: false, error: 'Recipient ID required' };
+  if (!cleanRecipientId)
+    return { success: false, error: 'Recipient ID required' };
   if (!Number.isFinite(amount) || amount <= 0)
     return { success: false, error: 'Amount must be positive' };
   if (!reason?.trim()) return { success: false, error: 'Reason is required' };
@@ -251,10 +265,22 @@ export async function executeDirectRequestPayment(
 
     const chatId = await generateSnowflakeId();
     const messageId = await generateSnowflakeId();
-    await db.insert(chats).values({ id: chatId, createdAt: new Date(), updatedAt: new Date() });
+    await db
+      .insert(chats)
+      .values({ id: chatId, createdAt: new Date(), updatedAt: new Date() });
     await db.insert(chatParticipants).values([
-      { id: crypto.randomUUID(), chatId, userId: agentUserId, joinedAt: new Date() },
-      { id: crypto.randomUUID(), chatId, userId: cleanRecipientId, joinedAt: new Date() },
+      {
+        id: crypto.randomUUID(),
+        chatId,
+        userId: agentUserId,
+        joinedAt: new Date(),
+      },
+      {
+        id: crypto.randomUUID(),
+        chatId,
+        userId: cleanRecipientId,
+        joinedAt: new Date(),
+      },
     ]);
     await db.insert(messages).values({
       id: messageId,

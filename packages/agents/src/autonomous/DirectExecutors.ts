@@ -1,9 +1,9 @@
 /**
  * Direct Executors for Multi-Step Agent Actions
  *
- * These are "dumb" executors that take specific parameters and execute directly
- * without making their own LLM calls. The multi-step decision loop handles all
- * LLM reasoning - these just execute the decided actions.
+ * Executors that take specific parameters and execute directly without making
+ * their own LLM calls. The multi-step decision loop handles all LLM reasoning
+ * - these just execute the decided actions.
  */
 
 import {
@@ -2738,7 +2738,13 @@ export async function executeDirectShareInformation(params: {
   messageId: string | null;
 }> {
   void params;
-  return { success: false, error: 'Not yet implemented', matchCount: 0, sharedWithRecipient: false, messageId: null };
+  return {
+    success: false,
+    error: 'Not yet implemented',
+    matchCount: 0,
+    sharedWithRecipient: false,
+    messageId: null,
+  };
 }
 
 /** Stub: Request payment from another agent (not yet implemented) */

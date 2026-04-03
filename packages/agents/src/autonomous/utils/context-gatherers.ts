@@ -17,6 +17,7 @@ import {
   db,
   desc,
   eq,
+  follows,
   getDbInstance,
   getRawDrizzle,
   groups,
@@ -42,6 +43,7 @@ import { StaticDataRegistry } from '@babylon/engine';
 import { logger } from '../../shared/logger';
 import type {
   AgentOwnPostContext,
+  AgentSocialConnection,
   AgentTradeHistoryEntry,
   GroupChatIntel,
   MarketTrendContext,
@@ -971,4 +973,178 @@ export async function getAgentTradeHistory(
     );
     return [];
   }
+}
+
+// =============================================================================
+// Agent Social Graph (user-controlled agents)
+// =============================================================================
+
+/**
+ * Derive a lightweight social graph for a user-controlled agent from:
+ * 1. follows table — who the agent follows and who follows them back (mutual detection)
+ * 2. comments + posts — who the agent has engaged with recently (last 7 days)
+ *
+ * Uses existing indexes: Follow_followerId_idx, Follow_followingId_idx,
+ * Comment_authorId_createdAt_idx, Reaction_userId_createdAt_idx
+ */
+export async function getAgentSocialGraph(
+  agentUserId: string
+): Promise<AgentSocialConnection[]> {
+  try {
+    return await getAgentSocialGraphInner(agentUserId);
+  } catch (error) {
+    logger.warn(
+      'Failed to fetch agent social graph',
+      {
+        agentUserId,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      'ContextGatherers'
+    );
+    return [];
+  }
+}
+
+async function getAgentSocialGraphInner(
+  agentUserId: string
+): Promise<AgentSocialConnection[]> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [
+    followingRows,
+    followerRows,
+    commentInteractions,
+    reactionInteractions,
+  ] = await Promise.all([
+    db
+      .select({ followingId: follows.followingId })
+      .from(follows)
+      .where(eq(follows.followerId, agentUserId))
+      .orderBy(desc(follows.createdAt))
+      .limit(20),
+
+    db
+      .select({ followerId: follows.followerId })
+      .from(follows)
+      .where(eq(follows.followingId, agentUserId))
+      .limit(100),
+
+    db
+      .select({
+        targetUserId: posts.authorId,
+        interactionCount: count(),
+      })
+      .from(comments)
+      .innerJoin(posts, eq(comments.postId, posts.id))
+      .where(
+        and(
+          eq(comments.authorId, agentUserId),
+          ne(posts.authorId, agentUserId),
+          gte(comments.createdAt, sevenDaysAgo)
+        )
+      )
+      .groupBy(posts.authorId)
+      .orderBy(desc(count()))
+      .limit(10),
+
+    db
+      .select({
+        targetUserId: posts.authorId,
+        interactionCount: count(),
+      })
+      .from(reactions)
+      .innerJoin(posts, eq(reactions.postId, posts.id))
+      .where(
+        and(
+          eq(reactions.userId, agentUserId),
+          ne(posts.authorId, agentUserId),
+          gte(reactions.createdAt, sevenDaysAgo)
+        )
+      )
+      .groupBy(posts.authorId)
+      .orderBy(desc(count()))
+      .limit(10),
+  ]);
+
+  const followingIds = new Set(followingRows.map((r) => r.followingId));
+  const followerIds = new Set(followerRows.map((r) => r.followerId));
+
+  const interactionMap = new Map<string, number>();
+  for (const row of commentInteractions) {
+    interactionMap.set(
+      row.targetUserId,
+      (interactionMap.get(row.targetUserId) || 0) + Number(row.interactionCount)
+    );
+  }
+  for (const row of reactionInteractions) {
+    interactionMap.set(
+      row.targetUserId,
+      (interactionMap.get(row.targetUserId) || 0) + Number(row.interactionCount)
+    );
+  }
+
+  const connectionMap = new Map<string, AgentSocialConnection>();
+
+  for (const id of followingIds) {
+    connectionMap.set(id, {
+      userId: id,
+      displayName: '',
+      username: null,
+      isFollowing: true,
+      isFollowedBy: followerIds.has(id),
+      interactionCount: interactionMap.get(id) || 0,
+      source: interactionMap.has(id) ? 'both' : 'follow',
+    });
+  }
+
+  for (const [userId, cnt] of interactionMap) {
+    if (!connectionMap.has(userId)) {
+      connectionMap.set(userId, {
+        userId,
+        displayName: '',
+        username: null,
+        isFollowing: false,
+        isFollowedBy: followerIds.has(userId),
+        interactionCount: cnt,
+        source: 'interaction',
+      });
+    }
+  }
+
+  if (connectionMap.size === 0) return [];
+
+  const allUserIds = [...connectionMap.keys()];
+  const userRows = await db
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      username: users.username,
+    })
+    .from(users)
+    .where(inArray(users.id, allUserIds));
+
+  const nameMap = new Map(
+    userRows.map((u) => [
+      u.id,
+      {
+        displayName: u.displayName || u.username || u.id.slice(0, 8),
+        username: u.username,
+      },
+    ])
+  );
+
+  const connections = [...connectionMap.values()].map((c) => ({
+    ...c,
+    displayName: nameMap.get(c.userId)?.displayName || c.userId.slice(0, 8),
+    username: nameMap.get(c.userId)?.username || null,
+  }));
+
+  connections.sort((a, b) => {
+    const aMutual = a.isFollowing && a.isFollowedBy ? 1 : 0;
+    const bMutual = b.isFollowing && b.isFollowedBy ? 1 : 0;
+    if (aMutual !== bMutual) return bMutual - aMutual;
+    return b.interactionCount - a.interactionCount;
+  });
+
+  return connections.slice(0, 15);
 }

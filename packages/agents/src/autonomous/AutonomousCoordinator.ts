@@ -32,9 +32,9 @@ import {
 } from '../plugins/plugin-trajectory-logger/src/action-interceptor';
 import { getAgentConfig } from '../shared/agent-config';
 import { logger } from '../shared/logger';
-import { populateIdentityMapOnRuntime } from './agent-identity-map';
 // Import services
 import { autonomousPlanningCoordinator } from './AutonomousPlanningCoordinator';
+import { populateIdentityMapOnRuntime } from './agent-identity-map';
 import { multiStepExecutor } from './MultiStepExecutor';
 import { priceAlertService } from './PriceAlertService';
 import { topicDiversityService } from './TopicDiversityService';
