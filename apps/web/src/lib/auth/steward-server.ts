@@ -30,12 +30,23 @@ export const STEWARD_API_URL =
 export const STEWARD_PLATFORM_KEY =
   (process.env.STEWARD_PLATFORM_KEYS ?? '').split(',')[0]?.trim() ?? '';
 
+export interface EnsureStewardUserOptions {
+  email?: string;
+  name?: string;
+}
+
 /**
  * Provision a Steward user record by email (idempotent).
  * Falls back to a random UUID if no email or platform key is available
  * (development / Farcaster/Telegram users without email).
  */
-export async function ensureStewardUser(email?: string): Promise<string> {
+export async function ensureStewardUser(
+  input?: string | EnsureStewardUserOptions
+): Promise<string> {
+  const options: EnsureStewardUserOptions =
+    typeof input === 'string' ? { email: input } : (input ?? {});
+  const { email, name } = options;
+
   if (!email || !STEWARD_PLATFORM_KEY) return crypto.randomUUID();
 
   const res = await fetch(`${STEWARD_API_URL}/platform/users`, {
@@ -44,7 +55,7 @@ export async function ensureStewardUser(email?: string): Promise<string> {
       'Content-Type': 'application/json',
       'X-Steward-Platform-Key': STEWARD_PLATFORM_KEY,
     },
-    body: JSON.stringify({ email, emailVerified: false }),
+    body: JSON.stringify({ email, emailVerified: false, name }),
   });
 
   if (!res.ok)

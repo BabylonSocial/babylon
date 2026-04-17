@@ -22,49 +22,10 @@ import { createClient } from '@farcaster/quick-auth';
 import { SignJWT } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getStewardJwtSecret } from '@/lib/auth/steward-server';
-
-const STEWARD_API_URL = process.env.STEWARD_API_URL ?? 'http://localhost:3200';
-const STEWARD_PLATFORM_KEY =
-  (process.env.STEWARD_PLATFORM_KEYS ?? '').split(',')[0]?.trim() ?? '';
-
-interface EnsureStewardUserOptions {
-  email?: string;
-  name?: string;
-}
-
-async function ensureStewardUser(
-  input?: string | EnsureStewardUserOptions
-): Promise<string> {
-  const options: EnsureStewardUserOptions =
-    typeof input === 'string' ? { email: input } : (input ?? {});
-  const { email, name } = options;
-
-  if (!email || !STEWARD_PLATFORM_KEY) return crypto.randomUUID();
-
-  const res = await fetch(`${STEWARD_API_URL}/platform/users`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Steward-Platform-Key': STEWARD_PLATFORM_KEY,
-    },
-    body: JSON.stringify({ email, emailVerified: false, name }),
-  });
-
-  if (!res.ok)
-    throw new Error(`Failed to provision Steward user: ${res.status}`);
-
-  const data = (await res.json()) as {
-    ok: boolean;
-    data?: { userId?: string };
-    error?: string;
-  };
-
-  if (!data.ok || !data.data?.userId)
-    throw new Error(data.error ?? 'Steward provisioning: missing userId');
-
-  return data.data.userId;
-}
+import {
+  ensureStewardUser,
+  getStewardJwtSecret,
+} from '@/lib/auth/steward-server';
 
 function buildFarcasterPlaceholderEmail(fid: number): string {
   return `fid-${fid}@farcaster.babylon.local`;
@@ -168,7 +129,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       id: await generateSnowflakeId(),
       stewardId: stewardUserId,
       farcasterFid: String(fid),
-      name: placeholderName,
+      displayName: placeholderName,
       hasFarcaster: true,
       isActor: false,
       updatedAt: new Date(),
