@@ -21,6 +21,8 @@ import { SignJWT } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
+  buildFarcasterPlaceholderEmail,
+  buildFarcasterPlaceholderName,
   ensureStewardUser,
   getStewardJwtSecret,
 } from '@/lib/auth/steward-server';
@@ -33,6 +35,11 @@ async function mintToken(stewardUserId: string, fid: number): Promise<string> {
     .setIssuedAt()
     .setExpirationTime('24h')
     .sign(getStewardJwtSecret());
+}
+
+function extractCustodyAddress(message: string): string | undefined {
+  const match = message.match(/\b0x[a-fA-F0-9]{40}\b/);
+  return match?.[0]?.toLowerCase();
 }
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
@@ -86,37 +93,46 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     );
   }
 
+  const custodyAddress = extractCustodyAddress(message);
+  const placeholderEmail = buildFarcasterPlaceholderEmail(fid);
+  const placeholderName = buildFarcasterPlaceholderName(fid, custodyAddress);
+
   // Look up Babylon user by FID
   const [existing] = await db
     .select({
       id: users.id,
       stewardId: users.stewardId,
       email: users.email,
-      farcasterFid: users.farcasterFid,
     })
     .from(users)
     .where(eq(users.farcasterFid, String(fid)))
     .limit(1);
 
-  let babylonUserId: string;
   let stewardUserId: string;
 
   if (existing) {
-    babylonUserId = existing.id;
-
     if (existing.stewardId) {
       stewardUserId = existing.stewardId;
     } else {
-      // Ensure Steward user exists and link it
-      stewardUserId = await ensureStewardUser(existing.email ?? undefined);
+      // Ensure Steward user exists and link it, even when Farcaster did not
+      // provide a real email address.
+      stewardUserId = await ensureStewardUser({
+        email: existing.email ?? placeholderEmail,
+        name: placeholderName,
+      });
       await db
         .update(users)
         .set({ stewardId: stewardUserId })
-        .where(eq(users.id, babylonUserId));
+        .where(eq(users.id, existing.id));
     }
   } else {
-    // New Farcaster user — create Steward record first, then Babylon record
-    stewardUserId = await ensureStewardUser();
+    // New Farcaster user — create Steward record first, then Babylon record.
+    // Steward's platform API requires an email, so we provision with a stable
+    // synthetic placeholder keyed by FID.
+    stewardUserId = await ensureStewardUser({
+      email: placeholderEmail,
+      name: placeholderName,
+    });
     const newId = await generateSnowflakeId();
     const [newUser] = await db
       .insert(users)
@@ -135,7 +151,6 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
         { status: 500 }
       );
     }
-    babylonUserId = newUser.id;
   }
 
   const token = await mintToken(stewardUserId, fid);

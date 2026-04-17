@@ -22,14 +22,24 @@ import { createClient } from '@farcaster/quick-auth';
 import { SignJWT } from 'jose';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getStewardJwtSecret } from '@/lib/auth/steward-server';
+
 const STEWARD_API_URL = process.env.STEWARD_API_URL ?? 'http://localhost:3200';
 const STEWARD_PLATFORM_KEY =
   (process.env.STEWARD_PLATFORM_KEYS ?? '').split(',')[0]?.trim() ?? '';
-const STEWARD_JWT_SECRET = new TextEncoder().encode(
-  process.env.STEWARD_JWT_SECRET ?? 'dev-jwt-secret-change-in-prod'
-);
 
-async function ensureStewardUser(email?: string): Promise<string> {
+interface EnsureStewardUserOptions {
+  email?: string;
+  name?: string;
+}
+
+async function ensureStewardUser(
+  input?: string | EnsureStewardUserOptions
+): Promise<string> {
+  const options: EnsureStewardUserOptions =
+    typeof input === 'string' ? { email: input } : (input ?? {});
+  const { email, name } = options;
+
   if (!email || !STEWARD_PLATFORM_KEY) return crypto.randomUUID();
 
   const res = await fetch(`${STEWARD_API_URL}/platform/users`, {
@@ -38,19 +48,35 @@ async function ensureStewardUser(email?: string): Promise<string> {
       'Content-Type': 'application/json',
       'X-Steward-Platform-Key': STEWARD_PLATFORM_KEY,
     },
-    body: JSON.stringify({ email, emailVerified: false }),
+    body: JSON.stringify({ email, emailVerified: false, name }),
   });
 
   if (!res.ok)
     throw new Error(`Failed to provision Steward user: ${res.status}`);
+
   const data = (await res.json()) as {
     ok: boolean;
     data?: { userId?: string };
     error?: string;
   };
+
   if (!data.ok || !data.data?.userId)
-    throw new Error(data.error ?? 'missing userId');
+    throw new Error(data.error ?? 'Steward provisioning: missing userId');
+
   return data.data.userId;
+}
+
+function buildFarcasterPlaceholderEmail(fid: number): string {
+  return `fid-${fid}@farcaster.babylon.local`;
+}
+
+function buildFarcasterPlaceholderName(
+  fid: number,
+  custodyAddress?: string
+): string {
+  return custodyAddress
+    ? `Farcaster fid ${fid} (${custodyAddress})`
+    : `Farcaster fid ${fid}`;
 }
 
 async function mintToken(stewardUserId: string, fid: number): Promise<string> {
@@ -59,7 +85,7 @@ async function mintToken(stewardUserId: string, fid: number): Promise<string> {
     .setIssuer('steward')
     .setIssuedAt()
     .setExpirationTime('15m')
-    .sign(STEWARD_JWT_SECRET);
+    .sign(getStewardJwtSecret());
 }
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
@@ -107,6 +133,10 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     );
   }
 
+  const custodyAddress = payload.address?.toLowerCase();
+  const placeholderEmail = buildFarcasterPlaceholderEmail(fid);
+  const placeholderName = buildFarcasterPlaceholderName(fid, custodyAddress);
+
   // Look up existing user by FID
   const [existing] = await db
     .select({ id: users.id, stewardId: users.stewardId, email: users.email })
@@ -120,19 +150,26 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     if (existing.stewardId) {
       stewardUserId = existing.stewardId;
     } else {
-      stewardUserId = await ensureStewardUser(existing.email ?? undefined);
+      stewardUserId = await ensureStewardUser({
+        email: existing.email ?? placeholderEmail,
+        name: placeholderName,
+      });
       await db
         .update(users)
         .set({ stewardId: stewardUserId })
         .where(eq(users.id, existing.id));
     }
   } else {
-    stewardUserId = await ensureStewardUser();
-    const newId = await generateSnowflakeId();
+    stewardUserId = await ensureStewardUser({
+      email: placeholderEmail,
+      name: placeholderName,
+    });
     await db.insert(users).values({
-      id: newId,
+      id: await generateSnowflakeId(),
       stewardId: stewardUserId,
       farcasterFid: String(fid),
+      name: placeholderName,
+      hasFarcaster: true,
       isActor: false,
       updatedAt: new Date(),
     });

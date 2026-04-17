@@ -1,6 +1,7 @@
 'use client';
 
 import { logger } from '@babylon/shared';
+import { ArrowLeft, Fingerprint, Loader2, Mail } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useStewardAuthContext } from '@/components/providers/StewardAuthProvider';
 import { Button } from '@/components/ui/button';
@@ -17,14 +18,20 @@ import { useAuth } from '@/hooks/useAuth';
 /**
  * Steward-backed login modal.
  *
+ * Single card, progressive disclosure. First paint is a clean stack of
+ * provider options (OAuth, email, passkey, Farcaster). Picking email or
+ * passkey swaps the card contents to that flow, keeping one heading and
+ * one hierarchy. No duplicate chrome, no emoji-as-icon.
+ *
  * Supports:
+ * - OAuth: Google, Discord, Twitter/X (redirect to Steward authorize)
  * - Email magic link (no password)
  * - Passkey (WebAuthn)
- * - OAuth: Google, Discord, Twitter/X
- * - Farcaster SIWF
+ * - Farcaster SIWF (lazy-loaded)
  */
 
-type Step = 'idle' | 'email-sent' | 'loading' | 'error';
+type View = 'picker' | 'email' | 'passkey' | 'email-sent';
+type Status = 'idle' | 'loading' | 'error';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -34,9 +41,6 @@ interface LoginModalProps {
 }
 
 function getStewardApiUrl(): string {
-  if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_STEWARD_API_URL ?? 'http://localhost:3200';
-  }
   return process.env.NEXT_PUBLIC_STEWARD_API_URL ?? 'http://localhost:3200';
 }
 
@@ -65,8 +69,11 @@ export function LoginModal({
   const { stewardAuth, onLoginSuccess } = useStewardAuthContext();
   const { authenticated } = useAuth();
   const [email, setEmail] = useState('');
-  const [step, setStep] = useState<Step>('idle');
+  const [view, setView] = useState<View>('picker');
+  const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const loading = status === 'loading';
 
   useEffect(() => {
     if (authenticated && isOpen) onClose();
@@ -74,34 +81,43 @@ export function LoginModal({
 
   useEffect(() => {
     if (!isOpen) {
-      setStep('idle');
+      setView('picker');
+      setStatus('idle');
       setEmail('');
       setErrorMsg('');
     }
   }, [isOpen]);
 
+  const resetToPicker = useCallback(() => {
+    setView('picker');
+    setStatus('idle');
+    setErrorMsg('');
+  }, []);
+
   const handleEmailLogin = useCallback(async () => {
     const trimmed = email.trim();
     if (!trimmed || !trimmed.includes('@')) {
       setErrorMsg('Please enter a valid email address.');
+      setStatus('error');
       return;
     }
-    setStep('loading');
+    setStatus('loading');
     setErrorMsg('');
     try {
       const result = await stewardAuth.signInWithEmail(trimmed);
       if (result.ok) {
-        setStep('email-sent');
+        setView('email-sent');
+        setStatus('idle');
         logger.info('Magic link sent', { email: trimmed }, 'LoginModal');
       } else {
         setErrorMsg('Failed to send magic link. Please try again.');
-        setStep('error');
+        setStatus('error');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       logger.warn('Email login failed', { error: msg }, 'LoginModal');
       setErrorMsg(msg);
-      setStep('error');
+      setStatus('error');
     }
   }, [email, stewardAuth]);
 
@@ -109,19 +125,21 @@ export function LoginModal({
     const trimmed = email.trim();
     if (!trimmed || !trimmed.includes('@')) {
       setErrorMsg('Please enter your email address to use a passkey.');
+      setStatus('error');
       return;
     }
-    setStep('loading');
+    setStatus('loading');
     setErrorMsg('');
     try {
       const result = await stewardAuth.signInWithPasskey(trimmed);
       await onLoginSuccess(result.token);
+      setStatus('idle');
       logger.info('Passkey login successful', { email: trimmed }, 'LoginModal');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Passkey login failed';
       logger.warn('Passkey login failed', { error: msg }, 'LoginModal');
       setErrorMsg(msg);
-      setStep('error');
+      setStatus('error');
     }
   }, [email, stewardAuth, onLoginSuccess]);
 
@@ -132,6 +150,14 @@ export function LoginModal({
     []
   );
 
+  const pickerTitle = title ?? 'Sign in to Babylon';
+  const flowTitle =
+    view === 'email'
+      ? 'Sign in with email'
+      : view === 'passkey'
+        ? 'Sign in with a passkey'
+        : pickerTitle;
+
   return (
     <Dialog
       open={isOpen}
@@ -140,138 +166,332 @@ export function LoginModal({
       }}
     >
       <DialogContent className="p-8 sm:max-w-sm">
+        {view === 'email' || view === 'passkey' ? (
+          <button
+            type="button"
+            onClick={resetToPicker}
+            disabled={loading}
+            className="-ml-2 -mt-2 mb-1 inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-muted-foreground text-xs transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back
+          </button>
+        ) : null}
+
         <DialogHeader>
           <DialogTitle className="text-center text-xl">
-            {title ?? 'Sign in to Babylon'}
+            {view === 'email-sent' ? 'Check your inbox' : flowTitle}
           </DialogTitle>
-          {message && (
+          {message && view === 'picker' ? (
             <DialogDescription className="text-center">
               {message}
             </DialogDescription>
-          )}
+          ) : null}
         </DialogHeader>
 
         <div className="flex flex-col gap-3 pt-1">
-          {step === 'email-sent' ? (
-            <div className="rounded-xl border bg-muted/50 p-5 text-center">
-              <div className="mb-2 text-2xl">📬</div>
-              <p className="font-semibold">Check your inbox</p>
-              <p className="mt-1 text-muted-foreground text-sm">
-                We sent a magic link to <strong>{email}</strong>.
-              </p>
-              <p className="mt-1 text-muted-foreground text-xs">
-                No email? Check spam or{' '}
-                <button
-                  className="text-primary underline-offset-4 hover:underline"
-                  onClick={() => setStep('idle')}
-                  type="button"
-                >
-                  try again
-                </button>
-                .
-              </p>
-            </div>
+          {view === 'email-sent' ? (
+            <EmailSent email={email} onAgain={resetToPicker} />
+          ) : view === 'email' ? (
+            <EmailFlow
+              email={email}
+              setEmail={setEmail}
+              loading={loading}
+              errorMsg={errorMsg}
+              onSubmit={handleEmailLogin}
+            />
+          ) : view === 'passkey' ? (
+            <PasskeyFlow
+              email={email}
+              setEmail={setEmail}
+              loading={loading}
+              errorMsg={errorMsg}
+              onSubmit={handlePasskeyLogin}
+            />
           ) : (
-            <>
-              {/* OAuth buttons — always enabled */}
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleOAuth('google')}
-                  disabled={step === 'loading'}
-                  className="w-full gap-2"
-                >
-                  <GoogleIcon />
-                  Continue with Google
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleOAuth('discord')}
-                  disabled={step === 'loading'}
-                  className="w-full gap-2"
-                >
-                  <DiscordIcon />
-                  Continue with Discord
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleOAuth('twitter')}
-                  disabled={step === 'loading'}
-                  className="w-full gap-2"
-                >
-                  <XIcon />
-                  Continue with X
-                </Button>
-              </div>
-
-              {/* Farcaster */}
-              <FarcasterSignInSection
-                onLoginSuccess={onLoginSuccess}
-                onClose={onClose}
-                loading={step === 'loading'}
-              />
-
-              <div className="relative flex items-center gap-3">
-                <div className="flex-1 border-t" />
-                <span className="text-muted-foreground text-xs">
-                  or use email
-                </span>
-                <div className="flex-1 border-t" />
-              </div>
-
-              {/* Email + Passkey */}
-              <div className="flex flex-col gap-2">
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void handleEmailLogin();
-                  }}
-                  disabled={step === 'loading'}
-                  autoComplete="email"
-                  className="h-10"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => void handleEmailLogin()}
-                    disabled={step === 'loading' || !email.trim()}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    {step === 'loading' ? (
-                      <span className="flex items-center gap-2">
-                        <LoadingSpinner />
-                        Sending…
-                      </span>
-                    ) : (
-                      'Send link'
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => void handlePasskeyLogin()}
-                    disabled={step === 'loading' || !email.trim()}
-                    className="flex-1"
-                    size="sm"
-                    title="Sign in with a passkey (biometric / hardware key)"
-                  >
-                    🔑 Passkey
-                  </Button>
-                </div>
-              </div>
-
-              {errorMsg && (
-                <p className="text-center text-destructive text-xs">
-                  {errorMsg}
-                </p>
-              )}
-            </>
+            <Picker
+              loading={loading}
+              onOAuth={handleOAuth}
+              onEmail={() => {
+                setErrorMsg('');
+                setView('email');
+              }}
+              onPasskey={() => {
+                setErrorMsg('');
+                setView('passkey');
+              }}
+              onLoginSuccess={onLoginSuccess}
+              onClose={onClose}
+            />
           )}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ── Picker view (default) ────────────────────────────────────────────────────
+
+interface PickerProps {
+  loading: boolean;
+  onOAuth: (provider: 'google' | 'discord' | 'twitter') => void;
+  onEmail: () => void;
+  onPasskey: () => void;
+  onLoginSuccess: (token: string) => Promise<void>;
+  onClose: () => void;
+}
+
+function Picker({
+  loading,
+  onOAuth,
+  onEmail,
+  onPasskey,
+  onLoginSuccess,
+  onClose,
+}: PickerProps) {
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <ProviderButton
+          icon={<GoogleIcon />}
+          label="Continue with Google"
+          onClick={() => onOAuth('google')}
+          disabled={loading}
+        />
+        <ProviderButton
+          icon={<DiscordIcon />}
+          label="Continue with Discord"
+          onClick={() => onOAuth('discord')}
+          disabled={loading}
+        />
+        <ProviderButton
+          icon={<XIcon />}
+          label="Continue with X"
+          onClick={() => onOAuth('twitter')}
+          disabled={loading}
+        />
+        <ProviderButton
+          icon={<Mail className="size-4" />}
+          label="Continue with email"
+          onClick={onEmail}
+          disabled={loading}
+        />
+      </div>
+
+      <Divider label="or" />
+
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="ghost"
+          onClick={onPasskey}
+          disabled={loading}
+          className="w-full gap-2 text-muted-foreground hover:text-foreground"
+          size="sm"
+        >
+          <Fingerprint className="size-4" />
+          Sign in with a passkey
+        </Button>
+
+        <FarcasterSignInSection
+          onLoginSuccess={onLoginSuccess}
+          onClose={onClose}
+          loading={loading}
+        />
+      </div>
+    </>
+  );
+}
+
+// ── Email flow view ──────────────────────────────────────────────────────────
+
+interface FlowProps {
+  email: string;
+  setEmail: (v: string) => void;
+  loading: boolean;
+  errorMsg: string;
+  onSubmit: () => void | Promise<void>;
+}
+
+function EmailFlow({ email, setEmail, loading, errorMsg, onSubmit }: FlowProps) {
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void onSubmit();
+      }}
+    >
+      <label className="flex flex-col gap-1.5">
+        <span className="font-medium text-foreground text-sm">Email</span>
+        <Input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          autoComplete="email"
+          autoFocus
+          className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+        />
+      </label>
+
+      <Button
+        type="submit"
+        disabled={loading || !email.trim()}
+        className="h-10 w-full"
+      >
+        {loading ? (
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Sending link
+          </span>
+        ) : (
+          'Send magic link'
+        )}
+      </Button>
+
+      {errorMsg ? <ErrorLine message={errorMsg} /> : null}
+
+      <p className="text-center text-muted-foreground text-xs">
+        We will email you a one-time link. No password needed.
+      </p>
+    </form>
+  );
+}
+
+// ── Passkey flow view ────────────────────────────────────────────────────────
+
+function PasskeyFlow({
+  email,
+  setEmail,
+  loading,
+  errorMsg,
+  onSubmit,
+}: FlowProps) {
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void onSubmit();
+      }}
+    >
+      <label className="flex flex-col gap-1.5">
+        <span className="font-medium text-foreground text-sm">Email</span>
+        <Input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          autoComplete="email webauthn"
+          autoFocus
+          className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+        />
+      </label>
+
+      <Button
+        type="submit"
+        disabled={loading || !email.trim()}
+        className="h-10 w-full gap-2"
+      >
+        {loading ? (
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="size-4 animate-spin" />
+            Waiting for passkey
+          </span>
+        ) : (
+          <>
+            <Fingerprint className="size-4" />
+            Sign in with passkey
+          </>
+        )}
+      </Button>
+
+      {errorMsg ? <ErrorLine message={errorMsg} /> : null}
+
+      <p className="text-center text-muted-foreground text-xs">
+        Uses your device biometrics or hardware security key.
+      </p>
+    </form>
+  );
+}
+
+// ── Email-sent confirmation view ─────────────────────────────────────────────
+
+function EmailSent({ email, onAgain }: { email: string; onAgain: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-muted/40 p-6 text-center">
+      <Mail className="size-6 text-muted-foreground" aria-hidden />
+      <p className="mt-1 text-muted-foreground text-sm">
+        We sent a sign-in link to
+      </p>
+      <p className="font-medium text-foreground">{email}</p>
+      <p className="mt-2 text-muted-foreground text-xs">
+        No email in a minute? Check spam or{' '}
+        <button
+          className="text-primary underline-offset-4 hover:underline"
+          onClick={onAgain}
+          type="button"
+        >
+          try a different method
+        </button>
+        .
+      </p>
+    </div>
+  );
+}
+
+// ── Shared pieces ────────────────────────────────────────────────────────────
+
+interface ProviderButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+function ProviderButton({
+  icon,
+  label,
+  onClick,
+  disabled,
+}: ProviderButtonProps) {
+  return (
+    <Button
+      variant="outline"
+      onClick={onClick}
+      disabled={disabled}
+      className="h-10 w-full justify-start gap-3 px-4"
+    >
+      <span className="inline-flex size-5 items-center justify-center">
+        {icon}
+      </span>
+      <span className="flex-1 text-left">{label}</span>
+    </Button>
+  );
+}
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="relative flex items-center gap-3 py-1">
+      <div className="flex-1 border-border border-t" />
+      <span className="text-muted-foreground text-xs uppercase tracking-wider">
+        {label}
+      </span>
+      <div className="flex-1 border-border border-t" />
+    </div>
+  );
+}
+
+function ErrorLine({ message }: { message: string }) {
+  return (
+    <p
+      role="alert"
+      className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-destructive text-xs"
+    >
+      {message}
+    </p>
   );
 }
 
@@ -296,7 +516,7 @@ function FarcasterSignInSection({
     import('@farcaster/auth-kit')
       .then((mod) => setSignInButton(() => mod.SignInButton))
       .catch(() => {
-        // auth-kit unavailable — omit the button silently
+        // auth-kit unavailable, omit the button silently
       });
   }, []);
 
@@ -319,8 +539,9 @@ function FarcasterSignInSection({
           token?: string;
           error?: string;
         };
-        if (!data.ok || !data.token)
+        if (!data.ok || !data.token) {
           throw new Error(data.error ?? 'Farcaster auth failed');
+        }
         await onLoginSuccess(data.token);
         onClose();
       } catch (err) {
@@ -337,7 +558,13 @@ function FarcasterSignInSection({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className={loading ? 'pointer-events-none opacity-50' : ''}>
+      <div
+        className={
+          loading
+            ? 'pointer-events-none w-full opacity-50 [&>div]:w-full [&>div>button]:w-full'
+            : 'w-full [&>div]:w-full [&>div>button]:w-full'
+        }
+      >
         <SignInButton
           onSuccess={(res) =>
             void handleSuccess(res as Parameters<typeof handleSuccess>[0])
@@ -349,7 +576,7 @@ function FarcasterSignInSection({
           }}
         />
       </div>
-      {error && <p className="text-destructive text-xs">{error}</p>}
+      {error ? <ErrorLine message={error} /> : null}
     </div>
   );
 }
@@ -392,11 +619,5 @@ function XIcon() {
     <svg className="size-4 fill-current" viewBox="0 0 24 24" aria-hidden>
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
-  );
-}
-
-function LoadingSpinner() {
-  return (
-    <span className="inline-block size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
   );
 }
