@@ -13,6 +13,9 @@ import {
 
 // ── Singleton StewardAuth instance ───────────────────────────────────────────
 
+const STEWARD_TENANT_ID =
+  process.env.NEXT_PUBLIC_STEWARD_TENANT_ID ?? 'babylon';
+
 let _stewardAuthInstance: StewardAuth | null = null;
 
 function getOrCreateStewardAuth(): StewardAuth {
@@ -24,6 +27,7 @@ function getOrCreateStewardAuth(): StewardAuth {
       : 'http://localhost:3200');
   _stewardAuthInstance = new StewardAuth({
     baseUrl,
+    tenantId: STEWARD_TENANT_ID,
     // Persist session across page reloads
     storage: typeof localStorage !== 'undefined' ? localStorage : undefined,
     onSessionChange: (session) => {
@@ -47,7 +51,24 @@ interface StewardAuthContextValue {
   session: StewardSession | null;
   isLoading: boolean;
   /** Call after a successful login to sync the httpOnly cookie and fetch the user profile. */
-  onLoginSuccess: (token: string, refreshToken?: string) => Promise<void>;
+  onLoginSuccess: (
+    token: string,
+    refreshToken?: string | null
+  ) => Promise<void>;
+}
+
+async function syncSessionCookie(token: string, refreshToken?: string | null) {
+  const res = await fetch('/api/auth/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ token, refreshToken }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Session cookie sync failed: ${res.status} ${body}`);
+  }
 }
 
 const StewardAuthContext = createContext<StewardAuthContextValue | null>(null);
@@ -84,9 +105,15 @@ export function StewardAuthProvider({
   }, [stewardAuth]);
 
   const onLoginSuccess = useCallback(
-    async (token: string, refreshToken?: string) => {
+    async (token: string, refreshToken?: string | null) => {
       setIsLoading(true);
       try {
+        // Sync the token to the server-side httpOnly cookie before publishing a
+        // local authenticated state. If this fails, clear any SDK-stored token so
+        // callers do not redirect into an apparently authenticated UI without
+        // httpOnly cookies.
+        await syncSessionCookie(token, refreshToken);
+
         // For OAuth / Farcaster / Telegram callbacks we receive the JWT externally.
         // The SDK's private storage key is 'steward_session_token' in localStorage.
         // Writing there and then calling getSession() syncs the SDK without
@@ -99,14 +126,14 @@ export function StewardAuthProvider({
         }
         // Immediately update React session state so useAuth sees the new session
         setSession(stewardAuth.getSession());
-
-        // Sync the token to the server-side httpOnly cookie
-        await fetch('/api/auth/session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ token, refreshToken }),
-        });
+      } catch (err) {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('steward_session_token');
+          localStorage.removeItem('steward_refresh_token');
+        }
+        stewardAuth.signOut();
+        setSession(null);
+        throw err;
       } finally {
         setIsLoading(false);
       }

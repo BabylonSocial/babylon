@@ -1,7 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStewardAuthContext } from '@/components/providers/StewardAuthProvider';
 
 /**
@@ -15,7 +14,8 @@ import { useStewardAuthContext } from '@/components/providers/StewardAuthProvide
  */
 export default function EmailCallbackPage() {
   const { stewardAuth, onLoginSuccess } = useStewardAuthContext();
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<string | null>(null);
   const processed = useRef(false);
 
   useEffect(() => {
@@ -25,29 +25,60 @@ export default function EmailCallbackPage() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const email = params.get('email');
+    const errorParam = params.get('error');
+    const stateParam = params.get('state');
 
     // Sanitize URL immediately
     window.history.replaceState(null, '', window.location.pathname);
 
+    if (stateParam) {
+      setState(stateParam);
+    }
+
+    if (errorParam) {
+      setError(errorParam);
+      return;
+    }
+
     if (!token || !email) {
-      router.replace('/?auth_error=missing_params');
+      setError('missing_params');
       return;
     }
 
     stewardAuth
       .verifyEmailCallback(token, email)
-      .then((result) => onLoginSuccess(result.token))
-      .then(() => router.replace('/'))
+      .then((result) => onLoginSuccess(result.token, result.refreshToken))
+      .then(() => window.location.assign('/'))
       .catch((err: Error) => {
-        router.replace(`/?auth_error=${encodeURIComponent(err.message)}`);
+        setError(err.message);
       });
-  }, [stewardAuth, onLoginSuccess, router]);
+  }, [stewardAuth, onLoginSuccess]);
 
   return (
     <div className="flex min-h-dvh items-center justify-center">
       <div className="text-center">
-        <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-muted-foreground text-sm">Verifying your email…</p>
+        {error ? (
+          <>
+            <p className="font-semibold text-destructive">
+              Email sign-in failed
+            </p>
+            <p className="mt-2 max-w-sm text-muted-foreground text-sm">
+              {error}
+            </p>
+            {state ? (
+              <p className="mt-2 max-w-sm text-muted-foreground text-xs">
+                State: {state}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-muted-foreground text-sm">
+              Verifying your email…
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
