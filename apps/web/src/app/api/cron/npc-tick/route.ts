@@ -12,12 +12,20 @@
  * 3. Rotate through NPCs to ensure diverse feed coverage
  *
  * This runs at :30 of each minute, after game-tick (:00) updates world state.
+ *
+ * ## MultiStep LLM caps (env)
+ *
+ * NPCs that run `MultiStepExecutor` (`packages/agents`) share the same per-tick ceilings as documented in
+ * **docs/autonomous-multistep-llm-caps.md**. **Why document on the route:** cron operators look at API/cron
+ * code paths first; the env vars (`NPC_MAX_ITERATIONS`, `MULTISTEP_*`) are the levers for autonomous
+ * decision-LLM fan-out when qualia batch is off, throttled, or falls back to MultiStep.
  */
 
 import {
   acquireAgentLock,
   agentRuntimeManager,
   autonomousCoordinator,
+  computeNpcTickLlmBaseline,
   npcBootstrapService,
   releaseAgentLock,
 } from '@babylon/agents';
@@ -117,6 +125,20 @@ const NPCS_PER_TICK = NPC_TICK_CONFIG.batchSize;
  */
 const MAX_CONSECUTIVE_ERRORS = NPC_TICK_CONFIG.maxConsecutiveErrors;
 
+function npcTickMultistepMetrics(npcsInMultiStepSlice: number) {
+  const baseline = computeNpcTickLlmBaseline(npcsInMultiStepSlice);
+  return {
+    multistepWorstCaseDecisionCalls: baseline.multistepWorstCaseDecisionCalls,
+    multistepEnv: {
+      npcMaxIterations: baseline.multistepEnv.npcMaxIterations,
+      userMaxIterations: baseline.multistepEnv.userMaxIterations,
+      llmAttemptsPerDecision: baseline.multistepEnv.llmAttemptsPerDecision,
+      validationPasses: baseline.multistepEnv.validationPasses,
+    },
+    npcTickLlmBaseline: baseline,
+  };
+}
+
 /**
  * GET /api/cron/npc-tick
  * Alias for POST endpoint to support GET requests from cron services.
@@ -177,6 +199,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
       skipped: true,
       reason: 'Previous tick still running',
       processed: 0,
+      ...npcTickMultistepMetrics(0),
     });
   }
 
@@ -195,6 +218,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         skipped: true,
         reason: 'Game disabled via GAME_START environment variable',
         processed: 0,
+        ...npcTickMultistepMetrics(0),
       });
     }
 
@@ -225,6 +249,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         reason: 'No continuous game found',
         duration: Date.now() - startTime,
         processed: 0,
+        ...npcTickMultistepMetrics(0),
       });
     }
 
@@ -241,6 +266,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         gameId: gameState.id,
         duration: Date.now() - startTime,
         processed: 0,
+        ...npcTickMultistepMetrics(0),
       });
     }
 
@@ -258,6 +284,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         processed: 0,
         duration: Date.now() - startTime,
         warning: 'No NPCs found in registry',
+        ...npcTickMultistepMetrics(0),
       });
     }
 
@@ -896,6 +923,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
       'NPCTick'
     );
 
+    const multistepMetrics = npcTickMultistepMetrics(npcsThisTick.length);
     logger.info(
       `NPC tick completed in ${duration}ms`,
       {
@@ -915,6 +943,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
           regularSlotsUsed: regularSelection.length,
           neverPostedTodayCount: neverPostedToday.length,
         },
+        ...multistepMetrics,
       },
       'NPCTick'
     );
@@ -972,6 +1001,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         totalActiveNpcs: activeNpcs.length,
       },
       results,
+      ...multistepMetrics,
     });
   } finally {
     // Always release global lock

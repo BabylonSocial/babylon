@@ -1,0 +1,6 @@
+[
+  ["pg", "PostgreSQL"],
+  ["mysql", "MySQL"],
+  ["sqlite", "SQLite"],
+  ["singlestore", "SingleStore"]
+]

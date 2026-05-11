@@ -350,7 +350,7 @@ describe('extractFirstJsonObject', () => {
 });
 
 describe('getDecisionValidationError', () => {
-  const executor = new MultiStepExecutor();
+  const executor = new MultiStepExecutor(5, 12, 3, 2);
   const context = {
     predictionMarkets: [],
     perpMarkets: [],

@@ -321,7 +321,7 @@ export function OverviewTab({
                 return (
                   <div
                     key={day}
-                    className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background ${
+                    className={`-translate-x-1/2 -translate-y-1/2 absolute top-1/2 h-2.5 w-2.5 rounded-full border-2 border-background ${
                       progressPercent >= pct
                         ? 'bg-primary'
                         : 'bg-muted-foreground/30'

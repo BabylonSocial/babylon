@@ -651,7 +651,7 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Avatar - overlapping cover */}
-                      <div className="absolute -bottom-12 left-3 sm:-bottom-14 sm:left-4">
+                      <div className="-bottom-12 sm:-bottom-14 absolute left-3 sm:left-4">
                         <div className="group relative h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-background sm:h-28 sm:w-28">
                           <Avatar
                             id={user?.id || ''}

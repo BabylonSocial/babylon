@@ -35,6 +35,7 @@ Babylon is a live social simulation where players trade on prediction markets al
 - [Monorepo Structure](#monorepo-structure)
 - [Development](#development)
 - [Dev Tools](#dev-tools)
+- [Autonomous LLM caps (MultiStep)](#autonomous-llm-caps-multistep)
 - [Testing](#testing)
 - [Simulation & Training](#simulation--training)
 - [Deployment](#deployment)
@@ -162,6 +163,7 @@ See `.env.example` for the full annotated list. Key groups:
 | **Game** | `GAME_START`, `CRON_SECRET` | `GAME_START=true` enables auto-ticks |
 | **Social OAuth** | `DISCORD_CLIENT_ID/SECRET`, `TWITTER_CLIENT_ID/SECRET` | Optional; enables social login via Steward |
 | **Agents** | `BABYLON_A2A_API_KEY` | For external agents connecting via A2A protocol |
+| **Autonomous / cron (MultiStep)** | `NPC_MAX_ITERATIONS`, `MULTISTEP_MAX_LLM_ATTEMPTS_PER_DECISION`, `MULTISTEP_MAX_DECISION_VALIDATION_PASSES` | Cap decision-LLM fan-out per tick. **Why:** worst case scales with iterations × validation passes × parse retries; defaults match historical behavior when unset. See [Autonomous LLM caps (MultiStep)](#autonomous-llm-caps-multistep). |
 | **Vercel RUM** | `NEXT_PUBLIC_SPEED_INSIGHTS_SAMPLE_RATE` | Optional — Web Vitals sampling **0–100** (% of sessions); unset defaults to **50**. Route allowlist + rationale: [docs/observability/speed-insights.md](docs/observability/speed-insights.md) |
 
 Run `bun run env:validate` to check required variables before starting.
@@ -286,6 +288,13 @@ bun run report:realism
 # Training data quality
 bun run report:training-quality
 ```
+
+### Autonomous LLM caps (MultiStep)
+
+`MultiStepExecutor` drives user and NPC autonomous ticks. **Why document here:** operators tune cost via env without reading `packages/agents` source; wrong assumptions (e.g. that all agents share only the NPC cap) led to a fixed bug where **users** ran **12** iterations instead of **5**.
+
+**Doc (problem, env table, worst-case formula, rollout, roadmap):** [docs/autonomous-multistep-llm-caps.md](docs/autonomous-multistep-llm-caps.md)  
+**NPC cohort batching (separate concern):** [docs/npc-qualia-batch-roadmap.md](docs/npc-qualia-batch-roadmap.md)
 
 ### Prompt Diff
 

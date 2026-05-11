@@ -390,7 +390,7 @@ export function AgentEditModal({
           </div>
 
           {/* Avatar - overlapping banner */}
-          <div className="absolute -bottom-12 left-3 sm:-bottom-14 sm:left-4">
+          <div className="-bottom-12 sm:-bottom-14 absolute left-3 sm:left-4">
             <div className="group relative h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-muted sm:h-28 sm:w-28">
               <img
                 src={currentProfileImage}

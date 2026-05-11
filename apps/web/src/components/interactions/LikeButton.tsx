@@ -320,7 +320,7 @@ export function LikeButton({
           {/* Reaction Options */}
           <div
             className={cn(
-              'absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2',
+              '-translate-x-1/2 absolute bottom-full left-1/2 z-50 mb-2',
               'flex items-center gap-2 p-2',
               'rounded-full border border-border bg-popover shadow-lg',
               'fade-in slide-in-from-bottom-2 animate-in duration-200'

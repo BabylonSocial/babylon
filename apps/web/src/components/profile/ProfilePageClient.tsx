@@ -908,7 +908,7 @@ export function ProfilePageClient({
 
               <div className="px-4 pb-4">
                 <div className="mb-4 flex items-start justify-between">
-                  <div className="relative -mt-16 sm:-mt-20">
+                  <div className="-mt-16 sm:-mt-20 relative">
                     <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-background bg-background sm:h-36 sm:w-36">
                       <Avatar
                         id={actorInfo.id}

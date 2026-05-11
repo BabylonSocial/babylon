@@ -318,7 +318,7 @@ export function FeedbackTab() {
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search feedback..."

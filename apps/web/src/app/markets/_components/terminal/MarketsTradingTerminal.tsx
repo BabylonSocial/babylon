@@ -1491,7 +1491,7 @@ export function MarketsTradingTerminal({
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search
-              className="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground"
+              className="-translate-y-1/2 absolute top-1/2 left-2 text-muted-foreground"
               size={14}
             />
             <input

@@ -34,10 +34,12 @@
 import {
   CACHE_KEYS,
   checkProgress,
+  createMarketsTickLlmOpsBudget,
   DEFAULT_TTLS,
   DistributedLockService,
   getCacheOrFetch,
   invalidateCache,
+  type MarketsTickLlmOpsBudget,
   recordCronExecution,
   relayCronToStaging,
   verifyCronAuth,
@@ -577,6 +579,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
 
     // Initialize LLM client for question generation
     const llmClient = BabylonLLMClient.forGameTick();
+    const llmOpsBudget = createMarketsTickLlmOpsBudget();
 
     // Results tracking with detailed performance metrics
     const results = {
@@ -690,7 +693,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         const resolutionResult = await resolveMarket(
           market,
           llmClient,
-          gameState
+          gameState,
+          llmOpsBudget
         );
         if (resolutionResult.resolved) {
           results.marketsResolved++;
@@ -711,7 +715,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
           llmClient,
           gameState,
           topicForMarket,
-          topicCandidates
+          topicCandidates,
+          llmOpsBudget
         );
 
         if (created) {
@@ -938,7 +943,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
                 llmClient,
                 gameState,
                 topicForGap,
-                topicCandidates
+                topicCandidates,
+                llmOpsBudget
               );
 
               if (created) {
@@ -1137,7 +1143,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
                 parentMarketData,
                 duration,
                 llmClient,
-                gameState
+                gameState,
+                llmOpsBudget
               );
 
               if (created) {
@@ -1190,6 +1197,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
     metrics.subMarketCreationMs = Date.now() - subMarketStart;
 
     const durationMs = Date.now() - startTime;
+    metrics.totalLlmCalls = llmOpsBudget.getUsed();
 
     // Track sub-market specific metrics for monitoring
     const subMarketMetrics = {
@@ -1263,6 +1271,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
       durationMs,
       ...results,
       metrics,
+      llmMarketOpsUsed: llmOpsBudget.getUsed(),
+      llmMarketOpsCap: llmOpsBudget.cap > 0 ? llmOpsBudget.cap : null,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1400,7 +1410,8 @@ async function resolveMarket(
     timeframe: string;
   },
   llmClient: BabylonLLMClient,
-  gameState: GameState
+  gameState: GameState,
+  llmOpsBudget: MarketsTickLlmOpsBudget
 ): Promise<{ resolved: boolean }> {
   logger.info(
     `Resolving ${market.timeframe} market`,
@@ -1490,188 +1501,201 @@ async function resolveMarket(
     Boolean(question.resolutionDescription);
 
   if (!hasStoredProof) {
-    try {
-      // Load actors and organizations for proof context
-      const allActors = StaticDataRegistry.getAllActors()
-        .filter((a) => a.tier !== null)
-        .map((a) => ({
-          id: a.id,
-          name: a.name,
-          description: a.description,
-          domain: a.domain,
-          personality: a.personality,
-          affiliations: a.affiliations,
-          postStyle: a.postStyle,
-          postExample: a.postExample,
-          tier: a.tier!,
-          role: a.role ?? 'unknown',
-          initialLuck: (a.initialLuck as 'low' | 'medium' | 'high') ?? 'medium',
-          initialMood: a.initialMood ?? 0,
-        }));
-
-      const organizations = StaticDataRegistry.getAllOrganizations().map(
-        (o) => ({
-          id: o.id,
-          name: o.name,
-          ticker: o.ticker,
-          description: o.description,
-          type: o.type,
-          canBeInvolved: o.canBeInvolved,
-          initialPrice: o.initialPrice ?? undefined,
-        })
-      );
-
-      // Get recent events for proof context
-      const recentDbEvents = await db
-        .select()
-        .from(worldEvents)
-        .where(
-          gte(
-            worldEvents.timestamp,
-            new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-          )
-        )
-        .orderBy(desc(worldEvents.timestamp))
-        .limit(50);
-
-      // Convert to format QuestionManager expects
-      const mappedEvents = recentDbEvents
-        .filter((e) => e.eventType && e.visibility)
-        .map((e) => ({
-          id: e.id,
-          day: e.dayNumber || 0,
-          type: e.eventType as
-            | 'announcement'
-            | 'meeting'
-            | 'leak'
-            | 'development'
-            | 'scandal'
-            | 'rumor'
-            | 'deal'
-            | 'conflict'
-            | 'revelation',
-          description: e.description,
-          actors: toStringArray(e.actors),
-          relatedQuestion: e.relatedQuestion || undefined,
-          pointsToward: (e.pointsToward === 'YES' || e.pointsToward === 'NO'
-            ? e.pointsToward
-            : undefined) as 'YES' | 'NO' | undefined,
-          visibility: e.visibility as
-            | 'public'
-            | 'leaked'
-            | 'secret'
-            | 'private'
-            | 'group',
-        }));
-
-      // Create minimal DayTimeline structure for proof generation context
-      // Only events are needed for resolution proof - other fields can be empty
-      const recentTimelines: Array<{
-        day: number;
-        events: typeof mappedEvents;
-        summary: string;
-        groupChats: Record<string, never[]>;
-        feedPosts: never[];
-        luckChanges: never[];
-        moodChanges: never[];
-      }> = [
+    if (!llmOpsBudget.consumeIfAvailable()) {
+      logger.warn(
+        `Skipping resolution proof for Q${market.questionNumber} — MARKETS_TICK_MAX_LLM_MARKET_OPS_PER_RUN exhausted`,
         {
-          day: 0,
-          events: mappedEvents,
-          summary: 'Recent events context',
-          groupChats: {},
-          feedPosts: [],
-          luckChanges: [],
-          moodChanges: [],
-        },
-      ];
-
-      const questionManager = new QuestionManager(llmClient);
-      const questionForManager = {
-        id: question.questionNumber,
-        text: question.text,
-        scenario: question.scenarioId || 1,
-        outcome: question.outcome,
-        rank: question.rank || 1,
-        status: 'active' as const,
-      };
-
-      const proofResult = await questionManager.generateResolutionWithProof(
-        questionForManager,
-        allActors,
-        organizations,
-        recentTimelines
-      );
-
-      // Save proof to database
-      const proofTimestamp = new Date();
-      await db.transaction(async (tx) => {
-        // Save proof article if generated
-        // Note: Proof articles use type 'proof' (not 'article') to:
-        // 1. Avoid counting toward the article rate limiter (feed pacing)
-        // 2. Allow separate filtering in the /api/posts feed
-        // 3. Keep resolution evidence separate from news articles
-        if (proofResult.proof?.type === 'article') {
-          await tx.insert(posts).values({
-            id: proofResult.proof.article.id,
-            type: 'proof', // Different from 'article' - exempt from rate limiting
-            content: proofResult.proof.article.summary,
-            fullContent: proofResult.proof.article.content,
-            articleTitle: proofResult.proof.article.title,
-            authorId: proofResult.proof.article.authorOrgId,
-            gameId: gameState.id,
-            dayNumber: gameState.currentDay ?? 1,
-            timestamp: proofTimestamp,
-            createdAt: proofTimestamp,
-            category: proofResult.proof.article.category,
-            sentiment: proofResult.proof.article.sentiment,
-            slant: proofResult.proof.article.slant,
-            biasScore: proofResult.proof.article.biasScore,
-          });
-        }
-
-        // Update question with proof
-        await tx
-          .update(questions)
-          .set({
-            resolutionDescription: proofResult.description,
-            resolutionProofUrl: proofResult.proof?.url ?? null,
-            resolutionConfidence: proofResult.confidence,
-            requiresManualReview: proofResult.requiresManualReview,
-            resolutionReviewStatus: proofResult.requiresManualReview
-              ? 'pending'
-              : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(questions.id, question.id));
-      });
-
-      logger.info(
-        `Generated resolution proof for Q${market.questionNumber}`,
-        {
-          hasArticle: proofResult.proof?.type === 'article',
-          confidence: proofResult.confidence,
-          requiresManualReview: proofResult.requiresManualReview,
+          questionNumber: market.questionNumber,
+          cap: llmOpsBudget.cap,
+          used: llmOpsBudget.getUsed(),
         },
         'MarketsTick'
       );
+    } else {
+      try {
+        // Load actors and organizations for proof context
+        const allActors = StaticDataRegistry.getAllActors()
+          .filter((a) => a.tier !== null)
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            description: a.description,
+            domain: a.domain,
+            personality: a.personality,
+            affiliations: a.affiliations,
+            postStyle: a.postStyle,
+            postExample: a.postExample,
+            tier: a.tier!,
+            role: a.role ?? 'unknown',
+            initialLuck:
+              (a.initialLuck as 'low' | 'medium' | 'high') ?? 'medium',
+            initialMood: a.initialMood ?? 0,
+          }));
 
-      // Skip resolution if manual review required
-      if (proofResult.requiresManualReview) {
-        logger.warn(
-          `Q${market.questionNumber} queued for manual review`,
-          { confidence: proofResult.confidence },
+        const organizations = StaticDataRegistry.getAllOrganizations().map(
+          (o) => ({
+            id: o.id,
+            name: o.name,
+            ticker: o.ticker,
+            description: o.description,
+            type: o.type,
+            canBeInvolved: o.canBeInvolved,
+            initialPrice: o.initialPrice ?? undefined,
+          })
+        );
+
+        // Get recent events for proof context
+        const recentDbEvents = await db
+          .select()
+          .from(worldEvents)
+          .where(
+            gte(
+              worldEvents.timestamp,
+              new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+            )
+          )
+          .orderBy(desc(worldEvents.timestamp))
+          .limit(50);
+
+        // Convert to format QuestionManager expects
+        const mappedEvents = recentDbEvents
+          .filter((e) => e.eventType && e.visibility)
+          .map((e) => ({
+            id: e.id,
+            day: e.dayNumber || 0,
+            type: e.eventType as
+              | 'announcement'
+              | 'meeting'
+              | 'leak'
+              | 'development'
+              | 'scandal'
+              | 'rumor'
+              | 'deal'
+              | 'conflict'
+              | 'revelation',
+            description: e.description,
+            actors: toStringArray(e.actors),
+            relatedQuestion: e.relatedQuestion || undefined,
+            pointsToward: (e.pointsToward === 'YES' || e.pointsToward === 'NO'
+              ? e.pointsToward
+              : undefined) as 'YES' | 'NO' | undefined,
+            visibility: e.visibility as
+              | 'public'
+              | 'leaked'
+              | 'secret'
+              | 'private'
+              | 'group',
+          }));
+
+        // Create minimal DayTimeline structure for proof generation context
+        // Only events are needed for resolution proof - other fields can be empty
+        const recentTimelines: Array<{
+          day: number;
+          events: typeof mappedEvents;
+          summary: string;
+          groupChats: Record<string, never[]>;
+          feedPosts: never[];
+          luckChanges: never[];
+          moodChanges: never[];
+        }> = [
+          {
+            day: 0,
+            events: mappedEvents,
+            summary: 'Recent events context',
+            groupChats: {},
+            feedPosts: [],
+            luckChanges: [],
+            moodChanges: [],
+          },
+        ];
+
+        const questionManager = new QuestionManager(llmClient);
+        const questionForManager = {
+          id: question.questionNumber,
+          text: question.text,
+          scenario: question.scenarioId || 1,
+          outcome: question.outcome,
+          rank: question.rank || 1,
+          status: 'active' as const,
+        };
+
+        const proofResult = await questionManager.generateResolutionWithProof(
+          questionForManager,
+          allActors,
+          organizations,
+          recentTimelines
+        );
+
+        // Save proof to database
+        const proofTimestamp = new Date();
+        await db.transaction(async (tx) => {
+          // Save proof article if generated
+          // Note: Proof articles use type 'proof' (not 'article') to:
+          // 1. Avoid counting toward the article rate limiter (feed pacing)
+          // 2. Allow separate filtering in the /api/posts feed
+          // 3. Keep resolution evidence separate from news articles
+          if (proofResult.proof?.type === 'article') {
+            await tx.insert(posts).values({
+              id: proofResult.proof.article.id,
+              type: 'proof', // Different from 'article' - exempt from rate limiting
+              content: proofResult.proof.article.summary,
+              fullContent: proofResult.proof.article.content,
+              articleTitle: proofResult.proof.article.title,
+              authorId: proofResult.proof.article.authorOrgId,
+              gameId: gameState.id,
+              dayNumber: gameState.currentDay ?? 1,
+              timestamp: proofTimestamp,
+              createdAt: proofTimestamp,
+              category: proofResult.proof.article.category,
+              sentiment: proofResult.proof.article.sentiment,
+              slant: proofResult.proof.article.slant,
+              biasScore: proofResult.proof.article.biasScore,
+            });
+          }
+
+          // Update question with proof
+          await tx
+            .update(questions)
+            .set({
+              resolutionDescription: proofResult.description,
+              resolutionProofUrl: proofResult.proof?.url ?? null,
+              resolutionConfidence: proofResult.confidence,
+              requiresManualReview: proofResult.requiresManualReview,
+              resolutionReviewStatus: proofResult.requiresManualReview
+                ? 'pending'
+                : null,
+              updatedAt: new Date(),
+            })
+            .where(eq(questions.id, question.id));
+        });
+
+        logger.info(
+          `Generated resolution proof for Q${market.questionNumber}`,
+          {
+            hasArticle: proofResult.proof?.type === 'article',
+            confidence: proofResult.confidence,
+            requiresManualReview: proofResult.requiresManualReview,
+          },
           'MarketsTick'
         );
-        return { resolved: false };
+
+        // Skip resolution if manual review required
+        if (proofResult.requiresManualReview) {
+          logger.warn(
+            `Q${market.questionNumber} queued for manual review`,
+            { confidence: proofResult.confidence },
+            'MarketsTick'
+          );
+          return { resolved: false };
+        }
+      } catch (error) {
+        logger.error(
+          `Proof generation failed for Q${market.questionNumber}`,
+          { error: error instanceof Error ? error.message : String(error) },
+          'MarketsTick'
+        );
+        // Continue with resolution even without proof - payout is critical
       }
-    } catch (error) {
-      logger.error(
-        `Proof generation failed for Q${market.questionNumber}`,
-        { error: error instanceof Error ? error.message : String(error) },
-        'MarketsTick'
-      );
-      // Continue with resolution even without proof - payout is critical
     }
   }
 
@@ -1764,7 +1788,8 @@ async function createMarketForTimeframe(
   llmClient: BabylonLLMClient,
   gameState: GameState,
   dailyTopic: DailyTopicContext | null,
-  allTopics: DailyTopicContext[] = []
+  allTopics: DailyTopicContext[] = [],
+  llmOpsBudget: MarketsTickLlmOpsBudget
 ): Promise<boolean> {
   const now = new Date();
   const resolutionDate = new Date(now.getTime() + durationMs);
@@ -1853,6 +1878,19 @@ async function createMarketForTimeframe(
       },
       'MarketsTick'
     );
+
+    if (!llmOpsBudget.consumeIfAvailable()) {
+      logger.warn(
+        `Skipping ${timeframe} question generation — MARKETS_TICK_MAX_LLM_MARKET_OPS_PER_RUN exhausted`,
+        {
+          timeframe,
+          cap: llmOpsBudget.cap,
+          used: llmOpsBudget.getUsed(),
+        },
+        'MarketsTick'
+      );
+      return false;
+    }
 
     // Use QuestionManager for narrative-connected question generation
     // This queries world events, trending topics, and active questions for context
@@ -2303,7 +2341,8 @@ async function createSubMarket(
   parentMarket: ParentMarketData,
   durationMs: number,
   llmClient: BabylonLLMClient,
-  gameState: GameState
+  gameState: GameState,
+  llmOpsBudget: MarketsTickLlmOpsBudget
 ): Promise<boolean> {
   const now = new Date();
   const resolutionDate = new Date(now.getTime() + durationMs);
@@ -2346,6 +2385,19 @@ async function createSubMarket(
       },
       'MarketsTick'
     );
+
+    if (!llmOpsBudget.consumeIfAvailable()) {
+      logger.warn(
+        'Skipping sub-market question generation — MARKETS_TICK_MAX_LLM_MARKET_OPS_PER_RUN exhausted',
+        {
+          parentId: parentMarket.id,
+          cap: llmOpsBudget.cap,
+          used: llmOpsBudget.getUsed(),
+        },
+        'MarketsTick'
+      );
+      return false;
+    }
 
     // Generate question for sub-market using QuestionManager
     // The question will be generated based on timeframe, but we'll inherit

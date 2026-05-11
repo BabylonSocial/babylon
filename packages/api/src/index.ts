@@ -82,6 +82,11 @@ export {
   setCache,
   warmCache,
 } from './cache';
+export {
+  createMarketsTickLlmOpsBudget,
+  type MarketsTickLlmOpsBudget,
+  parseMarketsTickMaxLlmMarketOpsPerRun,
+} from './cron/markets-tick-llm-ops-budget';
 // Cron Authentication
 export {
   type CronHandler,

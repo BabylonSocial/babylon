@@ -6,6 +6,19 @@
  *
  * Key design: Services are "dumb executors" - all LLM reasoning happens HERE.
  * This eliminates double LLM calls and makes execution faster.
+ *
+ * ## LLM cost caps (env)
+ *
+ * **Why:** Worst-case decision LLM calls scale roughly as
+ * `effectiveMaxIterations × validationPasses × llmAttemptsPerDecision` per tick. Hardcoded limits
+ * prevented ops from tuning spend; users incorrectly used the NPC iteration ceiling until
+ * `effectiveMaxIterations` branched on `isNpc` (users = 5, NPCs = `NPC_MAX_ITERATIONS`).
+ *
+ * **Where:** `multistep-executor-limits.ts` parses `NPC_MAX_ITERATIONS`, `MULTISTEP_MAX_LLM_ATTEMPTS_PER_DECISION`,
+ * `MULTISTEP_MAX_DECISION_VALIDATION_PASSES`. **Why two prefixes:** only the iteration cap is NPC-specific;
+ * inner/outer retry loops apply to all agents, hence `MULTISTEP_*`.
+ *
+ * **Doc:** `docs/autonomous-multistep-llm-caps.md`
  */
 
 import {
@@ -55,6 +68,11 @@ import {
   executeDirectRequestPayment,
   executeDirectShareInformation,
 } from './intel-payment-executors';
+import {
+  getUserMaxIterationsForBaseline,
+  isMultistepSkipEmptyIterationsEnabled,
+  readMultistepExecutorLimitsFromEnv,
+} from './multistep-executor-limits';
 import { normalizeSocialDecisionParameters } from './social-parameter-normalization';
 import { topicDiversityService } from './TopicDiversityService';
 import {
@@ -137,11 +155,34 @@ export interface MultiStepExecutorResult {
 // =============================================================================
 
 export class MultiStepExecutor {
-  /** NPCs get more iterations to chain actions (trade + post + engage) */
+  /** Max iterations per tick for user-controlled agents (`isNpc === false`); from ctor or `USER_MAX_ITERATIONS`. */
+  private readonly userMaxIterations: number;
+
+  /** Max iterations per tick for NPC agents (`isNpc === true`); from `NPC_MAX_ITERATIONS` on the singleton */
   private readonly npcMaxIterations: number;
 
-  constructor(_maxIterations = 5, npcMaxIterations = 12) {
-    this.npcMaxIterations = npcMaxIterations;
+  /** Inner `getDecision` attempt cap (shared user + NPC); from `MULTISTEP_MAX_LLM_ATTEMPTS_PER_DECISION` */
+  private readonly multistepMaxLlmAttemptsPerDecision: number;
+
+  /** Outer normalization/validation passes per iteration; from `MULTISTEP_MAX_DECISION_VALIDATION_PASSES` */
+  private readonly multistepMaxDecisionValidationPasses: number;
+
+  constructor(
+    userMaxIterations?: number,
+    npcMaxIterations?: number,
+    multistepMaxLlmAttemptsPerDecision?: number,
+    multistepMaxDecisionValidationPasses?: number
+  ) {
+    const limits = readMultistepExecutorLimitsFromEnv();
+    this.userMaxIterations =
+      userMaxIterations ?? getUserMaxIterationsForBaseline();
+    this.npcMaxIterations = npcMaxIterations ?? limits.npcMaxIterations;
+    this.multistepMaxLlmAttemptsPerDecision =
+      multistepMaxLlmAttemptsPerDecision ??
+      limits.multistepMaxLlmAttemptsPerDecision;
+    this.multistepMaxDecisionValidationPasses =
+      multistepMaxDecisionValidationPasses ??
+      limits.multistepMaxDecisionValidationPasses;
   }
 
   private coerceParameterText(value: unknown): string {
@@ -432,8 +473,9 @@ export class MultiStepExecutor {
     const contextRefreshSummary =
       await this.getLatestContextRefreshSummary(agentUserId);
 
-    // All agents get the same iteration budget (7 by default)
-    const effectiveMaxIterations = this.npcMaxIterations;
+    const effectiveMaxIterations = isNpc
+      ? this.npcMaxIterations
+      : this.userMaxIterations;
     for (let iteration = 1; iteration <= effectiveMaxIterations; iteration++) {
       const iterationStartTime = Date.now();
       const iterationTimings: Record<string, number> = {};
@@ -464,6 +506,21 @@ export class MultiStepExecutor {
       iterationTimings.gatherContext = Date.now() - contextStartTime;
 
       const actionability = this.getActionabilitySummary(context);
+
+      // Only skip before the first LLM call: once we have trace entries, the agent may have
+      // consumed hooks and still need another decision pass (do not short-circuit mid-run).
+      if (
+        isMultistepSkipEmptyIterationsEnabled() &&
+        !actionability.hasAny &&
+        trace.length === 0
+      ) {
+        logger.info(
+          `[MultiStep] Skipping LLM iterations — no actionable context (MULTISTEP_SKIP_EMPTY_ITERATIONS)`,
+          { agentUserId, iteration, isNpc, actionability },
+          'MultiStepExecutor'
+        );
+        break;
+      }
 
       // Build decision prompt (systemPrompt passed separately to LLM system role)
       // For NPCs, prefer character name, fall back to StaticDataRegistry; for users, use displayName
@@ -504,7 +561,12 @@ export class MultiStepExecutor {
       let normalizedParameters: Record<string, unknown> = {};
       let validationFeedback: string | undefined;
 
-      for (let decisionAttempt = 1; decisionAttempt <= 2; decisionAttempt++) {
+      const maxValidationPasses = this.multistepMaxDecisionValidationPasses;
+      for (
+        let decisionAttempt = 1;
+        decisionAttempt <= maxValidationPasses;
+        decisionAttempt++
+      ) {
         const candidateDecision = await this.getDecision(
           prompt,
           runtime,
@@ -554,7 +616,7 @@ export class MultiStepExecutor {
           normalizedAction !== Actions.FINISH &&
           normalizedAction !== Actions.WAIT
         ) {
-          if (decisionAttempt < 2) {
+          if (decisionAttempt < maxValidationPasses) {
             logger.warn(
               `[MultiStep] Rejected invalid decision after normalization`,
               {
@@ -1191,7 +1253,7 @@ export class MultiStepExecutor {
     systemPrompt?: string,
     options?: { requireConcreteAction?: boolean; feedback?: string }
   ): Promise<{ decision: MultiStepDecision; rawResponse: string } | null> {
-    const maxRetries = 3;
+    const maxRetries = this.multistepMaxLlmAttemptsPerDecision;
 
     const system = systemPrompt
       ? `${systemPrompt}\n\nIMPORTANT: Output valid JSON only. No markdown, no explanations, and no <think> tags. The first character of your reply must be "{" and the last character must be "}".`

@@ -9,6 +9,13 @@
  * autonomous actions (trading, posting, commenting, DMs, group chats). Processes
  * agents in sequence with optional point deduction (configured via TICK_POINTS_COST).
  *
+ * ## MultiStep LLM caps (env)
+ *
+ * User-controlled autonomous agents use `MultiStepExecutor` (`packages/agents`) with **5** max iterations
+ * per tick (constructor default) and shared retry caps (`MULTISTEP_*`). **Why it matters here:** this cron
+ * is the primary fan-out surface for user agents; tuning is via env, not code — see
+ * **docs/autonomous-multistep-llm-caps.md** for the worst-case formula and rollout notes.
+ *
  * @openapi
  * /api/cron/agent-tick:
  *   post:
@@ -57,6 +64,7 @@ import {
   agentRuntimeManager,
   agentService,
   autonomousCoordinator,
+  computeAgentTickLlmBaseline,
   getAutonomousFeatures,
   hasAnyAutonomousFeature,
   releaseAgentLock,
@@ -118,13 +126,31 @@ class AgentTimeoutError extends Error {
  */
 const TICK_POINTS_COST = 0;
 
+function agentTickMultistepMetrics(eligibleUserAgents: number) {
+  const baseline = computeAgentTickLlmBaseline(eligibleUserAgents);
+  return {
+    multistepWorstCaseDecisionCalls: baseline.multistepWorstCaseDecisionCalls,
+    multistepEnv: {
+      npcMaxIterations: baseline.multistepEnv.npcMaxIterations,
+      userMaxIterations: baseline.multistepEnv.userMaxIterations,
+      llmAttemptsPerDecision: baseline.multistepEnv.llmAttemptsPerDecision,
+      validationPasses: baseline.multistepEnv.validationPasses,
+    },
+    agentTickLlmBaseline: baseline,
+  };
+}
+
 function createTickResponse(
   payload: Record<string, unknown>,
-  init?: ResponseInit
+  init?: ResponseInit,
+  multistepEligibleAgents?: number
 ) {
   return NextResponse.json(
     {
       tickPointsCost: TICK_POINTS_COST,
+      ...(multistepEligibleAgents === undefined
+        ? {}
+        : agentTickMultistepMetrics(multistepEligibleAgents)),
       ...payload,
     },
     init
@@ -191,7 +217,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
     );
     return createTickResponse(
       { error: 'Unauthorized cron request' },
-      { status: 401 }
+      { status: 401 },
+      0
     );
   }
 
@@ -211,6 +238,7 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
       processed: 0,
       skippedLocked: 0,
       duration: 0,
+      ...agentTickMultistepMetrics(0),
     });
   }
 
@@ -247,14 +275,18 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
       { processId },
       'AgentTick'
     );
-    return createTickResponse({
-      success: true,
-      skipped: true,
-      reason: 'Previous tick still running',
-      processed: 0,
-      skippedLocked: 0,
-      requestedAgentIds,
-    });
+    return createTickResponse(
+      {
+        success: true,
+        skipped: true,
+        reason: 'Previous tick still running',
+        processed: 0,
+        skippedLocked: 0,
+        requestedAgentIds,
+      },
+      undefined,
+      0
+    );
   }
 
   // Wrap remaining logic in try-finally to ensure global lock release
@@ -269,14 +301,18 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         },
         'AgentTick'
       );
-      return createTickResponse({
-        success: true,
-        skipped: true,
-        reason: 'Game disabled via GAME_START environment variable',
-        processed: 0,
-        skippedLocked: 0,
-        requestedAgentIds,
-      });
+      return createTickResponse(
+        {
+          success: true,
+          skipped: true,
+          reason: 'Game disabled via GAME_START environment variable',
+          processed: 0,
+          skippedLocked: 0,
+          requestedAgentIds,
+        },
+        undefined,
+        0
+      );
     }
 
     // 3. Check Game status from database
@@ -294,15 +330,19 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         'AgentTick'
       );
 
-      return createTickResponse({
-        success: true,
-        skipped: true,
-        reason: 'No continuous game found',
-        duration: Date.now() - startTime,
-        processed: 0,
-        skippedLocked: 0,
-        requestedAgentIds,
-      });
+      return createTickResponse(
+        {
+          success: true,
+          skipped: true,
+          reason: 'No continuous game found',
+          duration: Date.now() - startTime,
+          processed: 0,
+          skippedLocked: 0,
+          requestedAgentIds,
+        },
+        undefined,
+        0
+      );
     }
 
     // Skip if game exists but is not running
@@ -316,16 +356,20 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         'AgentTick'
       );
 
-      return createTickResponse({
-        success: true,
-        skipped: true,
-        reason: 'Game is paused',
-        gameId: gameState.id,
-        duration: Date.now() - startTime,
-        processed: 0,
-        skippedLocked: 0,
-        requestedAgentIds,
-      });
+      return createTickResponse(
+        {
+          success: true,
+          skipped: true,
+          reason: 'Game is paused',
+          gameId: gameState.id,
+          duration: Date.now() - startTime,
+          processed: 0,
+          skippedLocked: 0,
+          requestedAgentIds,
+        },
+        undefined,
+        0
+      );
     }
 
     // Query via AgentRegistry for USER_CONTROLLED agents only.
@@ -370,7 +414,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
             requestedAgentIds,
             missingAgentIds,
           },
-          { status: 404 }
+          { status: 404 },
+          0
         );
       }
 
@@ -392,7 +437,8 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
             invalidTypeAgentIds,
             invalidStatusAgentIds,
           },
-          { status: 409 }
+          { status: 409 },
+          0
         );
       }
 
@@ -490,15 +536,19 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
         'AgentTick'
       );
 
-      return createTickResponse({
-        success: true,
-        processed: 0,
-        duration: Date.now() - startTime,
-        results: [],
-        skippedLocked: 0,
-        message: 'No user agents found with autonomous features enabled',
-        requestedAgentIds,
-      });
+      return createTickResponse(
+        {
+          success: true,
+          processed: 0,
+          duration: Date.now() - startTime,
+          results: [],
+          skippedLocked: 0,
+          message: 'No user agents found with autonomous features enabled',
+          requestedAgentIds,
+        },
+        undefined,
+        0
+      );
     }
 
     logger.info(
@@ -849,18 +899,22 @@ export const POST = withErrorHandling(async function POST(_req: NextRequest) {
       errorCount: errors,
     });
 
-    return createTickResponse({
-      success: true,
-      eligible: eligibleAgents.length,
-      processed: results.length - skippedDueToLock,
-      skippedLocked: skippedDueToLock,
-      skippedTimeBudget: skippedDueToTimeBudget,
-      duration,
-      totalActions: totalActionsExecuted,
-      errors,
-      results,
-      requestedAgentIds,
-    });
+    return createTickResponse(
+      {
+        success: true,
+        eligible: eligibleAgents.length,
+        processed: results.length - skippedDueToLock,
+        skippedLocked: skippedDueToLock,
+        skippedTimeBudget: skippedDueToTimeBudget,
+        duration,
+        totalActions: totalActionsExecuted,
+        errors,
+        results,
+        requestedAgentIds,
+      },
+      undefined,
+      eligibleAgents.length
+    );
   } finally {
     // Always release global lock
     await DistributedLockService.releaseLock('agent-tick-global', processId);

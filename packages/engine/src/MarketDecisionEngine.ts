@@ -1150,8 +1150,12 @@ ${prompt}`
       if (actorData?.realName) {
         variations.push(
           actorData.realName.toLowerCase(), // elon musk
-          actorData.realName.toLowerCase().replace(/\s+/g, '-'), // elon-musk
-          actorData.realName.toLowerCase().replace(/\s+/g, '') // elonmusk
+          actorData.realName
+            .toLowerCase()
+            .replace(/\s+/g, '-'), // elon-musk
+          actorData.realName
+            .toLowerCase()
+            .replace(/\s+/g, '') // elonmusk
         );
       }
 

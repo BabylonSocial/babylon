@@ -48,7 +48,7 @@ export function SearchBar({
     <div className={cn('relative', className)}>
       <div
         className={cn(
-          'pointer-events-none absolute top-1/2 -translate-y-1/2',
+          '-translate-y-1/2 pointer-events-none absolute top-1/2',
           compact ? 'left-3' : 'left-4'
         )}
       >
@@ -75,7 +75,7 @@ export function SearchBar({
         <button
           onClick={() => onChange('')}
           className={cn(
-            'absolute top-1/2 -translate-y-1/2 p-1 transition-colors hover:bg-muted/50',
+            '-translate-y-1/2 absolute top-1/2 p-1 transition-colors hover:bg-muted/50',
             compact ? 'right-2' : 'right-3'
           )}
         >

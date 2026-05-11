@@ -1,0 +1,87 @@
+---
+url: 'https://elysiajs.com/integrations/astro.md'
+---
+
+# Integration with Astro
+
+With [Astro Endpoint](https://docs.astro.build/en/core-concepts/endpoints/), we can run Elysia on Astro directly.
+
+1. Set **output** to **server** in **astro.config.mjs**
+
+```javascript
+// astro.config.mjs
+import { defineConfig } from 'astro/config'
+
+// https://astro.build/config
+export default defineConfig({
+    output: 'server' // [!code ++]
+})
+```
+
+2. Create **pages/\[...slugs].ts**
+3. Create or import an existing Elysia server in **\[...slugs].ts**
+4. Export the handler with the name of the method you want to expose
+
+```typescript
+// pages/[...slugs].ts
+import { Elysia, t } from 'elysia'
+
+const app = new Elysia()
+    .get('/api', () => 'hi')
+    .post('/api', ({ body }) => body, {
+        body: t.Object({
+            name: t.String()
+        })
+    })
+
+const handle = ({ request }: { request: Request }) => app.handle(request) // [!code ++]
+
+export const GET = handle // [!code ++]
+export const POST = handle // [!code ++]
+```
+
+Elysia will work normally as expected because of WinterTC compliance.
+
+We recommend running [Astro on Bun](https://docs.astro.build/en/recipes/bun) as Elysia is designed to be run on Bun.
+
+::: tip
+You can run Elysia server without running Astro on Bun thanks to WinterTC support.
+:::
+
+With this approach, you can have co-location of both frontend and backend in a single repository and have End-to-end type-safety with Eden.
+
+### pnpm
+
+If you use pnpm, [pnpm doesn't auto install peer dependencies by default](https://github.com/orgs/pnpm/discussions/3995#discussioncomment-1893230) forcing you to install additional dependencies manually.
+
+```bash
+pnpm add @sinclair/typebox openapi-types
+```
+
+## Prefix
+
+If you place an Elysia server not in the root directory of the app router, you need to annotate the prefix on the Elysia server.
+
+For example, if you place the Elysia server in **pages/api/\[...slugs].ts**, you need to annotate the prefix as **/api** on the Elysia server.
+
+```typescript
+// pages/api/[...slugs].ts
+import { Elysia, t } from 'elysia'
+
+const app = new Elysia({ prefix: '/api' }) // [!code ++]
+    .get('/', () => 'hi')
+    .post('/', ({ body }) => body, {
+        body: t.Object({
+            name: t.String()
+        })
+    })
+
+const handle = ({ request }: { request: Request }) => app.handle(request) // [!code ++]
+
+export const GET = handle // [!code ++]
+export const POST = handle // [!code ++]
+```
+
+This will ensure that Elysia routing works properly wherever you place it.
+
+Please refer to [Astro Endpoints](https://docs.astro.build/en/core-concepts/endpoints/) for more information.

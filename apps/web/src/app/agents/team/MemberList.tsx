@@ -131,7 +131,7 @@ export function MemberList({
                       size="md"
                     />
                     {isProcessing && (
-                      <div className="absolute -top-0.5 -right-0.5 h-3 w-3 animate-pulse rounded-full bg-amber-500 ring-2 ring-background" />
+                      <div className="-top-0.5 -right-0.5 absolute h-3 w-3 animate-pulse rounded-full bg-amber-500 ring-2 ring-background" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">

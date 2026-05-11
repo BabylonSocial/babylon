@@ -10,12 +10,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`BabylonLLMClient` Ollama (OpenAI-compatible `/v1`)** — Engine/cron LLM calls can use local Ollama via `BABYLON_LLM_PROVIDER=ollama` or `BabylonLLMClient.forOllama()`. Uses `OLLAMA_BASE_URL` / `OLLAMA_MODEL`; optional `OLLAMA_OPENAI_API_KEY` for proxies. `LLMProviderName` includes `ollama`; `reasoning_effort` is omitted for Ollama to avoid unsupported params.
+
+- **Cron multistep worst-case metrics + markets-tick LLM op budget**
+  - **Why**: Operators need worst-case decision-call math on `npc-tick` / `agent-tick` JSON without a separate log stack; `markets-tick` needed optional `MARKETS_TICK_MAX_LLM_MARKET_OPS_PER_RUN` enforcement at true LLM generation sites (cached proof skips consume no slots).
+  - **Code**: `computeNpcTickLlmBaseline` / `computeAgentTickLlmBaseline` now include full `iterations × passes × attempts` worst case + `multistepEnv`; cron routes attach `multistepWorstCaseDecisionCalls` / `npcTickLlmBaseline` / `agentTickLlmBaseline`. `packages/api` `createMarketsTickLlmOpsBudget` wires resolution proof + question generation. Env: `USER_MAX_ITERATIONS`, `MULTISTEP_SKIP_EMPTY_ITERATIONS`, `.env.example` qualia shadow soak preset.
+  - **Tests**: `autonomous-tick-baseline.test.ts`, `markets-tick-llm-ops-budget.test.ts`, `tick-qualia-builder.test.ts`, `tick-event-batch-builder.test.ts`.
+
+- **MultiStepExecutor env caps for autonomous LLM usage**
+  - **Why (cost)**: Each autonomous tick can invoke the decision LLM many times per agent — outer iterations × validation passes × inner parse retries. Hardcoded ceilings meant no safe way to lower spend in staging/prod without shipping new code.
+  - **Why (correctness)**: `effectiveMaxIterations` previously always read `npcMaxIterations`, so **user** agents ran up to **12** iterations while docs/baseline assumed **5**; the first constructor argument was unused. That coupled user LLM cost to NPC settings and made `NPC_MAX_ITERATIONS`-style tuning misleading.
+  - **Why (naming)**: Retry knobs apply to **all** agents (shared `getDecision` / validation loops), so they use the `MULTISTEP_*` prefix; only `NPC_MAX_ITERATIONS` is NPC-specific.
+  - **Env**: `NPC_MAX_ITERATIONS` (NPC path only, default 12); `MULTISTEP_MAX_LLM_ATTEMPTS_PER_DECISION` (inner attempts, default 3); `MULTISTEP_MAX_DECISION_VALIDATION_PASSES` (outer passes per iteration, default 2). Annotated in `.env.example` with a worst-case formula; full rationale and rollout in **[docs/autonomous-multistep-llm-caps.md](docs/autonomous-multistep-llm-caps.md)**.
+  - **Code**: `packages/agents/src/autonomous/multistep-executor-limits.ts`; `MultiStepExecutor` uses `effectiveMaxIterations = isNpc ? npcMaxIterations : userMaxIterations` (user default 5). `computeNpcTickLlmBaseline` uses `getNpcMaxIterationsForBaseline()` for the same NPC iteration parse as runtime. `getNpcMaxIterationsForBaseline` is re-exported from the qualia-batch barrel.
+
+- **NPC qualia batch Phase 2 execute readiness**
+  - **Why**: Execute cohort wiring and partial executor behavior need a single tested contract before turning on `AUTONOMOUS_BATCH_TICK_PLANNER` in prod; ad hoc route logic is easy to regress when cron changes.
+  - **Code**: `computeMultiStepNpcsAfterQualiaBatch` in `packages/agents/.../qualia-batch-multi-step.ts` (exported from qualia-batch); `npc-tick` route calls it instead of inlining. `.env.example` documents a Phase 2 env preset (small `MAX_AGENTS` / `MAX_ACTIONS`).
+  - **Tests**: `qualia-batch-multi-step.test.ts`, `batch-plan-executor.test.ts`. Qualia batch tests should run with `bun test --isolate` so `npc-qualia-batch-orchestrator.test.ts` module mocks do not leak into the executor tests.
+
+- **NPC qualia batch planner docs and rollout guide**
+  - **Why**: The cron LLM reduction work changes execution semantics, fallback behavior, and side-effect ordering. Without explicit docs, it is easy to enable execute mode before shadow metrics are understood, or to accidentally reintroduce side effects in shadow mode.
+  - **Artifacts**: `packages/agents/src/autonomous/qualia-batch/README.md` explains the local architecture, feature flags, validation boundary, failure behavior, and verification commands. `docs/npc-qualia-batch-roadmap.md` documents shadow-first rollout, execute phases, test gaps, observability needs, and open product decisions.
+  - **Code comment**: `apps/web/src/app/api/cron/npc-tick/route.ts` now documents why quiet/throttled batch skips must leave NPCs eligible for normal MultiStep processing.
+
 - **Documentation: Vercel Speed Insights (gated RUM)**
   - **Why (docs)**: Sampling and route gating are operational choices; without written rationale, the next engineer disables “unused” env vars or removes `beforeSend` and accidentally restores 100% RUM volume or loses regressions on core surfaces.
   - **Artifacts**: `docs/observability/speed-insights.md` (design, env semantics 0–100, default 50%, route allowlist, minimal-layout behavior, migration from legacy fractional env values, roadmap); `docs/observability/README.md` (index); `apps/web/README.md` (web app entry + link to observability docs); root `README.md` (Observability section + env table row).
   - **Code**: `apps/web/src/components/observability/GatedSpeedInsights.tsx` (file-level and inline **why** comments); wired from `apps/web/src/app/layout.tsx` and `apps/web/src/components/layout/FullAppShellClient.tsx`; `.env.example` cross-links to the doc.
 
 ### Changed
+
+- **User autonomous MultiStep iteration ceiling (bugfix)** — User-controlled agents now honor **5** max MultiStep iterations per tick (constructor default) instead of **12**. **Why**: matches `computeAgentTickLlmBaseline` / intended behavior and reduces user-tick LLM usage; **CHANGELOG + [docs/autonomous-multistep-llm-caps.md](docs/autonomous-multistep-llm-caps.md)** call this out so product/support are not surprised if multi-action chains truncate earlier than before.
 
 - **Markets trending screener — display formatting & org avatars**
   - **Why (OI / 24h vol column width)**: Compact formatters stopped at **billions** (`B`). When open interest or volume exceeded ~1e12, the UI still divided by 1e9 and printed a huge mantissa (e.g. `ƀ81309980567587.61B`), blowing table layout. **T** (trillion) and **Q** (quadrillion) tiers in `formatVolume`, `formatCompactCurrency`, `formatCompactNumber`, and the terminal’s local `formatCompactNumber` keep strings short and comparable across rows.

@@ -24,7 +24,7 @@ export const ProfilePreviewCard = memo(function ProfilePreviewCard({
       <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
         <Skeleton className="aspect-[3/1] w-full" />
         <div className="relative p-4 pt-12">
-          <div className="absolute top-0 -translate-y-1/2">
+          <div className="-translate-y-1/2 absolute top-0">
             <Skeleton className="h-20 w-20 rounded-full" />
           </div>
           <div className="mt-2 space-y-2">
@@ -74,7 +74,7 @@ export const ProfilePreviewCard = memo(function ProfilePreviewCard({
       {/* Profile Content */}
       <div className="relative p-4 pt-12">
         {/* Avatar */}
-        <div className="group absolute top-0 -translate-y-1/2">
+        <div className="group -translate-y-1/2 absolute top-0">
           <Avatar
             id={profileData.username || 'placeholder'}
             src={profileData.profileImageUrl || undefined}

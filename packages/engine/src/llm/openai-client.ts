@@ -1,7 +1,7 @@
 /**
  * LLM Client for Babylon Game Generation
  * Supports multiple providers with intelligent fallback
- * Priority: Groq > Claude > OpenAI
+ * Priority: explicit BABYLON_LLM_PROVIDER (if set) > ElizaCloud > Groq > Claude > OpenAI; Ollama when forced or BABYLON_LLM_PROVIDER=ollama
  */
 
 import OpenAI from 'openai';
@@ -19,7 +19,7 @@ import {
 import type { LLMJsonSchema as JSONSchema } from './types';
 import { parseXML } from './xml-parser';
 
-type LLMProvider = 'elizacloud' | 'groq' | 'claude' | 'openai';
+type LLMProvider = 'elizacloud' | 'groq' | 'claude' | 'openai' | 'ollama';
 type LLMDisabledContext = 'default' | 'gameTick';
 
 /**
@@ -78,6 +78,34 @@ function resolveGroqDefaultModel(): string {
   );
 }
 
+/** Ollama OpenAI-compatible API base (e.g. `http://localhost:11434/v1`). */
+function resolveOllamaBaseURL(): string {
+  const raw =
+    process.env.OLLAMA_BASE_URL?.trim().replace(/\/$/, '') ||
+    'http://localhost:11434';
+  return `${raw}/v1`;
+}
+
+function resolveOllamaDefaultModel(): string {
+  return process.env.OLLAMA_MODEL?.trim() || 'qwen2.5:7b-instruct';
+}
+
+/**
+ * Optional explicit provider for `BabylonLLMClient` (`BABYLON_LLM_PROVIDER`).
+ * When set and `forceProvider` is omitted (e.g. `forGameTick()`), selects that provider
+ * when satisfiable; Ollama needs no API key.
+ */
+function resolveExplicitProvider(): LLMProvider | undefined {
+  const raw = process.env.BABYLON_LLM_PROVIDER?.trim().toLowerCase();
+  if (!raw) return undefined;
+  if (raw === 'ollama' || raw === 'local') return 'ollama';
+  if (raw === 'groq') return 'groq';
+  if (raw === 'claude' || raw === 'anthropic') return 'claude';
+  if (raw === 'openai') return 'openai';
+  if (raw === 'elizacloud' || raw === 'eliza') return 'elizacloud';
+  return undefined;
+}
+
 /**
  * Simple JSON schema for validation
  */
@@ -123,8 +151,16 @@ export class BabylonLLMClient {
   }
 
   /**
-   * Create a BabylonLLMClient for game tick operations
-   * Priority: ElizaCloud > Groq > Claude > OpenAI
+   * Create a BabylonLLMClient configured to use local Ollama (OpenAI-compatible `/v1`).
+   * Uses `OLLAMA_BASE_URL` and `OLLAMA_MODEL`; API key is optional (`OLLAMA_OPENAI_API_KEY`).
+   */
+  static forOllama(): BabylonLLMClient {
+    return new BabylonLLMClient('', 'ollama');
+  }
+
+  /**
+   * Create a BabylonLLMClient for game tick operations.
+   * Honors `BABYLON_LLM_PROVIDER` when set; else ElizaCloud > Groq > Claude > OpenAI.
    */
   static forGameTick(): BabylonLLMClient {
     return new BabylonLLMClient('', undefined, 'gameTick');
@@ -155,8 +191,25 @@ export class BabylonLLMClient {
     // We also do our own retries in generateJSON for more control
     const sdkMaxRetries = 2;
 
-    // Force specific provider if requested
-    if (forceProvider === 'elizacloud' && elizaCloud) {
+    const explicitProvider =
+      forceProvider === undefined ? resolveExplicitProvider() : undefined;
+    const want = forceProvider ?? explicitProvider;
+
+    if (want === 'ollama') {
+      const baseURL = resolveOllamaBaseURL();
+      logger.info(
+        'Using Ollama (OpenAI-compatible /v1)',
+        { baseURL },
+        'BabylonLLMClient'
+      );
+      this.client = new OpenAI({
+        apiKey: process.env.OLLAMA_OPENAI_API_KEY?.trim() || 'ollama',
+        baseURL,
+        timeout: timeoutMs,
+        maxRetries: sdkMaxRetries,
+      });
+      this.provider = 'ollama';
+    } else if (want === 'elizacloud' && elizaCloud) {
       logger.info('Using ElizaCloud (forced)', undefined, 'BabylonLLMClient');
       this.client = new OpenAI({
         apiKey: elizaCloud.apiKey,
@@ -166,7 +219,7 @@ export class BabylonLLMClient {
         maxRetries: sdkMaxRetries,
       });
       this.provider = 'elizacloud';
-    } else if (forceProvider === 'groq' && this.groqKey) {
+    } else if (want === 'groq' && this.groqKey) {
       logger.info('Using Groq (forced)', undefined, 'BabylonLLMClient');
       this.client = new OpenAI({
         apiKey: this.groqKey,
@@ -175,7 +228,7 @@ export class BabylonLLMClient {
         maxRetries: sdkMaxRetries,
       });
       this.provider = 'groq';
-    } else if (forceProvider === 'claude' && this.claudeKey) {
+    } else if (want === 'claude' && this.claudeKey) {
       logger.info('Using Claude (forced)', undefined, 'BabylonLLMClient');
       this.client = new OpenAI({
         apiKey: this.claudeKey,
@@ -184,7 +237,7 @@ export class BabylonLLMClient {
         maxRetries: sdkMaxRetries,
       });
       this.provider = 'claude';
-    } else if (forceProvider === 'openai' && this.openaiKey) {
+    } else if (want === 'openai' && this.openaiKey) {
       logger.info('Using OpenAI (forced)', undefined, 'BabylonLLMClient');
       this.client = new OpenAI({
         apiKey: this.openaiKey,
@@ -258,8 +311,9 @@ export class BabylonLLMClient {
 
     if (this.missingKeyContext === 'gameTick') {
       throw new Error(
-        '❌ No API key found for game tick operations!\n' +
-          '   Set one of these environment variables:\n' +
+        '❌ No LLM backend configured for game tick operations!\n' +
+          '   Set one of these:\n' +
+          '   - BABYLON_LLM_PROVIDER=ollama (local Ollama; optional OLLAMA_OPENAI_API_KEY)\n' +
           '   - ELIZACLOUD_API_KEY (recommended — single key for all inference)\n' +
           '   - GROQ_API_KEY (direct Groq)\n' +
           '   - ANTHROPIC_API_KEY\n' +
@@ -269,8 +323,9 @@ export class BabylonLLMClient {
     }
 
     throw new Error(
-      '❌ No API key found!\n' +
-        '   Set one of these environment variables (in priority order):\n' +
+      '❌ No LLM backend configured!\n' +
+        '   Set one of these (in priority order when keys are present):\n' +
+        '   - BABYLON_LLM_PROVIDER=ollama (local Ollama; optional OLLAMA_OPENAI_API_KEY)\n' +
         '   - ELIZACLOUD_API_KEY (recommended — single key for all inference)\n' +
         '   - GROQ_API_KEY (direct Groq, fast inference)\n' +
         '   - ANTHROPIC_API_KEY (Claude)\n' +
@@ -366,6 +421,7 @@ WORLD RULES:
         // - GPT-5 series (OpenAI/ElizaCloud): supports 'minimal'
         const isQwen3Model = model.includes('qwen3');
         const isGpt5Model = model.includes('gpt-5');
+        const canSendReasoningEffort = this.provider !== 'ollama';
 
         callStartTime = Date.now();
         const response = await this.client!.chat.completions.create({
@@ -374,8 +430,12 @@ WORLD RULES:
           ...(useJsonFormat ? { response_format: useJsonFormat } : {}),
           temperature,
           max_tokens: maxTokens,
-          ...(isQwen3Model ? { reasoning_effort: 'none' as const } : {}),
-          ...(isGpt5Model ? { reasoning_effort: 'minimal' as const } : {}),
+          ...(canSendReasoningEffort && isQwen3Model
+            ? { reasoning_effort: 'none' as const }
+            : {}),
+          ...(canSendReasoningEffort && isGpt5Model
+            ? { reasoning_effort: 'minimal' as const }
+            : {}),
         });
         const callDurationMs = Date.now() - callStartTime;
 
@@ -454,7 +514,12 @@ WORLD RULES:
                 ...(useJsonFormat ? { response_format: useJsonFormat } : {}),
                 temperature,
                 max_tokens: maxTokens,
-                ...(isQwen3Model ? { reasoning_effort: 'none' as const } : {}),
+                ...(canSendReasoningEffort && isQwen3Model
+                  ? { reasoning_effort: 'none' as const }
+                  : {}),
+                ...(canSendReasoningEffort && isGpt5Model
+                  ? { reasoning_effort: 'minimal' as const }
+                  : {}),
               });
 
             const contChoice = first(continuationResponse.choices);
@@ -888,6 +953,8 @@ WORLD RULES:
         // ElizaCloud uses provider-prefixed model IDs (openai/*, anthropic/*, etc.)
         // Allow override via env; default to gpt-5-nano with reasoning_effort=minimal.
         return process.env.ELIZACLOUD_DEFAULT_MODEL || 'openai/gpt-5-nano';
+      case 'ollama':
+        return resolveOllamaDefaultModel();
       default:
         return 'gpt-5-nano';
     }

@@ -1110,7 +1110,7 @@ export default function TeamChatPage() {
                       size="sm"
                     />
                     {isProcessing && (
-                      <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-amber-500 ring-2 ring-background" />
+                      <div className="-top-0.5 -right-0.5 absolute h-2.5 w-2.5 animate-pulse rounded-full bg-amber-500 ring-2 ring-background" />
                     )}
                   </div>
                   {agents.length <= 5 && (
@@ -1145,7 +1145,7 @@ export default function TeamChatPage() {
               <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
                 <div className="relative">
                   <Swords className="h-20 w-20 text-muted-foreground/30" />
-                  <div className="absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#0066FF] shadow-[#0066FF]/30 shadow-lg">
+                  <div className="-right-1 -bottom-1 absolute flex h-8 w-8 items-center justify-center rounded-full bg-[#0066FF] shadow-[#0066FF]/30 shadow-lg">
                     <Plus className="h-4 w-4 text-white" />
                   </div>
                 </div>
@@ -1364,7 +1364,7 @@ function AgentDetailCard({
             size="lg"
           />
           {isProcessing && (
-            <div className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 animate-pulse rounded-full bg-amber-500 ring-2 ring-background" />
+            <div className="-top-0.5 -right-0.5 absolute h-3.5 w-3.5 animate-pulse rounded-full bg-amber-500 ring-2 ring-background" />
           )}
         </div>
         <div className="min-w-0 flex-1">

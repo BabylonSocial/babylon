@@ -1,0 +1,39 @@
+---
+url: 'https://elysiajs.com/plugins/bearer.md'
+---
+
+# Bearer Plugin
+
+Plugin for [elysia](https://github.com/elysiajs/elysia) for retrieving the Bearer token.
+
+Install with:
+
+```bash
+bun add @elysiajs/bearer
+```
+
+Then use it:
+
+```typescript twoslash
+import { Elysia } from 'elysia'
+import { bearer } from '@elysiajs/bearer'
+
+const app = new Elysia()
+    .use(bearer())
+    .get('/sign', ({ bearer }) => bearer, {
+        beforeHandle({ bearer, set, status }) {
+            if (!bearer) {
+                set.headers[
+                    'WWW-Authenticate'
+                ] = `Bearer realm='sign', error="invalid_request"`
+
+                return status(400, 'Unauthorized')
+            }
+        }
+    })
+    .listen(3000)
+```
+
+This plugin is for retrieving a Bearer token specified in [RFC6750](https://www.rfc-editor.org/rfc/rfc6750#section-2).
+
+This plugin DOES NOT handle authentication validation for your server. Instead, the plugin leaves the decision to developers to apply the logic for handling validation checks themselves.

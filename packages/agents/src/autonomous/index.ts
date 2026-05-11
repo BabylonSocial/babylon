@@ -44,6 +44,7 @@ export {
   type MultiStepExecutorResult,
   multiStepExecutor,
 } from './MultiStepExecutor';
+export * from './qualia-batch';
 export {
   type PredictionMarketForTopic,
   TopicDiversityService,

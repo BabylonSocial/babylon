@@ -5,7 +5,12 @@
  * Used to measure costs, optimize prompts, and provide transparency on AI usage.
  */
 
-export type LLMProviderName = 'elizacloud' | 'groq' | 'claude' | 'openai';
+export type LLMProviderName =
+  | 'elizacloud'
+  | 'groq'
+  | 'claude'
+  | 'openai'
+  | 'ollama';
 
 /**
  * Token usage for a single LLM call
@@ -13,7 +18,7 @@ export type LLMProviderName = 'elizacloud' | 'groq' | 'claude' | 'openai';
 export interface LLMCallTokenUsage {
   /** Unique identifier for this call */
   callId: string;
-  /** Provider used (elizacloud, groq, claude, openai) */
+  /** Provider used (elizacloud, groq, claude, openai, ollama) */
   provider: LLMProviderName;
   /** Model used for the call */
   model: string;

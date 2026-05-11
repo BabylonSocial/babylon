@@ -458,7 +458,7 @@ export function WhitelistTab() {
         </div>
 
         <div className="relative">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
@@ -469,7 +469,7 @@ export function WhitelistTab() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="-translate-y-1/2 absolute top-1/2 right-2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>

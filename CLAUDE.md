@@ -146,6 +146,7 @@ bun scripts/prompt-diff.ts --old file1.ts --new file2.ts --section-only
 - `docs/agent-context-analysis.md` — deep analysis of agent context gaps, what's been fixed, what's remaining
 - `docs/stories-markets-analysis.md` — analysis of story/market repetition issues
 - `docs/dev-tools-plan.md` — dev tools roadmap and implementation plan
+- `docs/autonomous-multistep-llm-caps.md` — **why** env caps exist for `MultiStepExecutor`, worst-case LLM formula, user vs NPC iteration behavior, relationship to NPC qualia batch; operators tune `NPC_MAX_ITERATIONS` / `MULTISTEP_*` without code changes
 
 ## Production database (scale / locks)
 

@@ -99,7 +99,7 @@ export function PerpsMarketListPanel({
 
       <div className="p-3">
         <div className="relative">
-          <Search className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="-translate-y-1/2 absolute top-1/2 left-2 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="search"
             value={query}

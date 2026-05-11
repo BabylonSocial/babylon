@@ -293,6 +293,7 @@ for (const agentId of agents) {
 - `autonomous/` - Service implementations
 - `plugins/babylon/` - Plugin and providers
 - `examples/autonomous-agent-setup.ts` - Integration examples
+- **[Autonomous MultiStep LLM caps](../../../docs/autonomous-multistep-llm-caps.md)** — **Why:** autonomous ticks scale with `MultiStepExecutor` iterations and per-iteration retries; env vars (`NPC_MAX_ITERATIONS`, `MULTISTEP_*`) cap worst-case decision LLM calls and document the user vs NPC iteration bugfix. Complements NPC qualia batch (`docs/npc-qualia-batch-roadmap.md`), which reduces cohort planner calls, not per-loop ceilings.
 
 ---
 

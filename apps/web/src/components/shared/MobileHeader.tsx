@@ -292,7 +292,7 @@ function MobileHeaderContent() {
           </div>
 
           {/* Center: Logo */}
-          <div className="absolute left-1/2 -translate-x-1/2 transform">
+          <div className="-translate-x-1/2 absolute left-1/2 transform">
             <Link
               href="/feed"
               className="transition-transform duration-300 hover:scale-105"
@@ -390,7 +390,7 @@ function MobileHeaderContent() {
                     <div className="relative">
                       <Icon className="h-5 w-5" />
                       {hasNotificationBadge && (
-                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500 ring-2 ring-sidebar" />
+                        <span className="-top-1 -right-1 absolute h-2 w-2 rounded-full bg-blue-500 ring-2 ring-sidebar" />
                       )}
                     </div>
                     <span className="text-base">{item.name}</span>

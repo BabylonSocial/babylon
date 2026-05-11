@@ -155,7 +155,7 @@ export const MarketsDashboard = memo(function MarketsDashboard({
           <h1 className="font-bold text-foreground text-lg">Terminal</h1>
           <div className="relative w-64">
             <Search
-              className="absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
+              className="-translate-y-1/2 absolute top-1/2 left-2.5 text-muted-foreground"
               size={14}
             />
             <input

@@ -323,7 +323,7 @@ export function AdminManagementTab() {
 
             {/* Search Input */}
             <div className="relative mb-4">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search by username, display name, or wallet..."

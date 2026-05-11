@@ -172,7 +172,7 @@ export function ScoreSlider({
         {!readonly && (
           <div
             className={cn(
-              'absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-lg transition-transform',
+              '-translate-y-1/2 absolute top-1/2 h-5 w-5 rounded-full bg-white shadow-lg transition-transform',
               isDragging ? 'scale-110 duration-0' : 'duration-200',
               !readonly && 'hover:scale-110'
             )}
